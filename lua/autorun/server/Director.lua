@@ -122,16 +122,23 @@ hook.Add( "Tick", "Director", function()
 		local tSpotted = PlyTable.DR_tSpotted || {}
 		local tNewMusicEntities = {}
 		// We're doin' shit to them, so add it!
-		local flAllSuppression, flAllHealth = 0, 0
+		local flAllSuppression, flAllHealth, flAllThreat, bAtLeastOneWhoIsNotIdle = 0, 0, 0
 		for pEntity in pairs( tMusicEntities ) do
 			if !IsValid( pEntity ) then continue end
+			local f = pEntity.Disposition
+			local f = f && f( pEntity, ply ) == D_LI
+			if f then flAllThreat = flAllThreat - ( pEntity.GAME_flThreat || f ) end
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
+			if ETheirThreat > DIRECTOR_THREAT_HEAT then bAtLeastOneWhoIsNotIdle = true end
 			// TODO: Improve this, dammit!
 			if pEntity:NearestPoint( vEye ):DistToSqr( vEye ) > 9437184/*3072*/ then continue end
-			flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
-			local f = pEntity:Health() * 6
-			if f > 0 then flAllHealth = flAllHealth + f end
+			if !f then
+				flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
+				f = pEntity:Health()
+				if f > 0 then flAllHealth = flAllHealth + f end
+				if f > 0 then flAllThreat = flAllThreat + ( pEntity.GAME_flThreat || f ) end
+			end
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
 			if f then if CurTime() > f then EThreat = ETheirThreat end
@@ -148,8 +155,12 @@ hook.Add( "Tick", "Director", function()
 		if f != f then f = 0 end // NaN
 		flIntensity = flIntensity + f
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
-		if EThreat == DIRECTOR_THREAT_HOLD_FIRE || EThreat == DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) end
+		if EThreat == DIRECTOR_THREAT_HOLD_FIRE || EThreat == DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) else PlyTable.DR_bMagic = nil end
 		if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
+		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && flAllThreat > ply:Health() * 12 then
+			EThreat = DIRECTOR_THREAT_MAGIC
+			PlyTable.DR_bMagic = true
+		end
 		ply.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. tostring( flIntensity ) )
@@ -161,4 +172,3 @@ hook.Add( "Tick", "Director", function()
 		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. tostring( flTension ) )
 	end
 end )
-

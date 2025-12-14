@@ -11,11 +11,26 @@ function Director_Music( sName, sPath )
 	}
 end
 
+DIRECTOR_MUSIC_IDLE_SEQUENCES = DIRECTOR_MUSIC_IDLE_SEQUENCES || {}
+
+local math_Rand = math.Rand
 DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
+	// Do NOT write anything here! Use DIRECTOR_IDLE_SEQUENCES instead!
+	[ DIRECTOR_THREAT_NULL ] = {
+		Base = { Execute = function( self )
+			if !self.tHandles.Main then
+				if math_Rand( 0, 100000 * FrameTime() ) <= 1 then
+					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
+					if s then Director_Music_Play( self, "Main", s ) end
+				end
+			end
+		end }
+	},
 	[ DIRECTOR_THREAT_HEAT ] = {},
 	[ DIRECTOR_THREAT_ALERT ] = {},
 	[ DIRECTOR_THREAT_HOLD_FIRE ] = {},
 	[ DIRECTOR_THREAT_COMBAT ] = {},
+	[ DIRECTOR_THREAT_MAGIC ] = {}
 }
 
 function Director_Music_Container()
@@ -116,16 +131,41 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				p.m_fExecute = t.Execute
 				p.m_pSource = t
 				DIRECTOR_MUSIC[ ELayer ] = p
+			else
+				local p = Director_Music_Container()
+				p.m_fExecute = function() end
+				p.m_pSource = {}
+				DIRECTOR_MUSIC[ ELayer ] = p
 			end
 		end
 	end
-	if !DIRECTOR_MUSIC[ DIRECTOR_THREAT_NULL ] then
-		local p = Director_Music_Container()
-		p.m_fExecute = function() end
-		p.m_pSource = {}
-		DIRECTOR_MUSIC[ DIRECTOR_THREAT_NULL ] = p
-	end
-	if DIRECTOR_MUSIC_IN_VO then
+	// This thing is so important that we ignore voiceline pauses, too!
+	if DIRECTOR_THREAT == DIRECTOR_THREAT_MAGIC then
+		local bAllReady = true
+		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
+			local pContainer = DIRECTOR_MUSIC[ ELayer ]
+			if pContainer then
+				if ELayer != DIRECTOR_THREAT_MAGIC then
+					if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then
+						pContainer.m_flVolume = 0
+					else bAllReady = nil end
+				end
+				Director_Music_UpdateInternal( pContainer )
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() * .1 )
+			end
+		end
+		if bAllReady then
+			for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
+				local pContainer = DIRECTOR_MUSIC[ ELayer ]
+				if pContainer then
+					Director_Music_UpdateInternal( pContainer )
+					pContainer.m_flVolume = ELayer == DIRECTOR_THREAT_MAGIC && 1 || 0
+				end
+			end
+			DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
+		end
+		return
+	elseif DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
@@ -171,8 +211,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			end
 		end
 		return
-	end
-	if DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
+	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
 			if pContainer then

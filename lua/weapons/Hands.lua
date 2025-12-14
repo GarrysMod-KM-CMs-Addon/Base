@@ -115,4 +115,3 @@ function SWEP:Think()
 		self.bPlayingSprint = nil
 	end
 end
-

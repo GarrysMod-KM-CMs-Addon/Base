@@ -453,7 +453,7 @@ if CLIENT then
 					bOnGroundLast = nil
 				end
 			end
-			if !MyTable.bJumpingNotAnimated && !bZoom && CEntity_WaterLevel( ply ) < 1 then
+			if CEntity_WaterLevel( ply ) < 1 then
 				if RealTime() <= flJumpTime then
 					local f = .31 - ( flJumpTime - RealTime() )
 					local xx = BezierY( f, 0, -4, 0 )
@@ -464,7 +464,7 @@ if CLIENT then
 					local rl = BezierY( f, 0, -10.82, -5 )
 					vBezier = Vector( xx, yy, zz )
 					vBezierAngle = Vector( pt, yw )
-					if CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
+					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
 						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
 						vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle + Vector( pt, yw, rl )
 					else vTargetRatherQuick = vTargetRatherQuick + vBezier vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle end
@@ -473,7 +473,7 @@ if CLIENT then
 					local flBreathe = RealTime() * 30
 					vBezier = Vector( math_cos( flBreathe * .5 ) * .0625, 0, -5 + ( math_sin( flBreathe / 3 ) * .0625 ) )
 					vBezierAngle = Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25 )
-					if CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
+					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
 						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
 						vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle + Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25, -5 )
 					end
@@ -487,7 +487,7 @@ if CLIENT then
 					local rl = BezierY( f, 0, -10.82, -5 )
 					vBezier = Vector( xx, yy, zz )
 					vBezierAngle = Vector( pt, yw )
-					if CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
+					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
 						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
 						vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle + Vector( pt, yw, rl )
 					else vTargetRatherQuick = vTargetRatherQuick + vBezier vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle end

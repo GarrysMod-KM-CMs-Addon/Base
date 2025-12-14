@@ -133,4 +133,3 @@ function SWEP:Think()
 		else self.flSwim = CurTime() + self:SequenceDuration() + .5 end
 	end
 end
-

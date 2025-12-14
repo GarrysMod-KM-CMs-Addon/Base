@@ -16,33 +16,34 @@ RunConsoleCommand( "sv_friction", "4" )
 HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
 HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )
 
+local bit_band = bit.band
 function HasRangeAttack( ent )
 	if ent.HAS_RANGE_ATTACK then return true end
 	if ent.HAS_NOT_RANGE_ATTACK then return end
 	if ent.CapabilitiesGet then
 		local c = ent:CapabilitiesGet()
-		if bit.band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-		bit.band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-		bit.band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-		bit.band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+		if bit_band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+		bit_band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 	end
 	if ent.tWeapons then
 		for wep in pairs( ent.tWeapons ) do
 			if !wep.GetCapabilities then continue end
 			local c = wep:GetCapabilities()
-			if bit.band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-			bit.band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+			if bit_band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+			bit_band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 		end
 	elseif ent.GetWeapons then
 		for _, wep in ipairs( ent:GetWeapons() ) do
 			if !wep.GetCapabilities then continue end
 			local c = wep:GetCapabilities()
-			if bit.band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-			bit.band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+			if bit_band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+			bit_band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 		end
 	end
 end
@@ -51,28 +52,28 @@ function HasMeleeAttack( ent )
 	if ent.HAS_NOT_MELEE_ATTACK then return end
 	if ent.CapabilitiesGet then
 		local c = ent:CapabilitiesGet()
-		if bit.band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-		bit.band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-		bit.band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-		bit.band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+		if bit_band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+		bit_band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 	end
 	if ent.tWeapons then
 		for wep in pairs( ent.tWeapons ) do
 			if !wep.GetCapabilities then continue end
 			local c = wep:GetCapabilities()
-			if bit.band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-			bit.band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+			if bit_band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+			bit_band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 		end
 	elseif ent.GetWeapons then
 		for _, wep in ipairs( ent:GetWeapons() ) do
 			if !wep.GetCapabilities then continue end
 			local c = wep:GetCapabilities()
-			if bit.band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-			bit.band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-			bit.band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+			if bit_band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+			bit_band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+			bit_band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 		end
 	end
 end
@@ -1095,7 +1096,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	for _, ply in player_Iterator() do
 		if ply:EyePos():DistToSqr( vPos ) <= dts then
 			ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
-			if NOT_A_VOICELINE[ Data.SoundName ] then continue end
+			if NOT_A_VOICELINE[ Data.SoundName ] || ply.DR_EThreat == DIRECTOR_THREAT_MAGIC then continue end
 			if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
 			if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
 				local f = ply.DR_flVoWait
