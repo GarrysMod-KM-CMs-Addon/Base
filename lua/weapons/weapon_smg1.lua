@@ -1,8 +1,9 @@
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Submachine Guns"
-SWEP.PrintName = "#weapon_smg1"
-SWEP.Instructions = "Primary to shoot."
+SWEP.PrintName = "#weapon_smg1"
+
+SWEP.Instructions = "Primary to shoot. Secondary to switch fully-automatic and semi-automatic."
 SWEP.Purpose = "Heckler & Koch MP7."
 SWEP.ViewModel = Model "models/weapons/c_smg1.mdl"
 SWEP.UseHands = true
@@ -83,3 +84,4 @@ function SWEP:SecondaryAttack()
 	self:EmitSound( b && "MP7_SwitchAuto" || "MP7_SwitchSemi" )
 	self:SetNextSecondaryFire( CurTime() + .2 )
 end
+
