@@ -1,6 +1,6 @@
 include "autorun/Director.lua"
 
-GAMEMODE.DrawDeathNotice = nil
+timer.Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
 
 local sound_Add = sound.Add
 local CHAN_STATIC = CHAN_STATIC
