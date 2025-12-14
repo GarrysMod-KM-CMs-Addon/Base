@@ -22,12 +22,22 @@ hook.Add( "Think", "Alarm", function()
 		end
 	end
 	__ALARMS__ = t
+	local t = {}
+	for pEntity in pairs( __ALARMS_ACTIVE__ ) do
+		if !isentity( pEntity ) || !IsValid( pEntity ) || !pEntity.bIsOn then continue end
+		t[ pEntity ] = true
+	end
+	__ALARMS_ACTIVE__ = t
 end )
 
 ENT.iDefaultClass = 0
 ENT.iClass = 0
-function ENT:Classify() return self.iClass || self.iDefaultClass end
-function ENT:GetNPCClass() return self.iClass || self.iDefaultClass end
+function ENT:Classify() return self:GetNPCClass() end
+function ENT:GetNPCClass()
+	local pCaller = self.pCaller
+	if IsValid( pCaller ) && pCaller.GetNPCClass then return pCaller:GetNPCClass() end
+	return self.iClass || self.iDefaultClass
+end
 function ENT:SetNPCClass( iClass )
 	local iPreviousClass = self:GetNPCClass()
 	local t = __ALARMS__[ iPreviousClass ]
@@ -43,28 +53,58 @@ function ENT:CanToggle( ent ) local c = self:Classify() return c == CLASS_NONE |
 
 ENT.flTelepathyRangeSqr = 4194304/*2048*/
 
-function ENT:TurnOn( ent )
-	if self:CanToggle( ent ) then
-		self.bIsOn = true
+function ENT:Think()
+	local f = self.flReinforcementEndTime
+	if f && CurTime() > f then
 		local t = __ALARMS__[ self:Classify() ]
 		if t then
 			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
 			for ent in pairs( t ) do
-				if vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
-				ent.bIsOn = true
+				ent.bIsOn = nil
+				ent.flReinforcementStartTime = nil
+				ent.flReinforcementEndTime = nil
+				ent.flCoolDown = CurTime() + math.Rand( 45, 60 )
+			end
+		end
+	end
+	self:NextThink( CurTime() )
+	return true
+end
+
+function ENT:TurnOn( ent )
+	if ent.__ALARM__ || self:CanToggle( ent ) then
+		self.bIsOn = true
+		self.pCaller = ent
+		self.bSpawnedReinforcements = nil
+		// We don't actually do this yet, since reinforcements are not finished
+		//	self.flReinforcementStartTime = CurTime()
+		//	self.flReinforcementEndTime = CurTime() + math.Rand( 45, 60 )
+		__ALARMS_ACTIVE__[ self ] = true
+		if ent.__ALARM__ then return end
+		local t = __ALARMS__[ self:Classify() ]
+		if t then
+			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
+			for ent in pairs( t ) do
+				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
+				ent:TurnOn( self )
 			end
 		end
 	end
 end
 function ENT:TurnOff( ent )
-	if self:CanToggle( ent ) then
+	if ent.__ALARM__ || self:CanToggle( ent ) then
 		self.bIsOn = nil
+		self.pCaller = nil
+		self.bSpawnedReinforcements = nil
+		self.flReinforcementStartTime = nil
+		self.flReinforcementEndTime = nil
+		if ent.__ALARM__ then return end
 		local t = __ALARMS__[ self:Classify() ]
 		if t then
 			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
 			for ent in pairs( t ) do
-				if vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
-				ent.bIsOn = nil
+				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
+				ent:TurnOff( self )
 			end
 		end
 	end
@@ -72,11 +112,11 @@ end
 function ENT:Toggle( ent )
 	if self:CanToggle( ent ) then
 		if self.bIsOn then
-			self:TurnOff()
+			self:TurnOff( ent )
 		else
-			self:TurnOn()
+			self:TurnOn( ent )
 		end
 	end
 end
 
-function ENT:Use() self:Toggle() end
+function ENT:Use( _, pCaller ) self:Toggle( pCaller ) end

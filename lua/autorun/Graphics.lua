@@ -297,3 +297,41 @@ __HUD_SHOULD_NOT_DRAW__ = {
 	CHudHealth = true
 }
 hook.Add( "HUDShouldDraw", "Graphics", function( sName ) return __HUD_SHOULD_NOT_DRAW__[ sName ] == nil end )
+
+surface.CreateFont( "ReinforcementsBar", {
+	font = "Trebuchet24",
+	extended = false,
+	size = 32,
+	weight = 100,
+	blursize = 0,
+	scanlines = 0,
+	antialias = true,
+	underline = false,
+	italic = false,
+	strikeout = false,
+	symbol = false,
+	rotary = false,
+	shadow = false,
+	additive = false,
+	outline = false
+} )
+local flProgress = 0
+hook.Add( "HUDPaint", "Graphics", function()
+	local ply = LocalPlayer()
+	if !IsValid( ply ) then return end
+	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
+	if f <= 0 then flProgress = 0 return end
+	flProgress = Lerp( math.min( 1, FrameTime() ), flProgress, f )
+	draw.NoTexture()
+	local flHeight, flWidth = ScrH(), ScrW()
+	local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05
+	surface.SetDrawColor( 0, 0, 0 )
+	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * .033, flLabelWidth, flLabelHeight )
+	draw.DrawText( language.GetPhrase "ReinforcementsBar", "ReinforcementsBar", flWidth * .5, flHeight * .033, Color( 255, 255, 255, 255 ), TEXT_ALIGN_CENTER )
+	surface.SetDrawColor( 64, 64, 64 )
+	flLabelWidth = flLabelWidth * .9
+	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flLabelWidth, flHeight * .008 )
+	// The flashing is only activated when the true lerped progress is less than a half, not the smoothened one
+	surface.SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
+	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
+end )

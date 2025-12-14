@@ -10,6 +10,7 @@ local __BEHAVIOUR__ = __BEHAVIOUR__
 function Actor_RegisterBehaviour( Name, Data ) __BEHAVIOUR__[ Name ] = Data end
 
 __ALARMS__ = __ALARMS__ || {}
+__ALARMS_ACTIVE__ = __ALARMS_ACTIVE__ || {}
 
 // Cover: ( Vector vStart, Vector vEnd, Boolean bRightSide )
 // CNavArea:GetID() -> SequentialTable[ Cover ]

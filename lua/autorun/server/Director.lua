@@ -47,6 +47,19 @@ hook.Add( "Tick", "Director", function()
 			v = v.Think
 			if v then v( ply, PlyTable ) end
 		end
+		local flReinforcements, bAlarm
+		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
+			if !IsValid( pEntity ) then continue end
+			if pEntity:NearestPoint( ply:EyePos() ):DistToSqr( ply:EyePos() ) > 16777216/*4096*/ then continue end
+			if pEntity:Classify() != ply:Classify() then
+				bAlarm = true
+				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
+				if flStart && flEnd then
+					flReinforcements = math.min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
+				end
+			end
+		end
+		ply:SetNW2Float( "ALARM_flHostileReinforcements", flReinforcements || 0 )
 		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 30 )
 		if ply:Alive() then
 			local o = ply:GetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", -1 ) )
@@ -137,7 +150,7 @@ hook.Add( "Tick", "Director", function()
 				flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
 				f = pEntity:Health()
 				if f > 0 then flAllHealth = flAllHealth + f end
-				if f > 0 then flAllThreat = flAllThreat + ( pEntity.GAME_flThreat || f ) end
+				if f > 0 then flAllThreat = flAllThreat + ( pEntity.GAME_flThreat || 1 ) end
 			end
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
@@ -156,8 +169,8 @@ hook.Add( "Tick", "Director", function()
 		flIntensity = flIntensity + f
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
 		if EThreat == DIRECTOR_THREAT_HOLD_FIRE || EThreat == DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) else PlyTable.DR_bMagic = nil end
-		if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
-		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && flAllThreat > ply:Health() * 12 then
+		if bAlarm || PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
+		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && flAllThreat > ply:Health() * .12 then
 			EThreat = DIRECTOR_THREAT_MAGIC
 			PlyTable.DR_bMagic = true
 		end
