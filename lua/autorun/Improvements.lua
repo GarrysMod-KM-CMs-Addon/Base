@@ -74,13 +74,13 @@ function CalculateAngularVelocity( dTarget, dForward, vAngleVelocity, flTurnRate
 	return vFinal
 end
 
-function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration )
+function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, flFrameTime )
 	local vDelta = vTarget - vPos
 	local flDistance = vDelta:Length()
 	if flDistance == 0 then return Vector( 0, 0, 0 ) end
 	local vDir = vDelta:GetNormalized()
 	local flMaxSpeedToStop = ( 2 * flAcceleration * flDistance ) ^ .5
-	flSpeed = math_min( vCurrent:Length() + flAcceleration * FrameTime(), flMaxSpeedToStop )
+	flSpeed = math_min( vCurrent:Length() + flAcceleration * ( flFrameTime || FrameTime() ), flMaxSpeedToStop )
 	return vDir * flSpeed - vCurrent
 end
 
