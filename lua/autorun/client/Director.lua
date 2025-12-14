@@ -1,5 +1,7 @@
 include "autorun/Director.lua"
 
+GAMEMODE.DrawDeathNotice = nil
+
 local sound_Add = sound.Add
 local CHAN_STATIC = CHAN_STATIC
 function Director_Music( sName, sPath )
