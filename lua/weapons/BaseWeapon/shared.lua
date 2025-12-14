@@ -322,7 +322,6 @@ if CLIENT then
 	function SWEP:CalcViewModelView( _, pos, ang )
 		local MyTable = CEntity_GetTable( self )
 		local ply = LocalPlayer()
-		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
 		local f = math_Clamp( ply:Health() / ply:GetMaxHealth(), 0, 1 )
 		vBezier, vBezierAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 		vTargetRatherQuick, vTargetRatherQuickAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
@@ -340,6 +339,7 @@ if CLIENT then
 			vTargetAngle = vAimAngle && Vector( vAimAngle ) || Vector( 0, 0, 0 )
 		else vTarget, vTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) end
 		vInstantTarget, vInstantTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
+		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
 		if MyTable.flAimShoot then
 			local f = ( MyTable.flInAimShoot || 0 ) * ( MyTable.flBarrelBack || 0 ) * MyTable.flAimShoot
 			if ( MyTable.flBarrelBackCurrent || 0 ) > f then
