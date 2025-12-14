@@ -17,7 +17,7 @@ ENT.flRoundsPerMinuteLimit = 3000
 ENT.flTopSpeed = 1400
 ENT.flAcceleration = 1400
 ENT.flTurnSpeedBase = 200 // When not moving
-ENT.flTurnSpeedSpin = 100 // This is added as we go to full throttle
+ENT.flTurnSpeedSpin = .25 // This is added as we go to full throttle, a multiplier of our current speed
 
 ENT.flTurnSpeed = 0
 
@@ -68,6 +68,7 @@ ENT.flMaxRotorSequenceSpeed = 4
 DEFINE_BASECLASS "BaseVehicle" // For the BaseClass variable...
 
 function ENT:Initialize()
+	BaseClass.Initialize( self )
 	local s = CreateSound( self, self.sMotorSpin )
 	s:PlayEx( 0, 100 )
 	self.pMotorSpin = s
@@ -80,7 +81,6 @@ function ENT:Initialize()
 	local s = CreateSound( self, self.sFanIdle )
 	s:PlayEx( 0, 100 )
 	self.pFanIdle = s
-	BaseClass.Initialize( self )
 end
 
 function ENT:OnRemove()
@@ -134,27 +134,28 @@ function ENT:AimWeapon( vAim )
 	self:SetPoseParameter( self.sWeaponYawPoseParameter, self:GetPoseParameter( self.sWeaponYawPoseParameter ) + math.Clamp( y, flSpeedNeg, flSpeed ) )
 end
 
-function ENT:Tick()
-	local f = self.flRoundsPerMinute
+function ENT:Think()
+	local flRoundsPerMinute = self.flRoundsPerMinute
+	local flRoundsPerMinuteAbs = math.abs( self.flRoundsPerMinute )
 	local flIdle = self.flRoundsPerMinuteIdle
 	local flLimit = self.flRoundsPerMinuteLimit
 	local s = self.pMotorSpin
 	local flSpin
 	if s then
-		flSpin = math.Clamp( math.Remap( f, flIdle, flLimit, 0, 1 ), 0, 1 )
+		flSpin = math.Clamp( math.Remap( flRoundsPerMinuteAbs, flIdle, flLimit, 0, 1 ), 0, 1 )
 		s:ChangeVolume( flSpin )
-		s:ChangePitch( math.Clamp( math.Remap( f, 0, flLimit, 0, 100 ), 0, 100 ) )
+		s:ChangePitch( math.Clamp( math.Remap( flRoundsPerMinuteAbs, 0, flLimit, 0, 100 ), 0, 100 ) )
 	end
 	local s = self.pMotorIdle
 	if s then
 		s:ChangeVolume( 1 - flSpin )
-		s:ChangePitch( math.Clamp( math.Remap( f, 0, flIdle, 0, 100 ), 0, 100 ) )
+		s:ChangePitch( math.Clamp( math.Remap( flRoundsPerMinuteAbs, 0, flIdle, 0, 100 ), 0, 100 ) )
 	end
 	local iPropLayer = self.iPropLayer
 	local flMaxRotorSequenceSpeed = self.flMaxRotorSequenceSpeed
-	local s = math.Clamp( math.Remap( f, flIdle, flLimit, 0, flMaxRotorSequenceSpeed ), 0, flMaxRotorSequenceSpeed )
+	s = math.Clamp( math.Remap( flRoundsPerMinuteAbs, flIdle, flLimit, 0, flMaxRotorSequenceSpeed ), 0, flMaxRotorSequenceSpeed )
 	if iPropLayer then
-		self:SetLayerPlaybackRate( iPropLayer, self.bPropReverse && -s || s )
+		self:SetLayerPlaybackRate( iPropLayer, s )
 		if s <= self.flPropSolidUnTil then
 			self:SetBodygroup( self:FindBodygroupByName( self.sPropBodyGroupSolid ), 1 )
 		else
@@ -172,22 +173,16 @@ function ENT:Tick()
 	end
 	local p = self:GetPhysicsObject()
 	if IsValid( p ) then
-		local flSpeed = math.Remap( s, 0, flMaxRotorSequenceSpeed, 0, self.flTopSpeed )
-		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * s
-		local v = self:GetRight() * ( self.bPropReverse && flSpeed || -flSpeed ) - p:GetVelocity()
+		local flSpeed = math.max( math.Remap( flRoundsPerMinuteAbs, flIdle, flLimit, 0, self.flTopSpeed ), 0 )
+		if flRoundsPerMinute > 0 then flSpeed = -flSpeed end
+		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * math.abs( flSpeed )
+		local v = self:GetRight() * flSpeed - p:GetVelocity()
 		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), self.flAcceleration ) * FrameTime() )
 	end
 	if !IsValid( self.pDriver ) then self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, 0, self.flRoundsPerMinuteSpeed * FrameTime() ) end
+	return BaseClass.Think( self )
 end
 function ENT:PlayerControls( ply, cmd )
-	local b
-	if cmd:KeyDown( IN_FORWARD ) then
-		self.bPropReverse = nil
-		b = true
-	elseif cmd:KeyDown( IN_BACK ) then
-		self.bPropReverse = true
-		b = true
-	end
 	if cmd:KeyDown( IN_ATTACK ) then self:FireWeapon() end
 	if self:HasWeapon() then
 		self:AimWeapon( util.TraceLine( {
@@ -201,8 +196,10 @@ function ENT:PlayerControls( ply, cmd )
 	if bLeft && bRight then
 	elseif bLeft then self:TurnLeft()
 	elseif bRight then self:TurnRight() end
-	if b then
+	if cmd:KeyDown( IN_FORWARD ) then
 		self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteLimit, self.flRoundsPerMinuteSpeed * FrameTime() )
+	elseif cmd:KeyDown( IN_BACK ) then
+		self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, -self.flRoundsPerMinuteLimit, self.flRoundsPerMinuteSpeed * FrameTime() )
 	else
 		self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() )
 	end
@@ -217,8 +214,9 @@ end
 
 function ENT:Move( vDirection, flSpeed )
 	flSpeed = flSpeed * math.abs( self:GetRight():Dot( vDirection ) )
-	self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, math.max( self.flRoundsPerMinuteIdle, math.Remap( flSpeed, 0, self.flTopSpeed, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteLimit ) ), self.flRoundsPerMinuteSpeed * FrameTime() )
-	self.bPropReverse = vDirection:Dot( self:GetRight() ) > 0
+	local f = math.max( self.flRoundsPerMinuteIdle, math.Remap( flSpeed, 0, self.flTopSpeed, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteLimit ) )
+	if vDirection:Dot( self:GetRight() ) > 0 then f = -f end
+	self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, f, self.flRoundsPerMinuteSpeed * FrameTime() )
 end
 function ENT:Stay() self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 function ENT:Turn( vDirection )

@@ -15,12 +15,10 @@ function ENT:GetForwardDirection() return -self:GetRight() end
 
 if !SERVER then return end
 
-ENT.vSeat = Vector( 0, -8, 32 )
-ENT.aSeat = Angle( 0, 0, 0 )
-
 function ENT:Initialize()
+	BaseClass.Initialize( self )
 	self:SetModel "models/airboat.mdl"
 	local vMins, vMaxs = self:GetCollisionBounds()
 	self:PhysicsInit( SOLID_VPHYSICS, ( vMins + vMaxs ) * .5 - Vector( 0, 0, 256 ) )
-	BaseClass.Initialize( self )
+	self:SetSeatPosition( Vector( 0, -8, 32 ) )
 end

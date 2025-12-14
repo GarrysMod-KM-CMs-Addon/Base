@@ -1,8 +1,6 @@
 ENT.TRAVERSES = TRAVERSES_NONE
 ENT.flMass = 1
 ENT.flBuoyancy = 0
-ENT.vSeat = Vector( 0, 0, 0 )
-ENT.aSeat = Angle( 0, 0, 0 )
 ENT.flExitTime = 0
 
 function ENT:Move( vDirection, flSpeed ) end
@@ -21,11 +19,11 @@ function ENT:GetForwardDirection() return self:GetForward() end
 local __VEHICLE_TABLE_LOCAL__ = __VEHICLE_TABLE__
 local bit_band = bit.band
 function ENT:Initialize()
-	// Yes, Seriously...
 	local f = self.TRAVERSES
 	if bit_band( f, TRAVERSES_WATER ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_WATER ][ self ] = true end
 	if bit_band( f, TRAVERSES_GROUND ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_GROUND ][ self ] = true end
 	if bit_band( f, TRAVERSES_AIR ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_AIR ][ self ] = true end
+	//self:SetSeatPosition(
 end
 hook.Add( "Think", "BaseVehicle", function()
 	local t = {}
@@ -93,11 +91,10 @@ function ENT:Think()
 	end
 	local pDriver = self.pDriver
 	if IsValid( pDriver ) then
-		pDriver:SetLocalPos( self.vSeat )
-		pDriver:SetLocalAngles( self.aSeat )
+		pDriver:SetLocalPos( self:GetSeatPosition() )
+		pDriver:SetLocalAngles( self:GetSeatAngle() )
 		if pDriver:GetParent() != self then pDriver:SetParent( self ) end
 	end
-	self:Tick()
 	self:NextThink( CurTime() )
 	return true
 end

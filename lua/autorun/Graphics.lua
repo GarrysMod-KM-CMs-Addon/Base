@@ -244,11 +244,21 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		zfar = zfar,
 		drawviewer = false
 	}
-	if drive.CalcView( ply, view ) || IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then
+	if drive.CalcView( ply, view ) then
 		fMoreEffects( ply, view )
 		return view
 	end
-	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool()
+	local pVehicle = ply:GetNW2Entity "GAME_pVehicle"
+	if IsValid( pVehicle ) then
+		local vSeat = pVehicle:GetSeatPosition()
+		local ang = pVehicle:GetAngles()
+		vSeat:Rotate( ang )
+		local vView = ply:GetViewOffsetDucked()
+		vView:Rotate( ang )
+		view.origin = pVehicle:GetPos() + vSeat + vView
+		fMoreEffects( ply, view )
+		return view
+	elseif bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool()
 	elseif cThirdPerson:GetBool() then
 		local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
 		view.drawviewer = true
@@ -321,7 +331,7 @@ hook.Add( "HUDPaint", "Graphics", function()
 	if !IsValid( ply ) then return end
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
 	if f <= 0 then flProgress = 0 return end
-	flProgress = Lerp( math.min( 1, FrameTime() ), flProgress, f )
+	flProgress = Lerp( math.min( 1, RealFrameTime() ), flProgress, f )
 	draw.NoTexture()
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05
