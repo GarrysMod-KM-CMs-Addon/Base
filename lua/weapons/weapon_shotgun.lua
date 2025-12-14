@@ -1,7 +1,8 @@
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Shotguns"
-SWEP.PrintName = "#weapon_shotgun"
+SWEP.PrintName = "#weapon_shotgun"
+
 SWEP.Instructions = "Primary to shoot, secondary to switch semi-automatic and pump-action, reload to pump (when in pump-action)."
 SWEP.Purpose = "Franchi Special Purpose Automatic Shotgun 12."
 SWEP.ViewModel = Model "models/weapons/c_shotgun.mdl"

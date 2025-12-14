@@ -1,7 +1,8 @@
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Submachine Guns"
-SWEP.PrintName = "#UMP45"
+SWEP.PrintName = "#UMP45"
+
 SWEP.Instructions = "Primary to shoot."
 SWEP.Purpose = "Heckler & Koch Universale Maschinenpistole 45."
 SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_ump45.mdl"

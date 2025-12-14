@@ -1,7 +1,8 @@
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Submachine Guns"
-SWEP.PrintName = "#MAC10"
+SWEP.PrintName = "#MAC10"
+
 SWEP.Instructions = "Primary to shoot."
 SWEP.Purpose = "Military Armament Corporation Model 10, officially abbreviated as \"M10\" or \"M-10\", and more commonly known as the MAC-10."
 SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_mac10.mdl"

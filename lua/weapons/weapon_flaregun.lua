@@ -1,7 +1,8 @@
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Special"
-SWEP.PrintName = "#weapon_flaregun"
+SWEP.PrintName = "#weapon_flaregun"
+
 SWEP.Instructions = "Primary to shoot."
 SWEP.Purpose = "Shoots signal flares."
 SWEP.ViewModel = Model "models/weapons/c_pistol.mdl"
