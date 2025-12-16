@@ -483,8 +483,6 @@ end
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
 
-	ply:ConCommand( "fov_desired " .. tostring( UNIVERSAL_FOV ) )
-
 	local veh = ply.GAME_pVehicle
 	if IsValid( veh ) then
 		if !ply.GAME_sRestoreGun then
