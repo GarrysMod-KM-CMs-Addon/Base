@@ -137,32 +137,6 @@ function ENT:FindPathBattleLineNoAlliesToVector( Path, vShoot, flTolerance )
 end
 
 function ENT:FindPathStackUpLineInternal( Path, tEnemies, flTolerance )
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	local flSuppressionTraceFraction = self.flSuppressionTraceFraction
-	local iBattleLine = self:FindPathBattleLine( Path, tEnemies, flTolerance )
-	if !iBattleLine then return end
-	local vBattleLine = Path:GetPositionOnPath( iBattleLine ) + Vector( 0, 0, self.vHullMaxs.z * .5 )
-	local N
-	for I = 0, Path:GetLength(), flTolerance do
-		local vec = Path:GetPositionOnPath( I )
-		local tr = util.TraceLine {
-			start = vec + vStand,
-			endpos = vBattleLine,
-			mask = MASK_SHOT_HULL,
-			filter = self
-		}
-		if tr.Fraction > flSuppressionTraceFraction then return N else N = I end
-		if !vDuck then continue end
-		local tr = util.TraceLine {
-			start = vec + vDuck,
-			endpos = vBattleLine,
-			mask = MASK_SHOT_HULL,
-			filter = self
-		}
-		if tr.Fraction > flSuppressionTraceFraction then return N else N = I end
-	end
-	return N
 end
 
 function ENT:ShouldStackUp( Path, flTolerance )

@@ -45,7 +45,6 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched )
 		local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
 		pEnemyPath:MoveCursor( 1 )
 		d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
-		d[ 3 ] = 0
 		d:Normalize()
 		if !util_TraceLine( {
 			start = v,

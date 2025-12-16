@@ -114,9 +114,9 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 						table.insert( tAngles, -a )
 						table.insert( tAngles, a )
 					end
-					local vLeftTarget = fDo( self:GetShootPos(), tAngles )
-					if vLeftTarget then
-						self.vaAimTargetBody = vLeftTarget
+					vTarget = fDo( self:GetShootPos(), tAngles )
+					if vTarget then
+						self.vaAimTargetBody = vTarget
 						self.vaAimTargetPose = self.vaAimTargetBody
 						if self.bPlanted then
 							local b
@@ -261,8 +261,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 						table.insert( tAngles, -a )
 						table.insert( tAngles, a )
 					end
-					local vLeftTarget = fDo( self:GetShootPos(), tAngles )
-					if vLeftTarget then
+					vTarget = fDo( self:GetShootPos(), tAngles )
+					if vTarget then
 						if self.bPlanted then
 							if self:RangeAttackPlanted() then self:UnPlant() end
 						else
@@ -288,7 +288,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 					end
 				end
 			end
-		else
 		end
 		return
 	end
@@ -329,118 +328,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 		else self:SetSchedule "TakeCover" end
 		return
 	end
-	if sched.bAdvance || sched.bRetreat then
-		local pPath = sched.pEnemyPath
-		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-		if !sched.bStartedSearching then
-			self:ComputeFlankPath( pPath, enemy )
-			if !sched.bFromCombatFormation && sched.bAdvance then
-				local i = self:FindPathStackUpLine( pPath, tEnemies )
-				if i then
-					self.iLastEnemyPathStackUpCursor = i
-					pPath:MoveCursorTo( i )
-					local g = pPath:GetCurrentGoal()
-					if g then
-						local b = self:CreateBehaviour "CombatFormation"
-						local v = pPath:GetPositionOnPath( i )
-						b.Vector = v
-						b.Direction = ( pPath:GetPositionOnPath( i + 1 ) - v ):GetNormalized()
-						b:AddParticipant( self )
-						b:GatherParticipants()
-						b:Initialize()
-						return
-					end
-				end
-			end
-			sched.bStartedSearching = true
-		end
-		local vEnemy = enemy:GetPos()
-		local pIterator = sched.pIterator
-		local bAdvance = sched.bAdvance
-		if !sched.pIterator then
-			if bAdvance then
-				pPath:MoveCursorToClosestPosition( self.vCover || self:GetPos() )
-				pPath:MoveCursor( self.flCombatState * self.flCoverMoveDistance )
-				pIterator = self:SearchAreas( pPath:GetPositionOnPath( pPath:GetCursorPosition() ), function( _/*pFrom*/, pTo ) return pTo:GetClosestPointOnArea( vEnemy ):Distance( vEnemy ) end )
-			else
-				pIterator = self:SearchAreas( nil, function( _/*pFrom*/, pTo ) return -pTo:GetClosestPointOnArea( vEnemy ):Distance( vEnemy ) end )
-			end
-			sched.pIterator = pIterator
-		end
-		local v = sched.vCoverBounds || self:GatherCoverBounds()
-		sched.vCoverBounds = v
-		local tAllies = self:GetAlliesByClass()
-		local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
-		sched.flBoundingRadiusTwo = f
-		local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
-		local tCovers = {}
-		local tOldCover = self.tCover
-		local d = self.vHullMaxs.x * 4
-		local iLastEnemyPathStackUpCursor = bAdvance && self.iLastEnemyPathStackUpCursor || 0
-		for _ = 0, 64 do
-			local pArea = pIterator()
-			if pArea == nil then
-				// REPEAT!!! AND TRY HARDER!!!
-				sched.pIterator = nil
-				return
-			end
-			table.Empty( tCovers )
-			for _, t in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
-			for _, t in ipairs( __COVERS_DYNAMIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
-			table.SortByMember( tCovers, 2, true )
-			for _, t in ipairs( tCovers ) do
-				local tCover = t[ 1 ]
-				if tCover == tOldCover then continue end
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				local vDirection = vEnd - vStart
-				local flStep, flStart, flEnd
-				if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-					flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-				else
-					flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
-				end
-				vDirection:Normalize()
-				local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
-				vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
-				for iCurrent = flStart, flEnd, flStep do
-					local vCover = vStart + vDirection * iCurrent + vOff
-					pPath:MoveCursorToClosestPosition( vCover )
-					local iCursor = pPath:GetCursorPosition()
-					if bAdvance && iCursor <= iLastEnemyPathStackUpCursor then continue end
-					local dDirection = pPath:GetPositionOnPath( iCursor )
-					pPath:MoveCursor( 1 )
-					dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
-					dDirection[ 3 ] = 0
-					dDirection:Normalize()
-					if util_TraceHull( {
-						start = vCover,
-						endpos = vCover,
-						mins = vMins,
-						maxs = vMaxs,
-						filter = self
-					} ).Hit then continue end
-					local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
-					if !util_TraceLine( {
-						start = v,
-						endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-						filter = self
-					} ).Hit then continue end
-					if tAllies then
-						local b
-						for pAlly in pairs( tAllies ) do
-							if self == pAlly then continue end
-							if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
-						end
-						if b then continue end
-					end
-					self.vCover = vCover
-					self.tCover = tCover
-					return
-				end
-			end
-		end
-		if sched.bFromCombatFormation then return end
-	else sched.bStartedSearching = nil end
 	if self.vCover then
 		local vec = self.vCover
 		self.vActualCover = vec
@@ -621,10 +508,11 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 				local dRight = aGeneral:Right()
 				local dLeft = -dRight
 				local flDistance = self:OBBMaxs().x * 2
-				local vLeft = vec + dLeft * flDistance
+				local tCover = self.tCover
+				local vLeft = tCover[ 1 ] + ( tCover[ 1 ] - tCover[ 2 ] ):GetNormalized() * flDistance
 				local flAdd = self:OBBMaxs().x
 				local trLeft = util_TraceHull {
-					start = vec + vHeight,
+					start = vLeft + vHeight,
 					endpos = vLeft + dLeft * flAdd + vHeight,
 					mins = vMins,
 					maxs = vMaxs,
@@ -637,9 +525,9 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 				end
 				local vLeftTarget = fDo( trLeft, vLeft, tAngles )
 				local flDistance = self:OBBMaxs().x * 2
-				local vRight = vec + dRight * flDistance
+				local vRight = tCover[ 1 ] + ( tCover[ 2 ] - tCover[ 1 ] ):GetNormalized() * flDistance
 				local trRight = util_TraceHull {
-					start = vec + vHeight,
+					start = vRight + vHeight,
 					endpos = vRight + dRight * flAdd + vHeight,
 					mins = vMins,
 					maxs = vMaxs,
