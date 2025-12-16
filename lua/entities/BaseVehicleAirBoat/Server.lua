@@ -174,9 +174,10 @@ function ENT:Think()
 	if IsValid( p ) then
 		local flSpeed = math.max( math.Remap( flRoundsPerMinuteAbs, flIdle, flLimit, 0, self.flTopSpeed ), 0 )
 		if flRoundsPerMinute > 0 then flSpeed = -flSpeed end
-		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * math.abs( flSpeed )
+		s = math.abs( flSpeed )
+		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * s
 		local v = self:GetRight() * flSpeed - p:GetVelocity()
-		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), flSpeed ) * FrameTime() )
+		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), s ) * FrameTime() )
 	end
 	if !IsValid( self.pDriver ) then self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, 0, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 	return BaseClass.Think( self )
