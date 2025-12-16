@@ -51,8 +51,8 @@ hook.Add( "Tick", "Director", function()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
 			if !IsValid( pEntity ) then continue end
 			if pEntity:NearestPoint( ply:EyePos() ):DistToSqr( ply:EyePos() ) > 16777216/*4096*/ then continue end
+			bAlarm = true
 			if pEntity:Classify() != ply:Classify() then
-				bAlarm = true
 				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
 				if flStart && flEnd then
 					flReinforcements = math.min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
