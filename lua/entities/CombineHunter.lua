@@ -325,9 +325,8 @@ function ENT:Initialize()
 	BaseClass.Initialize( self )
 	self:SetModel "models/hunter.mdl"
 	self:SetBloodColor( DONT_BLEED )
-	// The POWER of Combine engineering!
-	self:SetHealth( 32768 )
-	self:SetMaxHealth( 32768 )
+	self:SetHealth( 24576 )
+	self:SetMaxHealth( 24576 )
 	self:SetCollisionBounds( self.vHullMins, self.vHullMaxs )
 	self:PhysicsInitShadow( false, false )
 end
