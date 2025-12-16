@@ -15,7 +15,6 @@ ENT.flRoundsPerMinuteIdle = 800
 ENT.flRoundsPerMinuteLimit = 3000
 
 ENT.flTopSpeed = 1400
-ENT.flAcceleration = 1400
 ENT.flTurnSpeedBase = 200 // When not moving
 ENT.flTurnSpeedSpin = .25 // This is added as we go to full throttle, a multiplier of our current speed
 
@@ -177,7 +176,7 @@ function ENT:Think()
 		if flRoundsPerMinute > 0 then flSpeed = -flSpeed end
 		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * math.abs( flSpeed )
 		local v = self:GetRight() * flSpeed - p:GetVelocity()
-		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), self.flAcceleration ) * FrameTime() )
+		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), flSpeed ) * FrameTime() )
 	end
 	if !IsValid( self.pDriver ) then self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, 0, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 	return BaseClass.Think( self )
