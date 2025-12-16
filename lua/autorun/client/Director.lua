@@ -132,6 +132,9 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				local p = Director_Music_Container()
 				p.m_fExecute = t.Execute
 				p.m_pSource = t
+				p.m_flStartTime = RealTime()
+				local f = p.Time
+				p.m_flEndTime = f && f() || math_Rand( 120, 240 )
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
 				local p = Director_Music_Container()
@@ -319,7 +322,12 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			Director_Music_UpdateInternal( pContainer )
 			if ELayer == DIRECTOR_THREAT then
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * FrameTime() )
-			else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, .1 * FrameTime() ) end
+			else
+				if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then pContainer.m_flVolume = 0 end
+				Director_Music_UpdateInternal( pContainer )
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() * .1 )
+				if pContainer.m_flVolume <= 0 && CurTime() > ( pContainer.m_flEndTime || 0 ) then DIRECTOR_MUSIC[ ELayer ] = nil end
+			end
 		end
 	end
 end )
