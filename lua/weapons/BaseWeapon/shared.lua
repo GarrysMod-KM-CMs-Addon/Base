@@ -293,16 +293,16 @@ if CLIENT then
 		local v = MyTable.flCustomZoomFoV
 		if v then
 			if MyTable.bSniper then
-				local f = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && v || UNIVERSAL_FOV
+				local f = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && v || ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
 				MyTable.flFoV = f
 				return pos, ang, f
 			else
-				local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, v )
+				local f = math_Remap( MyTable.flAimMultiplier, 1, 0, ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ), v )
 				MyTable.flFoV = f
 				return pos, ang, f
 			end
-		else MyTable.flFoV = UNIVERSAL_FOV end
-		return pos, ang, UNIVERSAL_FOV
+		else MyTable.flFoV = ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ) end
+		return pos, ang, ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
 	end
 	local util_TraceLine = util.TraceLine
 	function SWEP:GatherCrosshairPosition( MyTable )
