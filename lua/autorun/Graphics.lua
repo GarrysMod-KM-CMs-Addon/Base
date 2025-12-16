@@ -239,7 +239,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 	local view = {
 		origin = origin,
 		angles = angles,
-		fov = fov,
+		fov = UNIVERSAL_FOV,
 		znear = znear,
 		zfar = zfar,
 		drawviewer = false
