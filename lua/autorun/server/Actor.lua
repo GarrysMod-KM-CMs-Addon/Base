@@ -12,7 +12,7 @@ function Actor_RegisterBehaviour( Name, Data ) __BEHAVIOUR__[ Name ] = Data end
 __ALARMS__ = __ALARMS__ || {}
 __ALARMS_ACTIVE__ = __ALARMS_ACTIVE__ || {}
 
-// Cover: ( Vector vStart, Vector vEnd, Boolean bRightSide )
+// Cover: ( Vector vStart, Vector vEnd, Boolean bRightSide, Table tConnections )
 // CNavArea:GetID() -> SequentialTable[ Cover ]
 __COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. engine.ActiveGamemode() .. ".json" ) || "[]", true )
 __COVERS_DYNAMIC__ = __COVERS_DYNAMIC__ || {} // CNavArea:GetID() -> { Any -> Cover }

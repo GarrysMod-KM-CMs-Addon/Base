@@ -239,7 +239,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 	local view = {
 		origin = origin,
 		angles = angles,
-		fov = UNIVERSAL_FOV,
+		fov = fov,
 		znear = znear,
 		zfar = zfar,
 		drawviewer = false
@@ -293,7 +293,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		local f = pWeapon.CalcView
 		if f then
 			local origin, angles, fov = f( pWeapon, ply, Vector( view.origin ), Angle( view.angles ), view.fov )
-			view.origin, view.angles, view.fov = origin or view.origin, angles or view.angles, fov or view.fov
+			view.origin, view.angles, view.fov = origin || view.origin, angles || view.angles, fov || view.fov
 		end
 	end
 	fMoreEffects( ply, view )

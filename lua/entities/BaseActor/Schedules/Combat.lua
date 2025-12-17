@@ -328,6 +328,117 @@ Actor_RegisterSchedule( "Combat", function( self, sched )
 		else self:SetSchedule "TakeCover" end
 		return
 	end
+	// NOTE: For advancing, there needs to be
+	// A* pathing between covers here...
+	// but I have absolutely no idea how to implement it
+	if self.tCover && ( sched.bAdvance || sched.bRetreat ) then
+		local pPath = sched.pEnemyPath
+		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
+		if !sched.bStartedSearching then
+			self:ComputeFlankPath( pPath, enemy )
+			if !sched.bFromCombatFormation && sched.bAdvance then
+				local i = self:FindPathStackUpLine( pPath, tEnemies )
+				if i then
+					self.iLastEnemyPathStackUpCursor = i
+					pPath:MoveCursorTo( i )
+					local g = pPath:GetCurrentGoal()
+					if g then
+						local b = self:CreateBehaviour "CombatFormation"
+						local v = pPath:GetPositionOnPath( i )
+						b.Vector = v
+						b.Direction = ( pPath:GetPositionOnPath( i + 1 ) - v ):GetNormalized()
+						b:AddParticipant( self )
+						b:GatherParticipants()
+						b:Initialize()
+						return
+					end
+				end
+			end
+			sched.bStartedSearching = true
+		end
+		local vEnemy = enemy:GetPos()
+		local pIterator = sched.pIterator
+		local bAdvance = sched.bAdvance
+		local v = sched.vCoverBounds || self:GatherCoverBounds()
+		sched.vCoverBounds = v
+		local tAllies = self:GetAlliesByClass()
+		local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
+		sched.flBoundingRadiusTwo = f
+		local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
+		local tCovers = {}
+		local tOldCover = self.tCover
+		local d = self.vHullMaxs.x * 4
+		local iLastEnemyPathStackUpCursor = bAdvance && self.iLastEnemyPathStackUpCursor || 0
+		local _, vPos = util_DistanceToLine( self.tCover[ 1 ], self.tCover[ 2 ], vEnemy )
+		pPath:MoveCursorToClosestPosition( vPos )
+		local flInitialCursor = pPath:GetCursorPosition()
+		local tList = {}
+		for iAreaID, tIndices in pairs( self.tCover[ 4 ] || {} ) do
+			for iIndex in pairs( tIndices ) do
+				local tCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
+				if tCover == self.tCover then continue end
+				local _, vPos = util_DistanceToLine( tCover[ 1 ], tCover[ 2 ], vEnemy )
+				pPath:MoveCursorTo( flInitialCursor )
+				pPath:MoveCursorToClosestPosition( vPos, SEEK_AHEAD )
+				table.insert( tList, { tCover, pPath:GetCursorPosition() } )
+			end
+		end
+		table.SortByMember( tList, 2 )
+		for _, t in ipairs( tList ) do
+			local tCover = t[ 1 ]
+			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+			local vDirection = vEnd - vStart
+			local flStep, flStart, flEnd
+			if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
+				flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
+			else
+				flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
+			end
+			vDirection:Normalize()
+			local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
+			vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
+			for iCurrent = flStart, flEnd, flStep do
+				local vCover = vStart + vDirection * iCurrent + vOff
+				pPath:MoveCursorToClosestPosition( vCover )
+				local iCursor = pPath:GetCursorPosition()
+				local dDirection = pPath:GetPositionOnPath( iCursor )
+				pPath:MoveCursor( 1 )
+				dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
+				dDirection[ 3 ] = 0
+				dDirection:Normalize()
+				if util_TraceHull( {
+					start = vCover,
+					endpos = vCover,
+					mins = vMins,
+					maxs = vMaxs,
+					filter = self
+				} ).Hit then continue end
+				local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
+				if !util_TraceLine( {
+					start = v,
+					endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+					filter = self
+				} ).Hit then continue end
+				if tAllies then
+					local b
+					for pAlly in pairs( tAllies ) do
+						if self == pAlly then continue end
+						if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
+					end
+					if b then continue end
+				end
+				local s = self:SetSchedule "TakeCoverMove"
+				if math.abs( self.flCombatState ) < .2 then
+					if sched.bAdvance then s.bTakeCoverAdvance = true else s.bTakeCoverRetreat = true end
+				else
+					if sched.bAdvance then s.bAdvance = true else s.bRetreat = true end
+				end
+				self.vCover = vCover
+				self.tCover = tCover
+				return
+			end
+		end
+	end
 	if self.vCover then
 		local vec = self.vCover
 		self.vActualCover = vec
