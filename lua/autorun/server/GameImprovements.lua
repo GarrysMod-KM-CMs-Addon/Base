@@ -401,6 +401,26 @@ __EVENTS_LENGTH__ = __EVENTS_LENGTH__ || 0 // Don't forget to do this every time
 //	if !__EVENTS__.MyEvent then __EVENTS_LENGTH__ = __EVENTS_LENGTH__ + 1 end
 //	__EVENTS__.MyEvent = function()
 //	end
+DONT_CHANGE_DRAW_SHADOW = {
+	viewmodel = true,
+	predicted_viewmodel = true,
+	gmod_hands = true
+}
+hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue )
+	if !SUN_HAS_A_NAME && CurTime() > 2 then hook.Remove( "EntityKeyValue", "GameImprovements" ) return end
+	if pEntity:GetClass() == "light_environment" then
+		sKey = string.lower( sKey )
+		if sKey == "targetname" && sValue != "" then SUN_HAS_A_NAME = true
+		elseif sKey == "angles" then SUN_ANGLES = Angle( sValue )
+		elseif sKey == "pitch" then SUN_PITCH_OVERRIDE = tonumber( sValue ) || 0
+		elseif sKey == "_light" then
+			local R, G, B, A = sValue:match "(%d+)%s+(%d+)%s+(%d+)%s+(%d+)"
+			R, G, B, A = tonumber( R ) || -1, tonumber( G )|| -1, tonumber( B ) || -1, tonumber( A ) || -1
+			SUN_COLOR = Color( R, G, B )
+			SUN_BRIGHTNESS = A * .01
+		end
+	end
+end )
 hook.Add( "Think", "GameImprovements", function()
 	file.Write( "Covers/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 	file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
@@ -414,7 +434,29 @@ hook.Add( "Think", "GameImprovements", function()
 			iRemaining = iRemaining - 1
 		end
 	end
+	if IsValid( CascadeShadowMapping ) then
+		if SUN_ANGLES then
+			CascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )
+			CascadeShadowMapping:SetYaw( SUN_ANGLES[ 2 ] )
+			CascadeShadowMapping:SetRoll( SUN_ANGLES[ 3 ] )
+			SUN_ANGLES = nil
+		end
+		if SUN_PITCH_OVERRIDE then
+			CascadeShadowMapping:SetPitch( SUN_PITCH_OVERRIDE )
+			SUN_PITCH_OVERRIDE = nil
+		end
+		if SUN_BRIGHTNESS then
+			CascadeShadowMapping:SetBrightness( SUN_BRIGHTNESS )
+			SUN_BRIGHTNESS = nil
+		end
+		if SUN_COLOR then
+			CascadeShadowMapping:SetLightColor( SUN_COLOR:ToVector() )
+			SUN_COLOR = nil
+		end
+	end
 	for _, ent in ents_Iterator() do
+		if ent:GetClass() == "light_environment" then ent:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" ) end
+		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 		if ent.GAME_Think then ent:GAME_Think() end
 		if !ent.GAME_bPhysCollideHook then ent:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end ) ent.GAME_bPhysCollideHook = true end
 		if CEntity_WaterLevel( ent ) > 0 || ent.GAME_bDontIgnite then CEntity_Extinguish( ent ) elseif CEntity_IsOnFire( ent ) then CEntity_Ignite( ent, 999999 ) end

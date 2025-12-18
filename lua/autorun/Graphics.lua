@@ -49,6 +49,24 @@ net.Receive( "DynamicLight", function()
 	end
 end )
 
+hook.Add( "PopulateToolMenu", "CascadeShadowMappingClient", function()
+	spawnmenu.AddToolMenuOption( "Utilities", "User", "CascadeShadowMappingClient", "#CascadeShadowMapping", "", "", function( pPanel )
+		pPanel:ClearControls()
+		pPanel:ControlHelp "#CascadeShadowMappingInformation"
+		local p = pPanel:NumSlider( "#ShadowDepthResolution", "r_flashlightdepthres", 0, 16384, 0 )
+		pPanel:ControlHelp "#ShadowDepthResolutionHelp"
+		p.OnValueChanged = function( self, flValue ) RunConsoleCommand( "r_flashlightdepthres", flValue ) end
+	end )
+end )
+hook.Add( "PopulateToolMenu", "CascadeShadowMappingServer", function()
+	spawnmenu.AddToolMenuOption( "Utilities", "Admin", "CascadeShadowMappingServer", "#CascadeShadowMapping", "", "", function( pPanel )
+		pPanel:ClearControls()
+		pPanel:ControlHelp "#CascadeShadowMappingInformation"
+		local p = pPanel:CheckBox( "#CascadeShadowMapping", "bCascadeShadowMapping" )
+		pPanel:ControlHelp "#CascadeShadowMappingHelp"
+	end )
+end )
+
 local cThirdPerson = CreateClientConVar( "bThirdPerson", "0", true, nil, "Enable thirdperson?", 0, 1 )
 local cThirdPersonShoulder = CreateClientConVar( "bThirdPersonShoulder", "0", true, nil, "Should thirdperson use the left shoulder?", 0, 1 )
 
