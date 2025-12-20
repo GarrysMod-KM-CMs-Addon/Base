@@ -30,7 +30,6 @@ SWEP.vSprintArm = Vector( 1.358, -6.228, -.94 )
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoil = 5
-SWEP.flCrosshairInAccuracy = .01
 
 SWEP.ViewModelFOV = 54
 SWEP.flViewModelY = -4

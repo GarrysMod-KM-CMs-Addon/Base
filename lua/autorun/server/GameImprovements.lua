@@ -417,7 +417,7 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 			local R, G, B, A = sValue:match "(%d+)%s+(%d+)%s+(%d+)%s+(%d+)"
 			R, G, B, A = tonumber( R ) || -1, tonumber( G )|| -1, tonumber( B ) || -1, tonumber( A ) || -1
 			SUN_COLOR = Color( R, G, B )
-			SUN_BRIGHTNESS = A * .01
+			SUN_BRIGHTNESS = A * .004
 		end
 	end
 end )

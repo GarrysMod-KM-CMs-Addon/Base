@@ -32,7 +32,6 @@ SWEP.ViewModelFOV = 62
 SWEP.flViewModelY = -2
 SWEP.vViewModelAim = Vector( -5.82 - SWEP.flViewModelY, -8, 1.255 )
 SWEP.vSprintArm = Vector( .6, -1.228, -1.2 )
-SWEP.flRecoilMultiplierThingy = .4
 
 sound.Add {
 	name = "CombineEnergyBallCharge",

@@ -25,7 +25,6 @@ SWEP.vViewModelAim = Vector( -5.51, -12, 3.145 )
 SWEP.Crosshair = "Pistol"
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.bPistolSprint = true
-SWEP.flRecoilMultiplierThingy = .8
 
 sound.Add {
 	name = "USP_Match_Shot",

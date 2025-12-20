@@ -36,6 +36,14 @@ function Director_GetThreat( pPlayer, pEntity )
 	return DIRECTOR_THREAT_NULL
 end
 
+local cVisibleHostileReinforcementCountDown = CreateConVar(
+	"bVisibleHostileReinforcementCountDown",
+	1,
+	FCVAR_NEVER_AS_STRING,
+	"Allow clients to see how much is left until enemy reinforcements?",
+	0, 1
+)
+
 local VectorZ28 = Vector( 0, 0, 28 )
 hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
@@ -48,10 +56,12 @@ hook.Add( "Tick", "Director", function()
 			if v then v( ply, PlyTable ) end
 		end
 		local flReinforcements, bAlarm
+		local b = !cVisibleHostileReinforcementCountDown:GetBool()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
 			if !IsValid( pEntity ) then continue end
 			if pEntity:NearestPoint( ply:EyePos() ):DistToSqr( ply:EyePos() ) > 16777216/*4096*/ then continue end
 			bAlarm = true
+			if b then continue end
 			if pEntity:Classify() != ply:Classify() then
 				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
 				if flStart && flEnd then

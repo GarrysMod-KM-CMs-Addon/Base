@@ -21,6 +21,8 @@ TRAVERSES_AIR = 4
 
 UNIVERSAL_FOV = 80
 
+BASE_RECOIL_MULTIPLIER_THINGY = .4
+
 physenv.SetPerformanceSettings {
 	MaxVelocity = 999999,
 	MaxAngularVelocity = 999999

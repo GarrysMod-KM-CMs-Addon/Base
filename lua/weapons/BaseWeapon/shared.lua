@@ -24,8 +24,6 @@ SWEP.__WEAPON__ = true
 if CLIENT then
 	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoil = 0
-	SWEP.flAllowRecoilDecreaseTime = 0
-	function SWEP:SetAllowRecoilDecreaseTime() self.flAllowRecoilDecreaseTime = CurTime() + .25 end
 	function SWEP:AddRecoil( flRecoil )
 		self.flCurrentRecoil = self.flCurrentRecoil + flRecoil
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + flRecoil end
@@ -190,7 +188,6 @@ if CLIENT then
 	SWEP.flAimRoll = 45
 	SNIPER_AIMING_MULTIPLIER = .5
 	SNIPER_AIMING_SWAY_MULTIPLIER = .5
-	MOVE_LEFT_ROLL, MOVE_RIGHT_ROLL = -5.625, 5.625
 	local math_cos = math.cos
 	local math_sin = math.sin
 	local math_Clamp = math.Clamp
@@ -248,13 +245,6 @@ if CLIENT then
 		end
 		vViewTargetRatherQuick = vViewTargetRatherQuick + vBezier
 		vViewTargetRatherQuickAngle = vViewTargetRatherQuickAngle + vBezierAngle
-		local bLeft, bRight = CPlayer_KeyDown( ply, IN_MOVELEFT ), CPlayer_KeyDown( ply, IN_MOVERIGHT )
-		if bLeft && bRight then
-		elseif bLeft then
-			vTargetAngle.z = vTargetAngle.z + MOVE_LEFT_ROLL
-		elseif bRight then
-			vTargetAngle.z = vTargetAngle.z + MOVE_RIGHT_ROLL
-		end
 		if bBezierAllowOff && ( CurTime() <= self:GetNextPrimaryFire() + .1 || CPlayer_KeyDown( ply, IN_ZOOM ) ) then
 			vTarget = vTarget - vBezier
 			vTargetAngle = vTargetAngle - vBezierAngle
@@ -415,7 +405,7 @@ if CLIENT then
 				vTargetAngle.z = vTargetAngle.z + 45
 			end
 			local bOnGround = CEntity_IsOnGround( ply )
-			if CPlayer_InVehicle( ply ) then
+			if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
 				bOnGroundLast = true
 			elseif bOnGround then
@@ -424,27 +414,17 @@ if CLIENT then
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 1 )
 				else
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
-					if bSliding || CEntity_GetNW2Int( ply, "CTRL_Peek" ) == COVER_PEEK_NONE && CurTime() > ( self:GetNextPrimaryFire() + .2 ) && CPlayer_KeyDown( ply, IN_DUCK ) && !bZoom then
-						vTargetAngle.x = vTargetAngle.x - 11.25
-						vTarget.z = vTarget.z + 3 + MyTable.flViewModelZ * 12
-						vTarget.z = vTarget.x + 3 + MyTable.flViewModelZ * 3
-						if !bSliding then
-							local flVelocity = CEntity_GetVelocity( ply ):Length()
-							if flVelocity > 10 then
-								local flBreathe = RealTime() * 18
-								local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * 4 * MyTable.flAimMultiplier * MyTable.flBobScale
-								vTarget = vTarget - Vector( ( -math_cos( flBreathe * .5 ) / 5 ) * f, 0, 0 )
-								vTargetAngle = vTargetAngle - Vector( ( math_Clamp( math_cos( flBreathe ), -.3, .3 ) * 1.2 ) * f, ( -math_cos( flBreathe * .5 ) * 1.2 ) * f, 0 )
-							end
-						end
-					else
-						local flVelocity = CEntity_GetVelocity( ply ):Length()
-						if flVelocity > 10 then
-							local flBreathe = RealTime() * 16
-							local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale
-							vTarget = vTarget - Vector( ( -math_cos( flBreathe * .5 ) / 5 ) * f, 0, 0 )
-							vTargetAngle = vTargetAngle - Vector( ( math_Clamp( math_cos( flBreathe ), -.3, .3 ) * 1.2 ) * f, ( -math_cos( flBreathe * .5 ) * 1.2 ) * f, 0 )
-						end
+					local flVelocity = CEntity_GetVelocity( ply ):Length()
+					if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
+						vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - 4 * flVelocity / CPlayer_GetWalkSpeed( ply )
+					elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
+						vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+					end
+					if flVelocity > 10 then
+						local flBreathe = RealTime() * 16
+						local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale
+						vTarget = vTarget - Vector( ( -math_cos( flBreathe * .5 ) / 5 ) * f, 0, 0 )
+						vTargetAngle = vTargetAngle - Vector( ( math_Clamp( math_cos( flBreathe ), -.3, .3 ) * 1.2 ) * f, ( -math_cos( flBreathe * .5 ) * 1.2 ) * f, 0 )
 					end
 				end
 			else
@@ -497,9 +477,16 @@ if CLIENT then
 				end
 			end
 		end
-		if CurTime() > MyTable.flAllowRecoilDecreaseTime then
-			MyTable.flCurrentRecoil = Lerp( math_min( 1, ( game.SinglePlayer() && 8 || 4 ) * FrameTime() ), MyTable.flCurrentRecoil, 0 )
+		local f
+		if MyTable.Primary.Automatic then
+			f = MyTable.flRecoil * ( 1 / MyTable.Primary_flDelay )
+			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
+		else
+			f = MyTable.flRecoil * ( 1 / MyTable.Primary_flDelay ) * .5
+			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
 		end
+		f = f + MyTable.flRecoil / MyTable.flRecoilMultiplierThingy
+		if MyTable.flCurrentRecoil > f then MyTable.flCurrentRecoil = f end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
 		flAimTiltTime = Lerp( math_min( 1, 10 * FrameTime() ), flAimTiltTime, bZoom && flRoll || 0 )
