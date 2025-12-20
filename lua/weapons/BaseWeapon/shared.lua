@@ -46,7 +46,7 @@ SWEP.sDryFire = "Weapon_Pistol.Empty"
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetOwner = CEntity.GetOwner
 SWEP.bDisAllowPrimaryInCover = true
-function SWEP:CanPrimaryAttack( bIgnoreAmmo )
+function SWEP:CanPrimaryAttack( MyTable, bIgnoreAmmo )
 	// Believe it or not, some people (including VALVe!) have the AUDACITY to ignore this check!
 	if CurTime() <= self:GetNextPrimaryFire() then return end
 	local owner = CEntity_GetOwner( self )
@@ -565,3 +565,4 @@ sound.Add {
 }
 
 weapons.Register( SWEP, "BaseWeapon" )
+
