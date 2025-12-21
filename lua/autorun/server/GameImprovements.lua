@@ -272,6 +272,11 @@ hook.Add( "GetFallDamage", "GameImprovements", function( ply, flSpeed )
 	return flRatio * 32
 end )
 
+hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll )
+	local f = pOwner.OnBulletImpact
+	if f then pRagdoll.OnBulletImpact = f end
+end )
+
 TRACER_COLOR = {
 	Bullet = { 255, 48, 0, 1024 },
 	AR2Tracer = { 48, 255, 255, 1024 },
@@ -313,6 +318,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		if t.damage && bTarget then pTarget:TakeDamageInfo( dDamage ) end
 		local b = t.effects
 		if !bTracer || !b then return { damage = false, effects = b } end
+		t = pTarget.OnBulletImpact
+		if t then t( pTarget, dDamage ) end
 		local pt = ents.Create "env_projectedtexture"
 		pt:SetPos( tr.StartPos )
 		pt:SetAngles( ( tr.HitPos - tr.StartPos ):GetNormalized():Angle() )

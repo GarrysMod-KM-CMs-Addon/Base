@@ -94,7 +94,7 @@ function Director_Music_UpdateInternal( self, ... )
 		pSound:ChangePitch( tData[ 3 ] )
 	end
 	self.tHandles = tNewHandles
-	return self:m_fExecute( ... )
+	return self.m_pTable.Execute( self, ... )
 end
 
 DIRECTOR_MUSIC_INTENSITY = 0 // Intensity right now
@@ -130,16 +130,14 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
 			if t then
 				local p = Director_Music_Container()
-				p.m_fExecute = t.Execute
-				p.m_pSource = t
+				p.m_pTable = t
 				p.m_flStartTime = RealTime()
 				local f = p.Time
 				p.m_flEndTime = f && f() || math_Rand( 120, 240 )
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
 				local p = Director_Music_Container()
-				p.m_fExecute = function() end
-				p.m_pSource = {}
+				p.m_pTable = { Execute = function() end }
 				DIRECTOR_MUSIC[ ELayer ] = p
 			end
 		end
@@ -296,8 +294,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 	if DIRECTOR_MUSIC_LAST_THREAT < DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
 		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT )
-		DIRECTOR_TRANSITION.m_fExecute = t.Execute
-		DIRECTOR_TRANSITION.m_pSource = t
+		DIRECTOR_TRANSITION.m_pTable = t
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_bToCombat = true
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
@@ -306,8 +303,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 	elseif DIRECTOR_MUSIC_LAST_THREAT >= DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
 		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT )
-		DIRECTOR_TRANSITION.m_fExecute = t.Execute
-		DIRECTOR_TRANSITION.m_pSource = t
+		DIRECTOR_TRANSITION.m_pTable = t
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT

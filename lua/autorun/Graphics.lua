@@ -322,7 +322,8 @@ __HUD_SHOULD_NOT_DRAW__ = {
 	CHudHistoryResource = true,
 	CHudGeiger = true,
 	CHudDamageIndicator = true,
-	CHudHealth = true
+	CHudHealth = true,
+	CHudHistoryResource = true
 }
 hook.Add( "HUDShouldDraw", "Graphics", function( sName ) return __HUD_SHOULD_NOT_DRAW__[ sName ] == nil end )
 

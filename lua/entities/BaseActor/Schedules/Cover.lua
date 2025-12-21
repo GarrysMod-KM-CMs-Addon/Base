@@ -12,108 +12,19 @@ include "CoverUnReachable.lua"
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
 
-Actor_RegisterSchedule( "TakeCover", function( self, sched )
-	local tEnemies = sched.tEnemies || self.tEnemies
+Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
+	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return {} end
 	local enemy = sched.Enemy
-	if !IsValid( enemy ) then enemy = self.Enemy if !IsValid( enemy ) then return {} end end
-	local enemy, trueenemy = self:SetupEnemy( enemy )
-	self.bWantsCover = true
-	if self.vCover then
-		sched.pIterator = nil
-		local vec = self.vCover
-		self.vActualCover = self.vCover
-		local tAllies = self:GetAlliesByClass()
-		if tAllies then
-			local f = self:BoundingRadius()
-			f = f * f
-			for ally in pairs( tAllies ) do
-				if self == ally then continue end
-				if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil return end
-			end
-		end
-		local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
-		local v = vec + Vector( 0, 0, vMaxs[ 3 ] )
-		// Don't even try to repath often!
-		local pEnemyPath = self.pLastEnemyPath || sched.pEnemyPath
-		if !pEnemyPath then
-			pEnemyPath = Path "Follow"
-			self:ComputePath( pEnemyPath, enemy:GetPos() )
-			sched.pEnemyPath = pEnemyPath
-		end
-		pEnemyPath:MoveCursorToClosestPosition( vec )
-		local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
-		pEnemyPath:MoveCursor( 1 )
-		d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
-		d:Normalize()
-		if !util_TraceLine( {
-			start = v,
-			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-			mask = MASK_SHOT_HULL,
-			filter = self
-		} ).Hit then self.vCover = nil self.tCover = nil return end
-		if !sched.Path then sched.Path = Path "Follow" end
-		self:ComputePath( sched.Path, self.vCover )
-		local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] )
-		if util_TraceLine( {
-			start = v,
-			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-			filter = self
-		} ).Hit then
-			local f = self.flPathTolerance
-			if self:GetPos():DistToSqr( vec ) <= ( f * f ) then return true end
-		end
-		local tNearestEnemies = {}
-		for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-		table.SortByMember( tNearestEnemies, 2, true )
-		local c = self:GetWeaponClipPrimary()
-		if c != -1 && c <= 0 then self:WeaponReload() end
-		local tAllies, pEnemy = self:GetAlliesByClass()
-		for _, d in ipairs( tNearestEnemies ) do
-			local ent = d[ 1 ]
-			local v = ent:GetPos() + ent:OBBCenter()
-			local tr = util_TraceLine {
-				start = self:GetShootPos(),
-				endpos = v,
-				mask = MASK_SHOT_HULL,
-				filter = { self, ent }
-			}
-			if !tr.Hit || tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-				local b = true
-				if ent.GAME_tSuppressionAmount then
-					local flThreshold, flSoFar = ent:Health() * .1, 0
-					for other, am in pairs( ent.GAME_tSuppressionAmount ) do
-						if other == self || self:Disposition( other ) != D_LI || CurTime() <= ( other.flWeaponReloadTime || 0 ) then continue end
-						flSoFar = flSoFar + am
-						if flSoFar > flThreshold then continue end
-					end
-					if flSoFar > flThreshold then continue end
-				else b = true end
-				if b then
-					self.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-					self.vaAimTargetPose = self.vaAimTargetBody
-					pEnemy = ent
-					if self:CanAttackHelper( ent:GetPos() + ent:OBBCenter() ) then self:RangeAttack() end
-					break
-				end
-			end
-		end
-		if IsValid( pEnemy ) then
-			self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 )
-		else
-			local goal = sched.Path:GetCurrentGoal()
-			if goal then
-				self.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
-				self.vaAimTargetPose = self.vaAimTargetBody
-				self:ModifyMoveAimVector( self.vaAimTargetBody, self.flTopSpeed, 1 )
-			end
-			self:MoveAlongPathToCover( sched.Path )
-		end
-	else
+	if !IsValid( enemy ) then enemy = MyTable.Enemy if !IsValid( enemy ) then return {} end end
+	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
+	MyTable.bWantsCover = true
+	local vec = MyTable.vCover
+	if !vec then
 		local pPath = sched.pEnemyPath
 		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-		self:ComputeFlankPath( pPath, enemy )
-		self.vCover = nil
+		MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
+		MyTable.vCover = nil
 		local tNearestEnemies = {}
 		for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
 		table.SortByMember( tNearestEnemies, 2, true )
@@ -127,7 +38,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched )
 				mask = MASK_SHOT_HULL,
 				filter = { self, ent }
 			}
-			if !tr.Hit || tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
+			if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
 				local b = true
 				if ent.GAME_tSuppressionAmount then
 					local flThreshold, flSoFar = ent:Health() * .1, 0
@@ -139,11 +50,11 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched )
 					if flSoFar > flThreshold then continue end
 				else b = true end
 				if b then
-					self.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-					self.vaAimTargetPose = self.vaAimTargetBody
-					if self:GetWeaponClipPrimary() <= 0 then self:WeaponReload() end
-					if self:CanAttackHelper( ent:GetPos() + ent:OBBCenter() ) then
-						self:RangeAttack()
+					MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
+					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+					if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then MyTable.WeaponReload( self, MyTable ) end
+					if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then
+						MyTable.RangeAttack( self )
 					end
 					break
 				end
@@ -152,20 +63,20 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched )
 		self:Stand( self:GetCrouchTarget() )
 		local pIterator = sched.pIterator
 		if !sched.pIterator then
-			pIterator = self:SearchAreas()
+			pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
 			sched.pIterator = pIterator
 		end
 		local vEnemy = enemy:GetPos()
-		local v = sched.vCoverBounds || self:GatherCoverBounds()
+		local v = sched.vCoverBounds || MyTable.GatherCoverBounds( self, MyTable )
 		sched.vCoverBounds = v
-		local tAllies = self:GetAlliesByClass()
+		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
 		local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
 		sched.flBoundingRadiusTwo = f
-		local vMins, vMaxs = sched.vMins || ( self.vHullDuckMins || self.vHullMins ) + Vector( 0, 0, self.loco:GetStepHeight() ), self.vHullDuckMaxs || self.vHullMaxs
+		local vMins, vMaxs = sched.vMins || ( MyTable.vHullDuckMins || MyTable.vHullMins ) + Vector( 0, 0, MyTable.loco:GetStepHeight() ), MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 		sched.vMins = vMins
 		local tCovers = {}
-		local d = self.vHullMaxs.x * 4
-		for _ = 0, 64 do
+		local d = MyTable.vHullMaxs.x * 4
+		for _ = 0, 32 do
 			local pArea = pIterator()
 			if pArea == nil then
 				// REPEAT!!! AND TRY HARDER!!!
@@ -218,11 +129,100 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched )
 						end
 						if b then continue end
 					end
-					self.vCover = vCover
-					self.tCover = tCover
+					MyTable.vCover = vCover
+					MyTable.tCover = tCover
 					return
 				end
 			end
 		end
+		return
+	end
+	sched.pIterator = nil
+	MyTable.vActualCover = MyTable.vCover
+	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	if tAllies then
+		local f = self:BoundingRadius()
+		f = f * f
+		for ally in pairs( tAllies ) do
+			if self == ally then continue end
+			if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil return end
+		end
+	end
+	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
+	local v = vec + Vector( 0, 0, vMaxs[ 3 ] )
+	// Don't even try to repath often!
+	local pEnemyPath = MyTable.pLastEnemyPath || sched.pEnemyPath
+	if !pEnemyPath then
+		pEnemyPath = Path "Follow"
+		MyTable.ComputeFlankPath( self, pEnemyPath, enemy, MyTable )
+		sched.pEnemyPath = pEnemyPath
+	end
+	pEnemyPath:MoveCursorToClosestPosition( vec )
+	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
+	pEnemyPath:MoveCursor( 1 )
+	d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
+	d:Normalize()
+	if !util_TraceLine( {
+		start = v,
+		endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+		mask = MASK_SHOT_HULL,
+		filter = self
+	} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
+	if !sched.Path then sched.Path = Path "Follow" end
+	MyTable.ComputePath( self, sched.Path, MyTable.vCover, MyTable )
+	local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] )
+	if util_TraceLine( {
+		start = v,
+		endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+		filter = self
+	} ).Hit then
+		local f = MyTable.flPathTolerance
+		if self:GetPos():DistToSqr( vec ) <= ( f * f ) then return true end
+	end
+	local tNearestEnemies = {}
+	for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
+	table.SortByMember( tNearestEnemies, 2, true )
+	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
+	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
+	local tAllies, pEnemy = MyTable.GetAlliesByClass( self, MyTable )
+	for _, d in ipairs( tNearestEnemies ) do
+		local ent = d[ 1 ]
+		local v = ent:GetPos() + ent:OBBCenter()
+		local tr = util_TraceLine {
+			start = self:GetShootPos(),
+			endpos = v,
+			mask = MASK_SHOT_HULL,
+			filter = { self, ent }
+		}
+		if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
+			local b = true
+			if tr.Hit && ent.GAME_tSuppressionAmount then
+				local flThreshold, flSoFar = ent:Health() * .1, 0
+				for other, am in pairs( ent.GAME_tSuppressionAmount ) do
+					if other == self || self:Disposition( other ) != D_LI || CurTime() <= ( other.flWeaponReloadTime || 0 ) then continue end
+					flSoFar = flSoFar + am
+					if flSoFar > flThreshold then continue end
+				end
+				if flSoFar > flThreshold then continue end
+			else b = true end
+			if b then
+				MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
+				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+				pEnemy = ent
+				if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+				break
+			end
+		end
+	end
+	if IsValid( pEnemy ) then
+		MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 )
+	else
+		local goal = sched.Path:GetCurrentGoal()
+		if goal then
+			MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable )
+		end
+		MyTable.MoveAlongPathToCover( self, sched.Path )
 	end
 end )

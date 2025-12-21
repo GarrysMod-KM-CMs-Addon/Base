@@ -316,31 +316,31 @@ function ENT:DLG_State_Retreat() end // “PULL BAAACK!!!” *Burst of gunfire.*
 
 ENT.flLastAttackCombatState = 1
 
-Actor_RegisterSchedule( "RangeAttack", function( self, sched )
-	self.vActualCover = self.vCover
-	self.vActualTarget = sched.vFrom
-	self.bSuppressing = true
-	local f, o = self.flCombatState, self.flLastAttackCombatState
+Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
+	MyTable.vActualCover = MyTable.vCover
+	MyTable.vActualTarget = sched.vFrom
+	MyTable.bSuppressing = true
+	local f, o = MyTable.flCombatState, MyTable.flLastAttackCombatState
 	if f < -.2 && o >= -.2 then
-		self:DLG_State_Retreat()
+		MyTable.DLG_State_Retreat( self, MyTable )
 	elseif f <= .2 && o > .2 then
-		self:DLG_State_TakeCover()
+		MyTable.DLG_State_TakeCover( self, MyTable )
 	end
-	self.flLastAttackCombatState = f
-	local enemy, trueenemy = self:SetupEnemy( sched.Enemy )
+	MyTable.flLastAttackCombatState = f
+	local enemy, trueenemy = MyTable.SetupEnemy( self, sched.Enemy, MyTable )
 	if !IsValid( enemy ) || !sched.vFrom then return {} end
-	if !self:CanExpose() then self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" ) self:DLG_Suppressed() return end
-	local tEnemies = sched.tEnemies || self.tEnemies
+	if !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) MyTable.DLG_Suppressed( self, MyTable ) return end
+	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return {} end
-	local c = self:GetWeaponClipPrimary()
-	if c != -1 && c <= 0 then self:WeaponReload() end
+	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
+	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
 	if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
 	sched.bWantsCover = sched.bMove
-	local tAllies = self:GetAlliesByClass()
-	if !self.vCover then
+	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	if !MyTable.vCover then
 		if table.Count( tAllies ) > 1 then
 			local bNoEnemy = true
-			for ent in pairs( self.tEnemies ) do
+			for ent in pairs( MyTable.tEnemies ) do
 				if !IsValid( ent ) then continue end
 				local v = ent:GetPos() + ent:OBBCenter()
 				local tr = util_TraceLine {
@@ -363,13 +363,13 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 					if b then bNoEnemy = nil break end
 				end
 			end
-			if bNoEnemy then self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" ) return end
+			if bNoEnemy then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
 		end
 	end
-	self.bSuppressing = true
+	MyTable.bSuppressing = true
 	if sched.bSuppressing then
-		local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-		if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
+		local vStand, vDuck = Vector( 0, 0, MyTable.vHullMaxs.z )
+		if MyTable.vHullDuckMaxs && vStand.z != MyTable.vHullDuckMaxs.z then vDuck = Vector( 0, 0, MyTable.vHullDuckMaxs.z ) end
 		local vEnemy = enemy:GetPos() + enemy:OBBCenter()
 		local trStand, trDuck = util_TraceLine {
 			start = sched.vFrom + vStand,
@@ -401,17 +401,17 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 				filter = { self, enemy, trueenemy }
 			}
 		end
-		if trStand.Hit && ( !trDuck || trDuck.Hit ) then self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" ) return end
+		if trStand.Hit && ( !trDuck || trDuck.Hit ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
 		if !sched.Path then sched.Path = Path "Follow" end
-		self:ComputePath( sched.Path, sched.vFrom )
+		MyTable.ComputePath( self, sched.Path, sched.vFrom, MyTable )
 		local flHealth = enemy:Health()
 		local ws, w = 0 // Weapon Strength
-		for wep in pairs( self.tWeapons ) do
+		for wep in pairs( MyTable.tWeapons ) do
 			local t = wep.Primary_flDelay || 0
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + self.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
 		local trCurStand, trCurDuck = util_TraceLine {
@@ -435,8 +435,8 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 			mask = MASK_SHOT_HULL,
 			filter = { self, enemy, trueenemy }
 		} ).Hit then return false end
-		local f = self.flPathTolerance
-		local vMins, vMaxs = self:GatherShootingBounds()
+		local f = MyTable.flPathTolerance
+		local vMins, vMaxs = MyTable.GatherShootingBounds( self, MyTable )
 		if self:GetPos():DistToSqr( sched.vFrom ) <= ( f * f ) && !util_TraceHull( {
 			start = self:GetShootPos(),
 			endpos = v,
@@ -445,37 +445,37 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 			maxs = vMaxs,
 			filter = { self, enemy, trueenemy }
 		} ).Hit then
-			if !sched.Time then sched.Time = CurTime() + math.Rand( self.flShootTimeMin, self.flShootTimeMax )
+			if !sched.Time then sched.Time = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax )
 			elseif sched.Time == -1 then
 				local b = true
 				for ally in pairs( tAllies ) do if self != ally && IsValid( ally ) && ally.bWantsCover then b = nil break end end
 				if b then
-					self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" )
+					MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 					return
 				end
 			elseif CurTime() > sched.Time then
 				local b = true
 				for ally in pairs( tAllies ) do if self != ally && IsValid( ally ) && ally.bWantsCover then sched.Time = -1 b = nil break end end
 				if b then
-					self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" )
+					MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 					return
 				end
 			end
-			if !sched.bWasInShootPosition then self:DLG_Suppressing( enemy ) end
+			if !sched.bWasInShootPosition then MyTable.DLG_Suppressing( self, enemy, MyTable ) end
 			sched.bWasInShootPosition = true
 			if !trDuck || trDuck && trDuck.Hit then
 				self:Stand( 1 )
 			elseif trDuck then
 				self:Stand( sched.bDuck && 0 || 1 )
 			end
-			self.vaAimTargetBody = v
-			self.vaAimTargetPose = self.vaAimTargetBody
-			if self:CanAttackHelper( v ) then self:RangeAttack() end
+			MyTable.vaAimTargetBody = v
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			if MyTable.CanAttackHelper( self, v, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
 			local tNearestEnemies = {}
 			for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
 			table.SortByMember( tNearestEnemies, 2, true )
-			local tAllies, pEnemy = self:GetAlliesByClass()
+			local tAllies, pEnemy = MyTable.GetAlliesByClass( self, MyTable )
 			for _, d in ipairs( tNearestEnemies ) do
 				local ent = d[ 1 ]
 				local v = ent:GetPos() + ent:OBBCenter()
@@ -485,7 +485,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 					mask = MASK_SHOT_HULL,
 					filter = { self, ent }
 				}
-				if !tr.Hit || tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
+				if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
 					local b = true
 					if ent.GAME_tSuppressionAmount then
 						local flThreshold, flSoFar = ent:Health() * .1, 0
@@ -497,47 +497,47 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 						if flSoFar > flThreshold then continue end
 					else b = true end
 					if b then
-						self.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-						self.vaAimTargetPose = self.vaAimTargetBody
+						MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
+						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 						pEnemy = ent
-						if self:CanAttackHelper( ent:GetPos() + ent:OBBCenter() ) then self:RangeAttack() end
+						if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 						break
 					end
 				end
 			end
 			if IsValid( pEnemy ) then
 				if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-				local flDist = self.flWalkSpeed * 4
+				local flDist = MyTable.flWalkSpeed * 4
 				flDist = flDist * flDist
 				if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-					local flDist = self.flRunSpeed * 4
+					local flDist = MyTable.flRunSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-						self:MoveAlongPath( sched.Path, self.flTopSpeed, 1 )
-					else self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 ) end
-				else self:MoveAlongPath( sched.Path, self.flWalkSpeed, 0 ) end
+						MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+				else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 			else
 				local goal = sched.Path:GetCurrentGoal()
 				if goal then
-					self.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
-					self.vaAimTargetPose = self.vaAimTargetBody
-					if sched.bMove then self:ModifyMoveAimVector( self.vaAimTargetBody, self.flTopSpeed, 1 ) end
+					MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
+					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+					if sched.bMove then MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable ) end
 				end
 				if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-				local flDist = self.flWalkSpeed * 4
+				local flDist = MyTable.flWalkSpeed * 4
 				flDist = flDist * flDist
 				if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-					local flDist = self.flRunSpeed * 4
+					local flDist = MyTable.flRunSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-						self:MoveAlongPath( sched.Path, self.flTopSpeed, 1 )
-					else self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 ) end
-				else self:MoveAlongPath( sched.Path, self.flWalkSpeed, 0 ) end
+						MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+				else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 			end
 		end
 	else
-		local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-		if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
+		local vStand, vDuck = Vector( 0, 0, MyTable.vHullMaxs.z )
+		if MyTable.vHullDuckMaxs && vStand.z != MyTable.vHullDuckMaxs.z then vDuck = Vector( 0, 0, MyTable.vHullDuckMaxs.z ) end
 		local v = enemy:GetPos() + enemy:OBBCenter()
 		local trStand, trDuck = util_TraceLine {
 			start = sched.vFrom + vStand,
@@ -553,9 +553,9 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 				filter = { self, enemy, trueenemy }
 			}
 		end
-		if trStand.Hit && ( !trDuck || trDuck.Hit ) then self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" ) return end
+		if trStand.Hit && ( !trDuck || trDuck.Hit ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
 		if !sched.Path then sched.Path = Path "Follow" end
-		self:ComputePath( sched.Path, sched.vFrom )
+		MyTable.ComputePath( self, sched.Path, sched.vFrom, MyTable )
 		local flHealth = enemy:Health()
 		local ws, w = 0 // Weapon Strength
 		for wep in pairs( self.tWeapons ) do
@@ -563,38 +563,38 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + self.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
-		if IsValid( w ) then self:SetActiveWeapon( w ) end
-		local f = self.flPathTolerance
+		if IsValid( w ) then MyTable.SetActiveWeapon( self, w, MyTable ) end
+		local f = MyTable.flPathTolerance
 		if self:GetPos():DistToSqr( sched.vFrom ) <= ( f * f ) && ( !trStand.Hit || trDuck && !trDuck.Hit ) then
-			if !sched.Time then sched.Time = CurTime() + math.Rand( self.flShootTimeMin, self.flShootTimeMax )
+			if !sched.Time then sched.Time = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax )
 			elseif sched.Time == -1 then
 				local b = true
 				if tAllies then for ally in pairs( tAllies ) do if self != ally && IsValid( ally ) && ally.bWantsCover then b = nil break end end end
 				if b then
-					self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" )
+					MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 					return
 				end
 			elseif CurTime() > sched.Time then
 				local b = true
 				if tAllies then for ally in pairs( tAllies ) do if self != ally && IsValid( ally ) && ally.bWantsCover then sched.Time = -1 b = nil break end end end
 				if b then
-					self:SetSchedule( sched.bMove && "TakeCoverMove" || "TakeCover" )
+					MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 					return
 				end
 			end
-			if !sched.bWasInShootPosition then self:DLG_FiringAtAnExposedTarget( enemy ) end
+			if !sched.bWasInShootPosition then MyTable.DLG_FiringAtAnExposedTarget( self, enemy, MyTable ) end
 			sched.bWasInShootPosition = true
 			if !trDuck || trDuck && trDuck.Hit then
 				self:Stand( 1 )
 			elseif trDuck then
 				self:Stand( sched.bDuck && 0 || 1 )
 			end
-			self.vaAimTargetBody = enemy:GetPos() + enemy:OBBCenter()
-			self.vaAimTargetPose = self.vaAimTargetBody
-			if self:CanAttackHelper( enemy:GetPos() + enemy:OBBCenter() ) then self:RangeAttack() end
+			MyTable.vaAimTargetBody = enemy:GetPos() + enemy:OBBCenter()
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			if MyTable.CanAttackHelper( self, enemy:GetPos() + enemy:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
 			if sched.bMove then
 				local tNearestEnemies = {}
@@ -610,53 +610,53 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched )
 						mask = MASK_SHOT_HULL,
 						filter = { self, ent }
 					}
-					if !tr.Hit || tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
+					if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
 						local b = true
-						if !tr.Hit && CurTime() > self.flWeaponPrimaryVolleyTime && ent.GAME_tSuppressionAmount then
+						if !tr.Hit && CurTime() > MyTable.flWeaponPrimaryVolleyTime && ent.GAME_tSuppressionAmount then
 							local flThreshold = ent:Health() * .1
 							for other, am in pairs( ent.GAME_tSuppressionAmount ) do
 								if other != self && am > flThreshold then b = nil break end
 							end
 						end
 						if b then
-							self.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-							self.vaAimTargetPose = self.vaAimTargetBody
+							MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
+							MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 							pEnemy = ent
-							if self:CanAttackHelper( ent:GetPos() + ent:OBBCenter() ) then self:RangeAttack() end
+							if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 							break
 						end
 					end
 				end
 				if IsValid( pEnemy ) then
 					if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-					local flDist = self.flWalkSpeed * 4
+					local flDist = MyTable.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = self.flRunSpeed * 4
+						local flDist = MyTable.flRunSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-							self:MoveAlongPath( sched.Path, self.flTopSpeed, 1 )
-						else self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 ) end
-					else self:MoveAlongPath( sched.Path, self.flWalkSpeed, 0 ) end
+							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				else
 					local goal = sched.Path:GetCurrentGoal()
 					if goal then
-						self.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
-						self.vaAimTargetPose = self.vaAimTargetBody
-						if sched.bMove then self:ModifyMoveAimVector( self.vaAimTargetBody, self.flTopSpeed, 1 ) end
+						MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
+						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+						if sched.bMove then MyTable.ModifyMoveAimVector( MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1 ) end
 					end
 					if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
 					local flDist = self.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = self.flRunSpeed * 4
+						local flDist = MyTable.flRunSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-							self:MoveAlongPath( sched.Path, self.flTopSpeed, 1 )
-						else self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 ) end
-					else self:MoveAlongPath( sched.Path, self.flWalkSpeed, 0 ) end
+							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				end
-			else self:MoveAlongPath( sched.Path, self.flWalkSpeed, 0 ) end
+			else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 		end
 	end
 end )

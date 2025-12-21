@@ -12,6 +12,12 @@ ENT.bCanDuckMove = true
 ENT.bCanDuckMoveShoot = true
 ENT.bCanSlide = true
 
+function ENT:OnBulletImpact( dDamage )
+	local ed = EffectData()
+	ed:SetOrigin( dDamage:GetDamagePosition() )
+	util.Effect( "BloodImpact", ed )
+end
+
 function ENT:GetSlideLength() return QuickSlide_CalcLength( self ) end
 
 function ENT:MoveAlongPathToCover( Path, tFilter )

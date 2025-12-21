@@ -3,6 +3,8 @@ ENT.__ALARM__ = true
 // 0 means audible when visible
 ENT.flAudibleDistSqr = 0
 
+local GENERAL_AREA_SIZE_SQR = 4096 * 4096
+
 function ENT:Initialize()
 	self:SetUseType( SIMPLE_USE )
 	local iClass = self:Classify()
@@ -33,11 +35,7 @@ end )
 ENT.iDefaultClass = 0
 ENT.iClass = 0
 function ENT:Classify() return self:GetNPCClass() end
-function ENT:GetNPCClass()
-	local pCaller = self.pCaller
-	if IsValid( pCaller ) && pCaller.GetNPCClass then return pCaller:GetNPCClass() end
-	return self.iClass || self.iDefaultClass
-end
+function ENT:GetNPCClass() return self.iLastCallerClass || self.iClass || self.iDefaultClass end
 function ENT:SetNPCClass( iClass )
 	local iPreviousClass = self:GetNPCClass()
 	local t = __ALARMS__[ iPreviousClass ]
@@ -56,14 +54,36 @@ ENT.flTelepathyRangeSqr = 4194304/*2048*/
 function ENT:Think()
 	local f = self.flReinforcementEndTime
 	if f && CurTime() > f then
-		local t = __ALARMS__[ self:Classify() ]
+		local iClass = self:GetNPCClass()
+		local f = __ALARM_REINFORCEMENTS__[ iClass ]
+		local vPos = self:GetPos() + self:OBBCenter()
+		if f then f( self, vPos, 1 ) end
+		local t = __ALARMS__[ iClass ]
 		if t then
-			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
 			for ent in pairs( t ) do
+				if ent != self && ent:NearestPoint( vPos ):DistToSqr( vPos ) > GENERAL_AREA_SIZE_SQR then continue end
 				ent.bIsOn = nil
+				ent.pCaller = nil
+				ent.iLastCallerClass = nil
+				ent.bSpawnedReinforcements = nil
 				ent.flReinforcementStartTime = nil
 				ent.flReinforcementEndTime = nil
-				ent.flCoolDown = CurTime() + math.Rand( 45, 60 )
+				ent.flCoolDown = CurTime() + math.Rand( 90, 180 )
+			end
+		end
+		if ( self.iClass || self.iDefaultClass ) == CLASS_NONE then
+			local t = __ALARMS__[ CLASS_NONE ]
+			if t then
+				for ent in pairs( t ) do
+					if ent != self && ent:NearestPoint( vPos ):DistToSqr( vPos ) > GENERAL_AREA_SIZE_SQR then continue end
+					ent.bIsOn = nil
+					ent.pCaller = nil
+					ent.iLastCallerClass = nil
+					ent.bSpawnedReinforcements = nil
+					ent.flReinforcementStartTime = nil
+					ent.flReinforcementEndTime = nil
+					ent.flCoolDown = CurTime() + math.Rand( 90, 180 )
+				end
 			end
 		end
 	end
@@ -71,22 +91,24 @@ function ENT:Think()
 	return true
 end
 
-function ENT:TurnOn( ent )
+function ENT:TurnOn( ent, pCallerOverride )
 	if ent.__ALARM__ || self:CanToggle( ent ) then
 		self.bIsOn = true
-		self.pCaller = ent
+		local pCaller = IsValid( pCallerOverride ) && pCallerOverride || ent
+		self.pCaller = pCaller
+		local f = pCaller.GetNPCClass
+		if f then self.iLastCallerClass = f( pCaller ) end
 		self.bSpawnedReinforcements = nil
-		// We don't actually do this yet, since reinforcements are not finished
-		//	self.flReinforcementStartTime = CurTime()
-		//	self.flReinforcementEndTime = CurTime() + math.Rand( 45, 60 )
+		self.flReinforcementStartTime = CurTime()
+		self.flReinforcementEndTime = CurTime() + math.Rand( 20, 40 )
 		__ALARMS_ACTIVE__[ self ] = true
 		if ent.__ALARM__ then return end
 		local t = __ALARMS__[ self:Classify() ]
 		if t then
-			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
+			local flDistSqr, vPos = self.flTelepathyRangeSqr, self:GetPos()
 			for ent in pairs( t ) do
-				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
-				ent:TurnOn( self )
+				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDistSqr then continue end
+				ent:TurnOn( self, pCaller )
 			end
 		end
 	end
@@ -95,15 +117,16 @@ function ENT:TurnOff( ent )
 	if ent.__ALARM__ || self:CanToggle( ent ) then
 		self.bIsOn = nil
 		self.pCaller = nil
+		self.iLastCallerClass = nil
 		self.bSpawnedReinforcements = nil
 		self.flReinforcementStartTime = nil
 		self.flReinforcementEndTime = nil
 		if ent.__ALARM__ then return end
 		local t = __ALARMS__[ self:Classify() ]
 		if t then
-			local flDist, vPos = self.flTelepathyRangeSqr, self:GetPos()
+			local flDistSqr, vPos = self.flTelepathyRangeSqr, self:GetPos()
 			for ent in pairs( t ) do
-				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDist then continue end
+				if ent == self || vPos:DistToSqr( ent:GetPos() ) > flDistSqr then continue end
 				ent:TurnOff( self )
 			end
 		end

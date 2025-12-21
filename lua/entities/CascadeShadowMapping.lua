@@ -13,7 +13,6 @@
 AddCSLuaFile()
 DEFINE_BASECLASS "base_point"
 
-ENT.Spawnable = true
 ENT.AdminOnly = true
 
 scripted_ents.Register( ENT, "CascadeShadowMapping" )

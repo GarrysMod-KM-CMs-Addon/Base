@@ -6,7 +6,7 @@ local table_IsEmpty = table.IsEmpty
 
 local unpack = unpack
 
-function ENT:SearchAreas( vPos, fWeighter )
+function ENT:SearchAreas( vPos, fWeighter, MyTable )
 	vPos = vPos || self:GetPos()
 	local area = navmesh.GetNearestNavArea( vPos )
 	if !area then return {} end
