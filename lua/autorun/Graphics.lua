@@ -29,13 +29,25 @@ net.Broadcast()
 
 if SERVER then util.AddNetworkString "DynamicLight" return end
 
+local DynamicLight = DynamicLight
 local net_ReadFloat = net.ReadFloat
 local net_ReadVector = net.ReadVector
 local net_ReadUInt = net.ReadUInt
 local math_Round = math.Round
+local math_Rand = math.Rand
 local CurTime = CurTime
+local iLightsThisTick, iLightsTickIndexLast, iLightsLastStoredTick = 0, 0
+local engine_TickCount = engine.TickCount
 net.Receive( "DynamicLight", function()
-	local pLight = DynamicLight( 8192 + math_Round( CurTime() ^ 2 ) )
+	local iTick = engine_TickCount()
+	if iTick == iLightsLastStoredTick then
+		iLightsThisTick = iLightsThisTick + 1
+	else
+		iLightsLastStoredTick = iTick
+		iLightsTickIndexLast = iLightsTickIndexLast + iLightsThisTick
+		iLightsThisTick = 0
+	end
+	local pLight = DynamicLight( 8192 + iLightsTickIndexLast )
 	if pLight then
 		pLight.brightness = net_ReadFloat()
 		pLight.size = net_ReadFloat()
@@ -253,6 +265,59 @@ local function fMoreEffects( ply, tView )
 	* .125 )
 end
 
+local aThirdPerson = Angle( 0, math.Rand( 0, 360 ), 0 )
+
+local flThirdPersonAttackTime = 0
+
+hook.Add( "CreateMove", "Graphics", function( cmd )
+	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
+	if !cThirdPerson:GetBool() then return end
+	local pPlayer = LocalPlayer()
+	if !IsValid( pPlayer ) then return end
+	local aAim = pPlayer:GetAimVector()
+	aAim[ 3 ] = 0
+	aAim = aAim:Angle()
+	local aDirection = Angle( aThirdPerson )
+	aDirection[ 1 ] = 0
+	aDirection[ 3 ] = 0
+	local vDirection = Vector( cmd:GetForwardMove(), -cmd:GetSideMove(), 0 )
+	vDirection:Rotate( aDirection )
+	vDirection:Normalize()
+	aDirection = vDirection:Angle()
+	local flActualBiggerMove = math.max( math.abs( cmd:GetForwardMove() ), math.abs( cmd:GetSideMove() ) )
+	local f = math.min( pPlayer:GetRunSpeed(), flActualBiggerMove )
+	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
+	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
+	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .2 end
+	local bSpecial = pPlayer:WaterLevel() > 0
+	if !bSpecial && flActualBiggerMove > 0 && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) then
+		local a = Angle( aDirection )
+		a[ 1 ] = a[ 1 ] + 30
+		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), a ) )
+	elseif RealTime() <= flThirdPersonAttackTime then
+		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
+	elseif bSpecial then
+		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+	elseif flActualBiggerMove > 0 then
+		local a = Angle( aDirection )
+		a[ 1 ] = a[ 1 ] + 30
+		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a ) )
+	else
+		local a = Angle( aAim )
+		a[ 0 ] = 0
+		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a ) )
+	end
+end )
+
+hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
+	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
+	if !cThirdPerson:GetBool() then return end
+	aThirdPerson[ 1 ] = aThirdPerson[ 1 ] + y * FrameTime()
+	aThirdPerson[ 2 ] = aThirdPerson[ 2 ] - x * FrameTime()
+	return true
+end )
+
 hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
 	local view = {
 		origin = origin,
@@ -293,7 +358,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		end
 		vThirdPersonCameraOffset = LerpVector( 3 * FrameTime(), vThirdPersonCameraOffset, vTarget )
 		local v = Vector( vThirdPersonCameraOffset )
-		v:Rotate( angles )
+		v:Rotate( aThirdPerson )
 		local f = ply:GetFOV() * .33
 		local tr = util_TraceLine( {
 			start = view.origin,
@@ -302,6 +367,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			filter = ply
 		} )
 		view.origin = tr.HitPos - tr.Normal * f
+		view.angles = Angle( aThirdPerson ) + ply:GetViewPunchAngles()
 		fMoreEffects( ply, view )
 		return view
 	end

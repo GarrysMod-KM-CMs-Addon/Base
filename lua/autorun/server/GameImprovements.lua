@@ -1115,14 +1115,19 @@ NOT_A_VOICELINE[ "npc/zombie/moan_loop2.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop3.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop4.wav" ] = true
 
+util.AddNetworkString "EmitSound"
+
 local player_Iterator = player.Iterator
 hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
-	if _Comp then return end
-	hook.Run( "EntityEmitSound", Data, true )
+	if _Comp then
+		if _Comp.KM_CMs_Addon then
+			return
+		else _Comp.KM_CMs_Addon = true end
+	end
+	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
 	local ent = Data.Entity
 	local dent = GetOwner( ent )
-	if ent.GAME_bNextSoundMute then ent.GAME_bNextSoundMute = nil return true end
-	if Data.Volume <= .05 then return true end
+	if Data.Volume <= .05 then return false end
 	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 2 || 1.5 ), 5, 18000 )
 	local vPos = Data.Pos || ent:GetPos()
 	for act in pairs( __ACTOR_LIST__ ) do
@@ -1141,33 +1146,44 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	local sCaption = Format( "%q", Data.SoundName )
 	local dts = dt * dt
 	for _, ply in player_Iterator() do
-		if ply:EyePos():DistToSqr( vPos ) <= dts then
-			ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
-			if NOT_A_VOICELINE[ Data.SoundName ] || ply.DR_EThreat == DIRECTOR_THREAT_MAGIC then continue end
-			if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
-			if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
-				local f = ply.DR_flVoWait
-				if !f || RealTime() > ( f + DIRECTOR_MUSIC_VO_WAIT * 2 ) then
-					local t = ply.DR_tMusicEntities
-					if t then t[ dent ] = true end
-					ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
-					ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
-					ply.DR_flVoDangerousWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
-				end
-				continue
-			end
-			// If it's a voice line, wait until it is over
-			if ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) then
+		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
+		net.Start "EmitSound"
+			net.WriteString( Data.SoundName ) -- The name of the sound
+			net.WriteFloat( Data.SoundTime ) -- The time the sound is emitted
+			net.WriteFloat( dt ) -- Distance
+			net.WriteUInt( Data.Pitch, 8 ) -- Pitch of the sound
+			net.WriteUInt( Data.Flags, 32 ) -- Flags related to the sound
+			net.WriteUInt( Data.Channel, 8 ) -- Audio channel
+			net.WriteFloat( Data.Volume ) -- Volume of the sound
+			net.WriteVector( vPos )
+			net.WriteVector( GetVelocity( ent ) )
+			net.WriteEntity( ent )
+		net.Send( ply )
+		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
+		if NOT_A_VOICELINE[ Data.SoundName ] || ply.DR_EThreat == DIRECTOR_THREAT_MAGIC then continue end
+		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+		if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
+			local f = ply.DR_flVoWait
+			if !f || RealTime() > ( f + DIRECTOR_MUSIC_VO_WAIT * 2 ) then
 				local t = ply.DR_tMusicEntities
 				if t then t[ dent ] = true end
-				ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
-				ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
-				ply.DR_flVoWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + DIRECTOR_MUSIC_VO_WAIT
-				continue
+				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+				ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
+				ply.DR_flVoDangerousWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
 			end
+			continue
+		end
+		// If it's a voice line, wait until it is over
+		if ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) then
+			local t = ply.DR_tMusicEntities
+			if t then t[ dent ] = true end
+			ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
+			ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
+			ply.DR_flVoWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + DIRECTOR_MUSIC_VO_WAIT
+			continue
 		end
 	end
-	return true
+	return false
 end )
 
 if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end

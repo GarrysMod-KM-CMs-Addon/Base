@@ -291,7 +291,7 @@ function GetVelocity( ent )
 	if IsValid( v ) then return GetVelocity( v ) end
 	if EntTable.__GetVelocity__ then return EntTable:__GetVelocity__() end
 	if ent:IsPlayer() || ent:IsNPC() then return CEntity_GetVelocity( ent ) else
-		if ent:IsNextBot() then
+		if SERVER && ent:IsNextBot() then
 			local v = EntTable.loco:GetVelocity()
 			if v == vector_origin && EntTable.GAME_vVelocity then
 				return Vector( EntTable.GAME_vVelocity )
