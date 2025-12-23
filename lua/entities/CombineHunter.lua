@@ -8,6 +8,18 @@ ENT.PrintName = "#CombineHunter"
 
 if !IsMounted "ep2" then return end
 
+// TODO: Redefine all of those sounds with better info instead of copying them
+local t = sound.GetProperties "NPC_Hunter.Scan" t.name = "CombineHunterScan" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.FoundEnemy" t.name = "CombineHunterSend" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.FoundEnemyAck" t.name = "CombineHunterReceive" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.FlankAnnounce" t.name = "CombineHunterFlank" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.TackleAnnounce" t.name = "CombineHunterCharge" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.Alert" t.name = "CombineHunterAlert" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.DefendStrider" t.name = "CombineHunterMaintainFire" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.Footstep" t.name = "CombineHunterFootstep" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.BackFootstep" t.name = "CombineHunterBackFootstep" sound.Add( t )
+local t = sound.GetProperties "NPC_Hunter.FlechetteShoot" t.name = "CombineHunterFire" sound.Add( t )
+
 if CLIENT then
     local cMaterial = Material "sprites/light_glow02_add"
     local cColor = Color( 131, 224, 255 )
