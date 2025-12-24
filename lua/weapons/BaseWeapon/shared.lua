@@ -423,9 +423,7 @@ if CLIENT then
 				if !bSliding && bSprinting && !MyTable.bSprintNotAnimated then
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 1 )
 				else
-					if CPlayer_Crouching( ply ) then
-						vTarget = vTarget + Vector( -1, -1, .5 )
-					end
+					if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) end
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
 					local flVelocity = CEntity_GetVelocity( ply ):Length()
 					if !bZoom then
