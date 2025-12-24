@@ -118,8 +118,8 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 	BullseyeTable.flTime = CurTime()
 	BullseyeTable.Enemy = ent
 	BullseyeTable.Owner = self
-	BullseyeTable:SetPos( vec )
-	BullseyeTable:SetAngles( ang )
+	beye:SetPos( vec )
+	beye:SetAngles( ang )
 	BullseyeTable.GAME_BoundMins = ent:OBBMins()
 	BullseyeTable.GAME_BoundMaxs = ent:OBBMaxs()
 	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
