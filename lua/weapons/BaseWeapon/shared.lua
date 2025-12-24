@@ -207,6 +207,7 @@ if CLIENT then
 		return ( 1 - f ) ^ 2 * a + 2 * ( 1 - f ) * f * b + ( f ^ 2 ) * c
 	end
 	local SLIDE_ANGLE = -45
+	local util_TraceLine = util.TraceLine
 	function SWEP:CalcView( ply, pos, ang )
 		local MyTable = CEntity_GetTable( self )
 		vTarget, vTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
@@ -309,6 +310,12 @@ if CLIENT then
 	SWEP.flAimTiltTime = 0
 	SWEP.flAimLastEyeYaw = 0
 	SWEP.flViewModelSprint = 0
+	SWEP.vBlindFireLeft = Vector( -8, 0, 2 )
+	SWEP.vBlindFireLeftAngle = Vector( 0, 0, -22.5 )
+	SWEP.vBlindFireRight = Vector( 2, 0, 1 )
+	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
+	SWEP.vBlindFireUp = Vector( 3, 0, 0 )
+	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
 	function SWEP:CalcViewModelView( _, pos, ang )
 		local MyTable = CEntity_GetTable( self )
 		local ply = LocalPlayer()
@@ -321,13 +328,17 @@ if CLIENT then
 		local bInCover = CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" )
 		local bZoom = !bSprinting && !bSliding && !bInCover && CEntity_IsOnGround( ply ) && CPlayer_KeyDown( ply, IN_ZOOM )
 		bBezierAllowOff = nil
+		local flBreathe = RealTime() * 5
 		local vAim
 		if bZoom then vAim = MyTable.vViewModelAim end
 		if bZoom && vAim then
 			vTarget = Vector( vAim )
 			local vAimAngle = MyTable.vViewModelAimAngle
 			vTargetAngle = vAimAngle && Vector( vAimAngle ) || Vector( 0, 0, 0 )
-		else vTarget, vTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) end
+		else
+			vTarget = Vector( math_cos( flBreathe * .5 ) * .0625, 0, ( math_sin( flBreathe / 3 ) * .0625 ) )
+			vTargetAngle = Vector( ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25 )
+		end
 		vInstantTarget, vInstantTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
 		if MyTable.flAimShoot then
@@ -378,7 +389,7 @@ if CLIENT then
 			else
 				vTargetAngle.x = vTargetAngle.x + 45
 				vTarget.x = vTarget.x + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 )
-				vTarget.y = vTarget.y - 10 - MyTable.flViewModelX
+				vTarget.y = vTarget.y - 10 - MyTable.flViewModelX + ( MyTable.flCoverY || 0 )
 				vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 			end
 		else
@@ -389,15 +400,14 @@ if CLIENT then
 				vTargetAngle.z = vTargetAngle.z + 22.5
 			elseif MyTable.__VIEWMODEL_FULLY_MODELED__ then
 				if p == COVER_BLINDFIRE_UP then
-					vTargetAngle.z = vTargetAngle.z + 180
-					vTarget.z = vTarget.z + MyTable.flViewModelZ
-					vTarget.x = vTarget.x - ( 18 + MyTable.flViewModelY )
+					vTarget = vTarget + ( MyTable.vBlindFireUp || vector_origin )
+					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireUpAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_LEFT then
-					vTarget.x = vTarget.x + ( MyTable.flBlindFireLeftX || 0 ) + MyTable.flViewModelX
-					vTargetAngle.z = vTargetAngle.z + 90
+					vTarget = vTarget + ( MyTable.vBlindFireLeft || vector_origin )
+					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireLeftAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_RIGHT then
-					vTarget.x = vTarget.x + ( MyTable.flBlindFireRightX || 0 ) - MyTable.flViewModelX
-					vTargetAngle.z = vTargetAngle.z - 90
+					vTarget = vTarget + ( MyTable.vBlindFireRight || vector_origin )
+					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireRightAngle || vector_origin )
 				end
 			elseif p == COVER_BLINDFIRE_LEFT then
 				vTargetAngle.z = vTargetAngle.z - 45
@@ -413,12 +423,17 @@ if CLIENT then
 				if !bSliding && bSprinting && !MyTable.bSprintNotAnimated then
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 1 )
 				else
+					if CPlayer_Crouching( ply ) then
+						vTarget = vTarget + Vector( -1, -1, .5 )
+					end
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
 					local flVelocity = CEntity_GetVelocity( ply ):Length()
-					if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
-						vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - 4 * flVelocity / CPlayer_GetWalkSpeed( ply )
-					elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
-						vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+					if !bZoom then
+						if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
+							vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - 4 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
+							vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						end
 					end
 					if flVelocity > 10 then
 						local flBreathe = RealTime() * 16
@@ -520,7 +535,6 @@ if CLIENT then
 			vTarget = vTarget + MyTable.vSprintArm
 			vTarget[ 3 ] = vTarget[ 3 ] - 3
 			vTargetAngle = Vector( MyTable.vSprintArmAngle )
-			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		vFinal = LerpVector( 5 * FrameTime(), vFinal, vTarget )
 		vFinalAngle = LerpVector( 5 * FrameTime(), vFinalAngle, vTargetAngle )
@@ -565,4 +579,3 @@ sound.Add {
 }
 
 weapons.Register( SWEP, "BaseWeapon" )
-

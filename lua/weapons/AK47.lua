@@ -37,7 +37,6 @@ else
 	SWEP.flDrawActivity = ACT_VM_DEPLOY
 	SWEP.flAimShoot = 2
 	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
-	SWEP.flBlindFireRightX = -10
 	SWEP.flViewModelX = -2
 	SWEP.flViewModelY = -4
 	SWEP.flViewModelZ = .5

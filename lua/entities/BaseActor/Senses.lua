@@ -97,7 +97,7 @@ function ENT:UpdateEnemyMemory( enemy, vec, ang ) self:SetupBullseye( enemy, vec
 
 local EntityUniqueIdentifier = EntityUniqueIdentifier
 
-function ENT:SetupBullseye( enemy, vec, ang )
+function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 	if vec then
 		local center = enemy:GetPos() + enemy:OBBCenter()
 		if self:CanSee( center ) then vec = center end
@@ -113,28 +113,29 @@ function ENT:SetupBullseye( enemy, vec, ang )
 	local beye = self.tBullseyes[ id ]
 	if beye then beye = beye[ 1 ] end
 	if !IsValid( beye ) then beye = ents.Create "BaseActorBullseye" beye:Spawn() end
-	beye.flTime = CurTime()
-	self.tBullseyes[ id ] = { beye, enemy, ent }
-	beye.Enemy = ent
-	beye.Owner = self
-	beye:SetPos( vec )
-	beye:SetAngles( ang )
-	beye.GAME_BoundMins = ent:OBBMins()
-	beye.GAME_BoundMaxs = ent:OBBMaxs()
-	beye.__VELOCITY__ = GetVelocity( enemy )
+	( MyTable || CEntity_GetTable( self ) ).tBullseyes[ id ] = { beye, enemy, ent }
+	local BullseyeTable = CEntity_GetTable( beye )
+	BullseyeTable.flTime = CurTime()
+	BullseyeTable.Enemy = ent
+	BullseyeTable.Owner = self
+	BullseyeTable:SetPos( vec )
+	BullseyeTable:SetAngles( ang )
+	BullseyeTable.GAME_BoundMins = ent:OBBMins()
+	BullseyeTable.GAME_BoundMaxs = ent:OBBMaxs()
+	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
 	if HasRangeAttack( ent ) then
-		beye.HAS_RANGE_ATTACK = true
-		beye.HAS_NOT_RANGE_ATTACK = nil
+		BullseyeTable.HAS_RANGE_ATTACK = true
+		BullseyeTable.HAS_NOT_RANGE_ATTACK = nil
 	else
-		beye.HAS_RANGE_ATTACK = nil
-		beye.HAS_NOT_RANGE_ATTACK = true
+		BullseyeTable.HAS_RANGE_ATTACK = nil
+		BullseyeTable.HAS_NOT_RANGE_ATTACK = true
 	end
 	if HasMeleeAttack( ent ) then
-		beye.HAS_MELEE_ATTACK = true
-		beye.HAS_NOT_MELEE_ATTACK = nil
+		BullseyeTable.HAS_MELEE_ATTACK = true
+		BullseyeTable.HAS_NOT_MELEE_ATTACK = nil
 	else
-		beye.HAS_MELEE_ATTACK = nil
-		beye.HAS_NOT_MELEE_ATTACK = true
+		BullseyeTable.HAS_MELEE_ATTACK = nil
+		BullseyeTable.HAS_NOT_MELEE_ATTACK = true
 	end
 	beye:SetHealth( enemy:Health() )
 	beye:SetMaxHealth( enemy:GetMaxHealth() )
@@ -258,7 +259,7 @@ function ENT:Look( MyTable )
 					if !ent.FLARE_tFoundByClass || !ent.FLARE_tFoundByClass[ self:Classify() ] then
 						local f = tOldVisionStrength[ ent ]
 						if f && f >= 1 then
-							if ent:Classify() == self:Classify() then // Go Over to Ally Flares to Help
+							if ent:Classify() == self:Classify() then // Go over to ally flares to help
 								if ent:GetPos():DistToSqr( self:GetPos() ) > 9437184/*3072*/ then
 									local p = self:SetupBullseye( ent, util_TraceLine( {
 										start = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ),
@@ -290,12 +291,12 @@ function ENT:Look( MyTable )
 				if !bRange && HasRangeAttack( ent ) then bRange = true end
 				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
 				if tVisionStrength[ ent ] >= 1 then
-					self.bHoldFire = nil
-					self.flLastEnemy = CurTime()
+					MyTable.bHoldFire = nil
+					MyTable.flLastEnemy = CurTime()
 					if MyTable.WillAttackFirst( self, ent ) then
 						tEnemies[ ent ] = true
 						tVisibleEnemies[ EntityUniqueIdentifier( ent ) ] = true
-						self:SetupBullseye( ent )
+						MyTable.SetupBullseye( self, ent, nil, nil, MyTable )
 					else tAlertEntities[ ent ] = true end
 				end
 			end

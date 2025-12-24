@@ -25,6 +25,7 @@ SWEP.bPistolSprint = true
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoil = 5
+SWEP.flAimShoot = 1
 
 SWEP.flViewModelX = -8
 SWEP.flViewModelY = -2

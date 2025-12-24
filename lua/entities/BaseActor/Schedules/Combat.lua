@@ -323,207 +323,102 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		else self:SetSchedule "TakeCover" end
 		return
 	end
-	local bAdvance = sched.bAdvance
-	if self.tCover && ( bAdvance || sched.bRetreat ) then
-		if bAdvance then
-			// NOTE: For advancing, there needs to be
-			// A* pathing or similar between covers here...
-			// but I have absolutely no idea how to implement it
-			local pPath = sched.pEnemyPath
-			if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-			if !sched.bStartedSearching then
-				self:ComputeFlankPath( pPath, enemy )
-				if !sched.bFromCombatFormation && sched.bAdvance then
-					local i = self:FindPathStackUpLine( pPath, tEnemies )
-					if i then
-						self.iLastEnemyPathStackUpCursor = i
-						pPath:MoveCursorTo( i )
-						local g = pPath:GetCurrentGoal()
-						if g then
-							local b = self:CreateBehaviour "CombatFormation"
-							local v = pPath:GetPositionOnPath( i )
-							b.Vector = v
-							b.Direction = ( pPath:GetPositionOnPath( i + 1 ) - v ):GetNormalized()
-							b:AddParticipant( self )
-							b:GatherParticipants()
-							b:Initialize()
-							return
-						end
-					end
-				end
-				sched.bStartedSearching = true
+	if !MyTable.tCover then return false end
+	if sched.bAdvance then
+		for iAreaID, tIndices in pairs( self.tCover[ 4 ] || {} ) do
+			for iIndex in pairs( tIndices ) do
+				local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
 			end
-			local vEnemy = enemy:GetPos()
-			local pIterator = sched.pIterator
-			local v = sched.vCoverBounds || self:GatherCoverBounds()
-			sched.vCoverBounds = v
-			local tAllies = self:GetAlliesByClass()
-			local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
-			sched.flBoundingRadiusTwo = f
-			local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
-			local tCovers = {}
-			local tOldCover = MyTable.tCover
-			local d = MyTable.vHullMaxs.x * 4
-			local iLastEnemyPathStackUpCursor = bAdvance && MyTable.iLastEnemyPathStackUpCursor || 0
-			local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
-			pPath:MoveCursorToClosestPosition( vPos )
-			local flInitialCursor = pPath:GetCursorPosition()
-			local tList = {}
-			for iAreaID, tIndices in pairs( MyTable.tCover[ 4 ] || {} ) do
-				for iIndex in pairs( tIndices ) do
-					local tCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
-					if tCover == MyTable.tCover then continue end
-					local _, vPos = util_DistanceToLine( tCover[ 1 ], tCover[ 2 ], vEnemy )
-					pPath:MoveCursorTo( flInitialCursor )
-					pPath:MoveCursorToClosestPosition( vPos, SEEK_AHEAD )
-					table.insert( tList, { tCover, pPath:GetCursorPosition() } )
-				end
-			end
-			table.SortByMember( tList, 2 )
-			for _, t in ipairs( tList ) do
-				local tCover = t[ 1 ]
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				local vDirection = vEnd - vStart
-				local flStep, flStart, flEnd
-				if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-					flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-				else
-					flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
-				end
-				vDirection:Normalize()
-				local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
-				vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
-				for iCurrent = flStart, flEnd, flStep do
-					local vCover = vStart + vDirection * iCurrent + vOff
-					pPath:MoveCursorToClosestPosition( vCover )
-					local iCursor = pPath:GetCursorPosition()
-					local dDirection = pPath:GetPositionOnPath( iCursor )
-					pPath:MoveCursor( 1 )
-					dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
-					dDirection[ 3 ] = 0
-					dDirection:Normalize()
-					if util_TraceHull( {
-						start = vCover,
-						endpos = vCover,
-						mins = vMins,
-						maxs = vMaxs,
-						filter = self
-					} ).Hit then continue end
-					local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
-					if !util_TraceLine( {
-						start = v,
-						endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-						filter = self
-					} ).Hit then continue end
-					if tAllies then
-						local b
-						for pAlly in pairs( tAllies ) do
-							if self == pAlly then continue end
-							if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
-						end
-						if b then continue end
-					end
-					local s = MyTable.SetSchedule( self, "TakeCoverMove", MyTable )
-					if math.abs( MyTable.flCombatState ) < .2 then
-						s.bTakeCoverAdvance = true
-					else
-						s.bAdvance = true
-					end
-					MyTable.vCover = vCover
-					MyTable.tCover = tCover
-					return
-				end
-			end
-		else
-			// You might think this needs a BFS, but actually it doesn't!
-			// If we have no farther cover, that means we've been backed into a corner,
-			// which can be made into a mechanic like "WHERE DO I GO?!".
-			// Plus, there aren't that many problems with that normally.
-			// And yes, right now they're gonna go in a circle because we
-			// don't yet invalidate covers that are closer than the current one,
-			// but it's a pretty valid placeholder in my opinion, even if an accidental one
-			local pPath = sched.pEnemyPath
-			if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-			local vEnemy = enemy:GetPos()
-			local pIterator = sched.pIterator
-			local v = sched.vCoverBounds || self:GatherCoverBounds()
-			sched.vCoverBounds = v
-			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
-			sched.flBoundingRadiusTwo = f
-			local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
-			local tCovers = {}
-			local tOldCover = MyTable.tCover
-			local d = MyTable.vHullMaxs.x * 4
-			local iLastEnemyPathStackUpCursor = bAdvance && MyTable.iLastEnemyPathStackUpCursor || 0
-			local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
-			pPath:MoveCursorToClosestPosition( vPos )
-			local flInitialCursor = pPath:GetCursorPosition()
-			local tList = {}
-			for iAreaID, tIndices in pairs( MyTable.tCover[ 4 ] || {} ) do
-				for iIndex in pairs( tIndices ) do
-					local tCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
-					if tCover == MyTable.tCover then continue end
-					table.insert( tList, { tCover, math.max( tCover[ 1 ]:DistToSqr( vEnemy ), tCover[ 2 ]:DistToSqr( vEnemy ) ) } )
-				end
-			end
-			table.SortByMember( tList, 2 )
-			for _, t in ipairs( tList ) do
-				local tCover = t[ 1 ]
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				local vDirection = vEnd - vStart
-				local flStep, flStart, flEnd
-				if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-					flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-				else
-					flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
-				end
-				vDirection:Normalize()
-				local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
-				vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
-				for iCurrent = flStart, flEnd, flStep do
-					local vCover = vStart + vDirection * iCurrent + vOff
-					pPath:MoveCursorToClosestPosition( vCover )
-					local iCursor = pPath:GetCursorPosition()
-					local dDirection = pPath:GetPositionOnPath( iCursor )
-					pPath:MoveCursor( 1 )
-					dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
-					dDirection[ 3 ] = 0
-					dDirection:Normalize()
-					if util_TraceHull( {
-						start = vCover,
-						endpos = vCover,
-						mins = vMins,
-						maxs = vMaxs,
-						filter = self
-					} ).Hit then continue end
-					local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
-					if !util_TraceLine( {
-						start = v,
-						endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-						filter = self
-					} ).Hit then continue end
-					if tAllies then
-						local b
-						for pAlly in pairs( tAllies ) do
-							if self == pAlly then continue end
-							if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
-						end
-						if b then continue end
-					end
-					local s = self:SetSchedule "TakeCoverMove"
-					if math.abs( MyTable.flCombatState ) < .2 then
-						s.bTakeCoverRetreat = true
-					else
-						s.bRetreat = true
-					end
-					MyTable.vCover = vCover
-					MyTable.tCover = tCover
-					return
-				end
-			end
-			sched.bRetreat = nil
 		end
+	elseif sched.bRetreat then
+		// You might think this needs a BFS, but actually it doesn't!
+		// If we have no farther cover, that means we've been backed into a corner,
+		// which can be made into a mechanic like "WHERE DO I GO?!".
+		// Plus, there aren't that many problems with that normally.
+		// And yes, right now they're gonna go in a circle because we
+		// don't yet invalidate covers that are closer than the current one,
+		// but it's a pretty valid placeholder in my opinion, even if an accidental one
+		local pPath = sched.pEnemyPath
+		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
+		local vEnemy = enemy:GetPos()
+		local pIterator = sched.pIterator
+		local v = sched.vCoverBounds || self:GatherCoverBounds()
+		sched.vCoverBounds = v
+		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
+		sched.flBoundingRadiusTwo = f
+		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
+		local tCovers = {}
+		local tOldCover = MyTable.tCover
+		local d = MyTable.vHullMaxs.x * 4
+		local iLastEnemyPathStackUpCursor = bAdvance && MyTable.iLastEnemyPathStackUpCursor || 0
+		local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
+		pPath:MoveCursorToClosestPosition( vPos )
+		local flInitialCursor = pPath:GetCursorPosition()
+		local tList = {}
+		for iAreaID, tIndices in pairs( MyTable.tCover[ 4 ] || {} ) do
+			for iIndex in pairs( tIndices ) do
+				local tCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
+				if tCover == MyTable.tCover then continue end
+				table.insert( tList, { tCover, math.max( tCover[ 1 ]:DistToSqr( vEnemy ), tCover[ 2 ]:DistToSqr( vEnemy ) ) } )
+			end
+		end
+		table.SortByMember( tList, 2 )
+		for _, t in ipairs( tList ) do
+			local tCover = t[ 1 ]
+			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+			local vDirection = vEnd - vStart
+			local flStep, flStart, flEnd
+			if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
+				flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
+			else
+				flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
+			end
+			vDirection:Normalize()
+			local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
+			vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
+			for iCurrent = flStart, flEnd, flStep do
+				local vCover = vStart + vDirection * iCurrent + vOff
+				pPath:MoveCursorToClosestPosition( vCover )
+				local iCursor = pPath:GetCursorPosition()
+				local dDirection = pPath:GetPositionOnPath( iCursor )
+				pPath:MoveCursor( 1 )
+				dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
+				dDirection[ 3 ] = 0
+				dDirection:Normalize()
+				if util_TraceHull( {
+					start = vCover,
+					endpos = vCover,
+					mins = vMins,
+					maxs = vMaxs,
+					filter = self
+				} ).Hit then continue end
+				local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
+				if !util_TraceLine( {
+					start = v,
+					endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+					filter = self
+				} ).Hit then continue end
+				if tAllies then
+					local b
+					for pAlly in pairs( tAllies ) do
+						if self == pAlly then continue end
+						if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
+					end
+					if b then continue end
+				end
+				local s = self:SetSchedule "TakeCoverMove"
+				if math.abs( MyTable.flCombatState ) < .2 then
+					s.bTakeCoverRetreat = true
+				else
+					s.bRetreat = true
+				end
+				MyTable.vCover = vCover
+				MyTable.tCover = tCover
+				return
+			end
+		end
+		sched.bRetreat = nil
 	end
 	local vec = MyTable.vCover
 	if !vec then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
@@ -577,212 +472,211 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	MyTable.vaAimTargetBody = d:Angle()
 	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	if !MyTable.CanExpose( self ) then MyTable.flSuppressed = CurTime() + math.Clamp( math.min( 0, ( MyTable.GetExposedWeight( self, MyTable ) / self:Health() ) * .2 ), 0, 2 ) return end
-	if CurTime() > ( MyTable.flSuppressed || 0 ) then
-		local flAlarm, vPos, pAlarm = math.huge, self:GetShootPos(), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
-		local t = __ALARMS__[ self:Classify() ]
-		if t then
-			for ent in pairs( t ) do
-				if !IsValid( ent ) || ent.bIsOn then continue end
-				local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
-				// Don't go out of audible range, even if an ally alarm. Why?
-				// Because it's not funny to run kilometers away from the battlefield to it like an idiot
-				if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
-				local f = ent.flCoolDown
-				if CurTime() <= f then continue end
-				local b
-				if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
-				if b then continue end
-				pAlarm, flAlarm = ent, d
-			end
+	if CurTime() <= ( MyTable.flSuppressed || 0 ) then return end
+	local flAlarm, vPos, pAlarm = math.huge, self:GetShootPos(), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
+	local t = __ALARMS__[ self:Classify() ]
+	if t then
+		for ent in pairs( t ) do
+			if !IsValid( ent ) || ent.bIsOn then continue end
+			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
+			// Don't go out of audible range, even if an ally alarm. Why?
+			// Because it's not funny to run kilometers away from the battlefield to it like an idiot
+			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
+			local f = ent.flCoolDown
+			if CurTime() <= f then continue end
+			local b
+			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if b then continue end
+			pAlarm, flAlarm = ent, d
 		end
-		if IsValid( pAlarm ) then
-			local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
-			s.pAlarm = pAlarm
-			MyTable.pAlarm = pAlarm
-			return
+	end
+	if IsValid( pAlarm ) then
+		local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
+		s.pAlarm = pAlarm
+		MyTable.pAlarm = pAlarm
+		return
+	end
+	t = __ALARMS__[ CLASS_NONE ]
+	if t then
+		for ent in pairs( t ) do
+			if !IsValid( ent ) || ent.bIsOn then continue end
+			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
+			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
+			local f = ent.flCoolDown
+			if f && CurTime() <= f then continue end
+			local b
+			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if b then continue end
+			pAlarm, flAlarm = ent, d
 		end
-		t = __ALARMS__[ CLASS_NONE ]
-		if t then
-			for ent in pairs( t ) do
-				if !IsValid( ent ) || ent.bIsOn then continue end
-				local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
-				if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
-				local f = ent.flCoolDown
-				if f && CurTime() <= f then continue end
-				local b
-				if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
-				if b then continue end
-				pAlarm, flAlarm = ent, d
-			end
-		end
-		if IsValid( pAlarm ) then
-			local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
-			s.pAlarm = pAlarm
-			MyTable.pAlarm = pAlarm
-			return
-		end
-		local pPath = sched.pEnemyPath
-		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-		MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-		if MyTable.flCombatState < 0 && math_random( 2 ) == 1 then sched.bRetreat = true return else
-			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			if tAllies then
-				local iShootingAllies, iAllies = 0, table.Count( tAllies )
-				if iAllies <= 1 then
-					if math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-				else
-					for ent in pairs( tAllies ) do if ent.bSuppressing then iShootingAllies = iShootingAllies + 1 end end
-					if math_Rand( 0, iAllies / iShootingAllies ) <= 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-				end
-			elseif math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-		end
-		local aDirection
-		local tGoal = pPath:NextSegment()
-		if tGoal then aDirection = ( tGoal.pos - vec ):Angle()
-		else aDirection = ( enemy:GetPos() - vec ):Angle() end
-		local vTarget = enemy:GetPos() + enemy:OBBCenter()
-		local vHeight = Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-		local tPitchAngles = { 0 }
-		if enemy:GetPos().z > self:GetPos().z then
-			for a = 5.625, 90, 5.625 do
-				table.insert( tPitchAngles, a )
-				table.insert( tPitchAngles, -a )
-			end
-		else
-			for a = 5.625, 90, 5.625 do
-				table.insert( tPitchAngles, -a )
-				table.insert( tPitchAngles, a )
-			end
-		end
-		local bCheckDistance, flDistSqr = MyTable.flCombatState > 0
-		if bCheckDistance then
-			flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			flDistSqr = flDistSqr * flDistSqr
-		end
-		local function fDo( tr, vOrigin, tAngles )
-			if !tr.Hit then
-				local vPos = vOrigin + vHeight
-				local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-				for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
-					for i, flGlobalAngleYaw in ipairs( tAngles ) do
-						// local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
-						local aAim = aDirection + Angle( 0, flGlobalAngleYaw )
-						aAim[ 1 ] = flGlobalAnglePitch
-						local vAim = aAim:Forward()
-						local tr = util_TraceLine {
-							start = vPos,
-							endpos = vPos + vAim * 999999,
-							mask = MASK_SHOT_HULL,
-							filter = self
-						}
-						local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
-						if util_TraceLine( {
-							start = vPoint,
-							endpos = vTarget,
-							mask = MASK_SHOT_HULL,
-							filter = tWholeFilter
-						} ).Hit || bCheckDistance && vPoint:DistToSqr( vTarget ) > flDistSqr then
-							continue
-						end
-						return vPoint
-					end
-				end
-			end
-		end
-		if self.bHoldFire then
-			local tAllies = self:GetAlliesByClass()
-			if tAllies then
-				local b = true
-				for ent in pairs( tAllies ) do
-					if !IsValid( ent ) || ent == self || !ent.__ACTOR__ || !IsValid( ent.Enemy ) || !ent:IsCurrentSchedule "HoldFireCheckEnemy" then continue end
-					local _, pTrueEnemy = ent:SetupEnemy( ent.Enemy )
-					if pTrueEnemy == trueenemy then b = nil break end
-				end
-				if b then
-					MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy
-					return
-				end
-			else MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy end
-		end
-		local aGeneral = Angle( aDirection )
-		aGeneral[ 1 ] = 0
-		local dRight = aGeneral:Right()
-		local dLeft = -dRight
-		local flDistance = self:OBBMaxs().x * 2
-		local tCover = MyTable.tCover
-		local vLeft = tCover[ 1 ] + ( tCover[ 1 ] - tCover[ 2 ] ):GetNormalized() * flDistance
-		local flAdd = self:OBBMaxs().x
-		local trLeft = util_TraceHull {
-			start = vLeft + vHeight,
-			endpos = vLeft + dLeft * flAdd + vHeight,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		}
-		local tAngles = { 0 }
-		for a = 5.625, 22.5, 5.625 do
-			table.insert( tAngles, -a )
-			table.insert( tAngles, a )
-		end
-		local vLeftTarget = fDo( trLeft, vLeft, tAngles )
-		local flDistance = self:OBBMaxs().x * 2
-		local vRight = tCover[ 1 ] + ( tCover[ 2 ] - tCover[ 1 ] ):GetNormalized() * flDistance
-		local trRight = util_TraceHull {
-			start = vRight + vHeight,
-			endpos = vRight + dRight * flAdd + vHeight,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		}
-		tAngles = { 0 }
-		for a = 5.625, 22.5, 5.625 do
-			table.insert( tAngles, a )
-			table.insert( tAngles, -a )
-		end
-		local vRightTarget = fDo( trRight, vRight, tAngles )
-		local function SetupSchedule( vOrigin, vTarget )
-			local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-			sched.vFrom = vOrigin
-			sched.vTo = vTarget
-			sched.Enemy = enemy
-			sched.bSuppressing = true
-		end
-		if vLeftTarget && vRightTarget then
-			if math_random( 2 ) == 1 then
-				SetupSchedule( vLeft, vLeftTarget )
+	end
+	if IsValid( pAlarm ) then
+		local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
+		s.pAlarm = pAlarm
+		MyTable.pAlarm = pAlarm
+		return
+	end
+	local pPath = sched.pEnemyPath
+	if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
+	MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
+	if MyTable.flCombatState < 0 && math_random( 2 ) == 1 then sched.bRetreat = true return else
+		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		if tAllies then
+			local iShootingAllies, iAllies = 0, table.Count( tAllies )
+			if iAllies <= 1 then
+				if math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
 			else
-				SetupSchedule( vRight, vRightTarget )
+				for ent in pairs( tAllies ) do if ent.bSuppressing then iShootingAllies = iShootingAllies + 1 end end
+				if math_Rand( 0, iAllies / iShootingAllies ) <= 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
 			end
-			return
-		elseif vLeftTarget then
-			SetupSchedule( vLeft, vLeftTarget )
-			return
-		elseif vRightTarget then
-			SetupSchedule( vRight, vRightTarget )
-			return
-		else
-			sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true
-			return
+		elseif math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
+	end
+	local aDirection
+	local tGoal = pPath:NextSegment()
+	if tGoal then aDirection = ( tGoal.pos - vec ):Angle()
+	else aDirection = ( enemy:GetPos() - vec ):Angle() end
+	local vTarget = enemy:GetPos() + enemy:OBBCenter()
+	local vHeight = Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
+	local tPitchAngles = { 0 }
+	if enemy:GetPos().z > self:GetPos().z then
+		for a = 5.625, 90, 5.625 do
+			table.insert( tPitchAngles, a )
+			table.insert( tPitchAngles, -a )
 		end
-		if !sched.pEnemyPath then sched.pEnemyPath = Path "Follow" end
-		MyTable.ComputeFlankPath( self, sched.pEnemyPath, enemy, MyTable )
-		if !sched.bFromCombatFormation && MyTable.flCombatState > 0 then
-			local p = sched.pEnemyPath
-			local i = self:FindPathStackUpLine( p, tEnemies )
-			if i then
-				MyTable.iLastEnemyPathStackUpCursor = i
-				p:MoveCursorTo( i )
-				local g = p:GetCurrentGoal()
-				if g then
-					local b = MyTable.CreateBehaviour( self, "CombatFormation", MyTable )
-					local v = p:GetPositionOnPath( i )
-					b.Vector = v
-					b.Direction = ( p:GetPositionOnPath( i + 1 ) - v ):GetNormalized()
-					b:AddParticipant( self )
-					b:GatherParticipants()
-					b:Initialize()
-					return
+	else
+		for a = 5.625, 90, 5.625 do
+			table.insert( tPitchAngles, -a )
+			table.insert( tPitchAngles, a )
+		end
+	end
+	local bCheckDistance, flDistSqr = MyTable.flCombatState > 0
+	if bCheckDistance then
+		flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
+		flDistSqr = flDistSqr * flDistSqr
+	end
+	local function fDo( tr, vOrigin, tAngles )
+		if !tr.Hit then
+			local vPos = vOrigin + vHeight
+			local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
+			for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
+				for i, flGlobalAngleYaw in ipairs( tAngles ) do
+					// local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
+					local aAim = aDirection + Angle( 0, flGlobalAngleYaw )
+					aAim[ 1 ] = flGlobalAnglePitch
+					local vAim = aAim:Forward()
+					local tr = util_TraceLine {
+						start = vPos,
+						endpos = vPos + vAim * 999999,
+						mask = MASK_SHOT_HULL,
+						filter = self
+					}
+					local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
+					if util_TraceLine( {
+						start = vPoint,
+						endpos = vTarget,
+						mask = MASK_SHOT_HULL,
+						filter = tWholeFilter
+					} ).Hit || bCheckDistance && vPoint:DistToSqr( vTarget ) > flDistSqr then
+						continue
+					end
+					return vPoint
 				end
+			end
+		end
+	end
+	if self.bHoldFire then
+		local tAllies = self:GetAlliesByClass()
+		if tAllies then
+			local b = true
+			for ent in pairs( tAllies ) do
+				if !IsValid( ent ) || ent == self || !ent.__ACTOR__ || !IsValid( ent.Enemy ) || !ent:IsCurrentSchedule "HoldFireCheckEnemy" then continue end
+				local _, pTrueEnemy = ent:SetupEnemy( ent.Enemy )
+				if pTrueEnemy == trueenemy then b = nil break end
+			end
+			if b then
+				MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy
+				return
+			end
+		else MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy end
+	end
+	local aGeneral = Angle( aDirection )
+	aGeneral[ 1 ] = 0
+	local dRight = aGeneral:Right()
+	local dLeft = -dRight
+	local flDistance = self:OBBMaxs().x * 2
+	local tCover = MyTable.tCover
+	local vLeft = tCover[ 1 ] + ( tCover[ 1 ] - tCover[ 2 ] ):GetNormalized() * flDistance
+	local flAdd = self:OBBMaxs().x
+	local trLeft = util_TraceHull {
+		start = vLeft + vHeight,
+		endpos = vLeft + dLeft * flAdd + vHeight,
+		mins = vMins,
+		maxs = vMaxs,
+		filter = self
+	}
+	local tAngles = { 0 }
+	for a = 5.625, 22.5, 5.625 do
+		table.insert( tAngles, -a )
+		table.insert( tAngles, a )
+	end
+	local vLeftTarget = fDo( trLeft, vLeft, tAngles )
+	local flDistance = self:OBBMaxs().x * 2
+	local vRight = tCover[ 1 ] + ( tCover[ 2 ] - tCover[ 1 ] ):GetNormalized() * flDistance
+	local trRight = util_TraceHull {
+		start = vRight + vHeight,
+		endpos = vRight + dRight * flAdd + vHeight,
+		mins = vMins,
+		maxs = vMaxs,
+		filter = self
+	}
+	tAngles = { 0 }
+	for a = 5.625, 22.5, 5.625 do
+		table.insert( tAngles, a )
+		table.insert( tAngles, -a )
+	end
+	local vRightTarget = fDo( trRight, vRight, tAngles )
+	local function SetupSchedule( vOrigin, vTarget )
+		local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
+		sched.vFrom = vOrigin
+		sched.vTo = vTarget
+		sched.Enemy = enemy
+		sched.bSuppressing = true
+	end
+	if vLeftTarget && vRightTarget then
+		if math_random( 2 ) == 1 then
+			SetupSchedule( vLeft, vLeftTarget )
+		else
+			SetupSchedule( vRight, vRightTarget )
+		end
+		return
+	elseif vLeftTarget then
+		SetupSchedule( vLeft, vLeftTarget )
+		return
+	elseif vRightTarget then
+		SetupSchedule( vRight, vRightTarget )
+		return
+	else
+		sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true
+		return
+	end
+	if !sched.pEnemyPath then sched.pEnemyPath = Path "Follow" end
+	MyTable.ComputeFlankPath( self, sched.pEnemyPath, enemy, MyTable )
+	if !sched.bFromCombatFormation && MyTable.flCombatState > 0 then
+		local p = sched.pEnemyPath
+		local i = self:FindPathStackUpLine( p, tEnemies )
+		if i then
+			MyTable.iLastEnemyPathStackUpCursor = i
+			p:MoveCursorTo( i )
+			local g = p:GetCurrentGoal()
+			if g then
+				local b = MyTable.CreateBehaviour( self, "CombatFormation", MyTable )
+				local v = p:GetPositionOnPath( i )
+				b.Vector = v
+				b.Direction = ( p:GetPositionOnPath( i + 1 ) - v ):GetNormalized()
+				b:AddParticipant( self )
+				b:GatherParticipants()
+				b:Initialize()
+				return
 			end
 		end
 	end
