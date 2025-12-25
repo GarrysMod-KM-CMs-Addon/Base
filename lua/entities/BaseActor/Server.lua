@@ -109,7 +109,7 @@ function ENT:OnKilled( dmg )
 end
 
 function ENT:ModifyMoveAimVector( ang, flSpeed, flDuck )
-	if flDuck < .5 then return end
+	if flDuck && flDuck < .5 then return end
 	ang[ 1 ] = ang[ 1 ] + 35
 end
 

@@ -4,7 +4,7 @@ SWEP.Category = "Melees"
 SWEP.PrintName = "#weapon_crowbar"
 
 SWEP.Instructions = "Primary to swing."
-SWEP.Purpose = "A Crowbar. Unknown manufacturer.."
+SWEP.Purpose = "A Crowbar. Unknown manufacturer."
 SWEP.ViewModel = Model "models/weapons/c_crowbar.mdl"
 SWEP.UseHands = true
 SWEP.WorldModel = Model "models/weapons/w_crowbar.mdl"
