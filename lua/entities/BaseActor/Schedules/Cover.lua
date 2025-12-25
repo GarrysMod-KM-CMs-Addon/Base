@@ -20,7 +20,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
 	MyTable.bWantsCover = true
 	local vec = MyTable.vCover
-	if !vec then
+	if !vec || !MyTable.tCover then
 		local pPath = sched.pEnemyPath
 		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
 		MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )

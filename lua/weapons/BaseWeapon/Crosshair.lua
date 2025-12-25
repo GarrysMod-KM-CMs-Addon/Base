@@ -250,11 +250,15 @@ function SWEP:DoDrawCrosshair()
 			end
 		end
 	end
-	local f = MyTable.flAimMultiplier
-	if MyTable.Primary.Automatic then
-		MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / MyTable.flRecoil * MyTable.flRecoilMultiplierThingy ) )
+	if CurTime() <= MyTable.flReloadTime then
+		MyTable.flCrosshairAlpha = 0
 	else
-		MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / MyTable.flRecoil * MyTable.flRecoilMultiplierThingy ) * 2 )
+		local flRecoil, f = MyTable.CalcRecoil( self, ply ), MyTable.flAimMultiplier
+		if MyTable.Primary.Automatic then
+			MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / flRecoil * MyTable.flRecoilMultiplierThingy ) )
+		else
+			MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / flRecoil * MyTable.flRecoilMultiplierThingy ) * 2 )
+		end
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes

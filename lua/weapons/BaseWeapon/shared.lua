@@ -28,6 +28,8 @@ if CLIENT then
 		self.flCurrentRecoil = self.flCurrentRecoil + flRecoil
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + flRecoil end
 	end
+	SWEP.flReloadTime = 0
+	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
 end
 
 function SWEP:Reload()
@@ -35,7 +37,12 @@ function SWEP:Reload()
 	local f = self:Clip1()
 	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
 	self:SetClip1( 0 )
-	if !self:DefaultReload( ACT_VM_RELOAD ) then self:SetClip1( f ) end
+	if self:DefaultReload( ACT_VM_RELOAD ) then
+		if !pReloadOwner:IsPlayer() then return end
+		f = pReloadOwner:GetViewModel()
+		f = f:SequenceDuration( f:SelectWeightedSequence( ACT_VM_RELOAD ) )
+		self:CallOnClient( "ReloadTime", f )
+	else self:SetClip1( f ) end
 end
 
 function SWEP:AllowsAutoSwitchFrom() return false end
@@ -119,14 +126,17 @@ SWEP.flRecoilGrowMin = -.5
 SWEP.flRecoilGrowMax = -1
 DEFINE_BASECLASS "weapon_base"
 local util_SharedRandom = util.SharedRandom
+function SWEP:CalcRecoil( pOwner )
+	local flRecoil = self.flRecoil * math.Clamp( 1 + pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.5 ), 1, 1.5 )
+	if !pOwner:KeyDown( IN_ZOOM ) then flRecoil = flRecoil * 1.5 end
+	if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.5 end
+	return flRecoil
+end
 function SWEP:DoRecoil()
 	local pOwner = self:GetOwner()
-	if IsValid( pOwner ) && pOwner:IsPlayer() then
-		local flRecoil = self.flRecoil
-		if !pOwner:KeyDown( IN_ZOOM ) then flRecoil = flRecoil * 1.5 end
-		if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.5 end
-		if flRecoil then self:CallOnClient( "AddRecoil", flRecoil ) end
-		self:CallOnClient "SetAllowRecoilDecreaseTime"
+	if IsValid( pOwner ) && pOwner.ViewPunch && pOwner.GetRunSpeed then
+		local flRecoil = self:CalcRecoil( pOwner )
+		self:CallOnClient( "AddRecoil", flRecoil )
 		pOwner:ViewPunch( Angle( util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 ) )
 	end
 end
@@ -490,15 +500,15 @@ if CLIENT then
 				end
 			end
 		end
-		local f
+		local flRecoil, f = MyTable.CalcRecoil( self, ply )
 		if MyTable.Primary.Automatic then
-			f = MyTable.flRecoil * ( 1 / MyTable.Primary_flDelay )
+			f = flRecoil * ( .75 / MyTable.Primary_flDelay )
 			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
 		else
-			f = MyTable.flRecoil * ( 1 / MyTable.Primary_flDelay ) * .5
+			f = flRecoil * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
 			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
 		end
-		f = f + MyTable.flRecoil / MyTable.flRecoilMultiplierThingy
+		f = f + flRecoil / MyTable.flRecoilMultiplierThingy
 		if MyTable.flCurrentRecoil > f then MyTable.flCurrentRecoil = f end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
