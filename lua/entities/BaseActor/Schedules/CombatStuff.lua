@@ -6,6 +6,10 @@ ENT.tPreScheduleResetVariables.bWantsCover = false
 function ENT:RangeAttack()
 	if self.bHoldFire then return end
 	self:WeaponPrimaryVolley()
+	// Set back to the default values for next no-custom-template shots
+	self.tWeaponPrimaryVolleyTimes = { 0, 3 }
+	self.tWeaponPrimaryVolleyBreaks = { .33, .66 }
+	self.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, .4 }
 	return true
 end
 
@@ -470,6 +474,9 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			end
 			MyTable.vaAimTargetBody = v
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			MyTable.tWeaponPrimaryVolleyTimes = { 2, 4 }
+			MyTable.tWeaponPrimaryVolleyBreaks = { .2, .4 }
+			MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { .1, .2 }
 			if MyTable.CanAttackHelper( self, v, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
 			local tNearestEnemies = {}
@@ -594,7 +601,20 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			end
 			MyTable.vaAimTargetBody = enemy:GetPos() + enemy:OBBCenter()
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-			if MyTable.CanAttackHelper( self, enemy:GetPos() + enemy:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+			local pWeapon = MyTable.Weapon
+			if !IsValid( pWeapon ) then return false end
+			local flRecoil = pWeapon.flRecoil
+			if flRecoil then
+				local flDistance = self:GetShootPos():Distance( MyTable.vaAimTargetBody )
+				if flRecoil <= 0 || flDistance < 1792 / flRecoil then // To Hell everything, I'm magdumping your ass
+					MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
+					MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
+					MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+				end
+			end
+			if MyTable.CanAttackHelper( self, enemy:GetPos() + enemy:OBBCenter(), MyTable ) then
+				MyTable.RangeAttack( self, MyTable )
+			end
 		else
 			if sched.bMove then
 				local tNearestEnemies = {}

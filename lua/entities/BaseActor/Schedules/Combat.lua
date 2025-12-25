@@ -339,6 +339,20 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		sched.tAdvanceSearchQueue = tQueue
 		sched.tAdvanceSearchVisited = tVisited
 		sched.flAdvanceSearchBestCandidate = flBestCandidate
+		local vEnemy = enemy:GetPos()
+		local pIterator = sched.pIterator
+		local v = sched.vCoverBounds || self:GatherCoverBounds()
+		sched.vCoverBounds = v
+		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
+		sched.flBoundingRadiusTwo = f
+		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
+		local tCovers = {}
+		local tOldCover = MyTable.tCover
+		local d = MyTable.vHullMaxs.x * 4
+		local iLastEnemyPathStackUpCursor = bAdvance && MyTable.iLastEnemyPathStackUpCursor || 0
+		local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
+		pPath:MoveCursorToClosestPosition( vPos )
 		local iHandled, bAtTheResult = 1, true
 		while !table_IsEmpty( tQueue ) do
 			bAtTheResult = nil
@@ -360,12 +374,57 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					pPath:MoveCursorToClosestPosition( vClosest )
 					local flCursor = pPath:GetCursorPosition()
 					local flNewCost = pPath:GetPositionOnPath( flCursor ):Distance( vClosest ) + ( pPath:GetLength() - flCursor )
-					// If it's not better than the current best - forget it!
-					// TODO: Don't do this for covers which we can't take,
-					// AND MOST CERTAINLY DON'T DO THIS FOR COVERS FULL OF ALLIES!
-					if flNewCost > flBestCandidate then continue end
-					flBestCandidate = flNewCost
-					local t = { tNewCover, flNewCost, tSource }
+					// This whole thing is for one reason: we can still semi
+					// path through covers we can't take to check more parts
+					// of the graph, BUT they're not best candidates
+					if flNewCost > flBestCandidate then continue end // This is why I said semi
+					local flInitialCursor = pPath:GetCursorPosition()
+					local bNope
+					local vDirection = vEnd - vStart
+					local flStep, flStart, flEnd
+					if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
+						flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
+					else
+						flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
+					end
+					vDirection:Normalize()
+					local vOff = tNewCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
+					vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
+					for iCurrent = flStart, flEnd, flStep do
+						local vCover = vStart + vDirection * iCurrent + vOff
+						pPath:MoveCursorToClosestPosition( vCover )
+						local iCursor = pPath:GetCursorPosition()
+						local dDirection = pPath:GetPositionOnPath( iCursor )
+						pPath:MoveCursor( 1 )
+						dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
+						dDirection[ 3 ] = 0
+						dDirection:Normalize()
+						if util_TraceHull( {
+							start = vCover,
+							endpos = vCover,
+							mins = vMins,
+							maxs = vMaxs,
+							filter = self
+						} ).Hit then continue end
+						local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
+						if !util_TraceLine( {
+							start = v,
+							endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+							filter = self
+						} ).Hit then continue end
+						if tAllies then
+							local b
+							for pAlly in pairs( tAllies ) do
+								if self == pAlly then continue end
+								if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= f then b = true break end
+							end
+							if b then continue end
+						end
+						bNope = true
+						break
+					end
+					if !bNope then flBestCandidate = flNewCost end
+					local t = { tNewCover, flNewCost, tSource, bNope }
 					sched.tAdvanceSearchBest = t
 					table.insert( tQueue, t )
 				end
@@ -384,22 +443,12 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				// We don't need to calculate all of this
 				// if we're already at the end of the path
 				if !table_IsEmpty( tOrderedPath ) then
-					local vEnemy = enemy:GetPos()
-					local pIterator = sched.pIterator
-					local v = sched.vCoverBounds || self:GatherCoverBounds()
-					sched.vCoverBounds = v
-					local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-					local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
-					sched.flBoundingRadiusTwo = f
-					local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
-					local tCovers = {}
-					local tOldCover = MyTable.tCover
-					local d = MyTable.vHullMaxs.x * 4
-					local iLastEnemyPathStackUpCursor = bAdvance && MyTable.iLastEnemyPathStackUpCursor || 0
-					local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
-					pPath:MoveCursorToClosestPosition( vPos )
 					local flInitialCursor = pPath:GetCursorPosition()
 					for _, tCover in ipairs( tOrderedPath ) do
+						// I'ma be honest, I didn't comment out this line. I wrote it already commented. I'm not so sure
+						// if this is truly a good choice, it probably isn't. Since we can path for seconds,
+						// this data can already be bad, which doesn't affect pathing that much, but affects this.
+						// if tCover[ 4 ] then continue end
 						local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
 						local vDirection = vEnd - vStart
 						local flStep, flStart, flEnd
@@ -441,7 +490,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 								end
 								if b then continue end
 							end
-							// TODO: Fix bullshit errors in TakeCoverMove!
 							local s = self:SetSchedule "TakeCoverMove"
 							if math.abs( MyTable.flCombatState ) < .2 then
 								s.bTakeCoverAdvance = true
@@ -463,6 +511,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			---------------------
 			// Nevermind, I thought about it, and it would be cool
 			// for the AI to only push when others are suppressing
+			sched.bAdvance = nil // EDIT: SO DO NOTHING FOR NOOOW
 		end
 	elseif sched.bRetreat then
 		// You might think this needs a BFS, but actually it doesn't!
