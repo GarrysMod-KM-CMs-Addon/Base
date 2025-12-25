@@ -58,9 +58,6 @@ else
 end
 
 local Vector = Vector
-
-local math = math
-local math_min = math.min
 local math_deg = math.deg
 local math_acos = math.acos
 

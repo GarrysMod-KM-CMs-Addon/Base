@@ -666,8 +666,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				ply.GAME_flPeekUpMinimumTime = nil
 				return
 			end
-			cmd:RemoveKey( IN_DUCK )
-			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + ply:GetUnDuckSpeed() end
+			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
 			if CurTime() <= ply.GAME_flPeekUpMinimumTime then
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
@@ -676,6 +675,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			ply:SetNW2Bool "CTRL_bInCover"
 			ply.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && COVER_FIRE_UP || COVER_BLINDFIRE_UP )
+			cmd:RemoveKey( IN_DUCK )
 			local aEye = ply:EyeAngles()
 			local bInCover
 			local EyeVector = aEye:Forward()
@@ -709,17 +709,24 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				ply.GAME_flPeekFireTime = CurTime() + .2
 			elseif CurTime() > ( ply.GAME_flPeekFireTime || 0 ) then
 				ply.GAME_sCoverState = "FROM"
+				ply.GAME_flPeekUpMinimumTime = nil
 				return
 			end
+			ply:SetNW2Bool "CTRL_bInCover"
+			ply.CTRL_bInCover = nil
+			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
+			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
+			if CurTime() <= ply.GAME_flPeekUpMinimumTime then
+				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
+				cmd:RemoveKey( IN_ATTACK )
+				cmd:RemoveKey( IN_ATTACK2 )
+			else ply:SetNW2Bool "CTRL_bPredictedCantShoot" end
 			local d = ply.GAME_vPeekTarget - ply:GetPos()
 			d[ 3 ] = 0
 			d:Normalize()
 			local dEyeFlat = -ply.GAME_vPeekSourceHitNormal
 			dEyeFlat:Normalize()
 			local bMove
-			ply:SetNW2Bool "CTRL_bInCover"
-			ply.CTRL_bInCover = nil
-			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
 			local s = ply.GAME_bPeekForceCrouch
 			if s == false then
 				cmd:RemoveKey( IN_DUCK )
@@ -900,7 +907,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				maxs = vMaxs,
 				filter = ply
 			} ).Hit
-			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs().x * 2, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs().x * 2
+			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs().y * 2, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs().y * 2
 			if !util_TraceLine( {
 				start = ply:GetPos() + ply:GetViewOffsetDucked(),
 				endpos = vLeft + ply:GetViewOffsetDucked(),
@@ -1127,9 +1134,9 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
 	local ent = Data.Entity
 	local dent = GetOwner( ent )
-	if Data.Volume <= .05 then return false end
+	if Data.Volume <= .05 then return true end
 	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 2 || 1.5 ), 5, 18000 )
-	local vPos = Data.Pos || ent:GetPos()
+	local vPos = Data.Pos || ( ent:GetPos() + ent:OBBCenter() )
 	for act in pairs( __ACTOR_LIST__ ) do
 		if act == ent || act == dent then continue end
 		if act.flHearDistanceMultiplier > 0 && act:GetPos():Distance( vPos ) <= ( dt * act.flHearDistanceMultiplier ) then
@@ -1147,18 +1154,6 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	local dts = dt * dt
 	for _, ply in player_Iterator() do
 		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
-		net.Start "EmitSound"
-			net.WriteString( Data.SoundName ) -- The name of the sound
-			net.WriteFloat( Data.SoundTime ) -- The time the sound is emitted
-			net.WriteFloat( dt ) -- Distance
-			net.WriteUInt( Data.Pitch, 8 ) -- Pitch of the sound
-			net.WriteUInt( Data.Flags, 32 ) -- Flags related to the sound
-			net.WriteUInt( Data.Channel, 8 ) -- Audio channel
-			net.WriteFloat( Data.Volume ) -- Volume of the sound
-			net.WriteVector( vPos )
-			net.WriteVector( GetVelocity( ent ) )
-			net.WriteEntity( ent )
-		net.Send( ply )
 		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
 		if NOT_A_VOICELINE[ Data.SoundName ] || ply.DR_EThreat == DIRECTOR_THREAT_MAGIC then continue end
 		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
@@ -1183,7 +1178,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			continue
 		end
 	end
-	return false
+	return true
 end )
 
 if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end

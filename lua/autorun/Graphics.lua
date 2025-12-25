@@ -100,8 +100,6 @@ end
 
 local BLEED_LOWER_THRESHOLD = .25
 
-local util_TraceLine = util.TraceLine
-
 function DrawBlur( flIntensity ) DrawBokehDOF( flIntensity, 0, 0 ) end
 
 local MAX_WATER_BLUR = 3
@@ -260,8 +258,9 @@ local vThirdPersonCameraOffset = Vector()
 local bAllowThirdPerson = GetConVar "bAllowThirdPerson"
 
 local function fMoreEffects( ply, tView )
+	local f = 1 - ply:GetNW2Float( "GAME_flBlood", 1 )
 	tView.fov = tView.fov * ( 1 - math.abs( math.sin( RealTime() * .5 ) ) *
-	( 1 - math.Clamp( ply:GetNW2Float( "GAME_flBlood", 1 ) + ( .0016 - ply:GetNW2Float( "GAME_flBleeding", 0 ) ) * FrameTime(), 0, 1 ) )
+	( f + .0016 - ply:GetNW2Float( "GAME_flBleeding", 0 ) ) * FrameTime()
 	* .125 )
 end
 
