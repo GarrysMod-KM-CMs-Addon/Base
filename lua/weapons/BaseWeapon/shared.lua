@@ -294,8 +294,10 @@ if CLIENT then
 		local v = MyTable.flCustomZoomFoV
 		if v then
 			if MyTable.bSniper then
-				local f = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && v || ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
+				local b = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER )
+				local f = b && v || ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
 				MyTable.flFoV = f
+				if b then ang = ang - ply:GetViewPunchAngles() * .5 end
 				return pos, ang, f
 			else
 				local f = math_Remap( MyTable.flAimMultiplier, 1, 0, ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ), v )
