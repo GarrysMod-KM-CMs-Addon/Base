@@ -381,7 +381,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					// of the graph, BUT they're not best candidates
 					if flNewCost > flBestCandidate then continue end // This is why I said semi
 					local flInitialCursor = pPath:GetCursorPosition()
-					local bNope
+					local bYup
 					local vDirection = vEnd - vStart
 					local flStep, flStart, flEnd
 					if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
@@ -422,11 +422,11 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 							end
 							if b then continue end
 						end
-						bNope = true
+						bYup = true
 						break
 					end
-					if !bNope then flBestCandidate = flNewCost end
-					local t = { tNewCover, flNewCost, tSource, bNope }
+					if bYup then flBestCandidate = flNewCost end
+					local t = { tNewCover, flNewCost, tSource }
 					sched.tAdvanceSearchBest = t
 					table.insert( tQueue, t )
 				end
