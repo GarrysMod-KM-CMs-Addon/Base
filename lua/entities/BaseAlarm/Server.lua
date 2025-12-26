@@ -3,7 +3,7 @@ ENT.__ALARM__ = true
 // 0 means audible when visible
 ENT.flAudibleDistSqr = 0
 
-local GENERAL_AREA_SIZE_SQR = 4096 * 4096
+local GENERAL_AREA_SIZE_SQR = 8192 * 8192
 
 function ENT:Initialize()
 	self:SetUseType( SIMPLE_USE )

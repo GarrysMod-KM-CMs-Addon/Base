@@ -363,6 +363,21 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			table.SortByMember( tQueue, 2 )
 			local tSource = table.remove( tQueue )
 			local tCover, flCost = unpack( tSource )
+			// Moved this here as it feels better - in reality I just
+			// felt like moving this here, I think it's better...
+			// I have yet to playtest it though. Will I actually do so?
+			// Meh, PROBABLY NOT.
+			// EDIT: Just kidding, I'm in the mood now, I will.
+			// EDIT THREE: It did something. I'm sure of it. I think.
+			// Jokes aside, I am leaving this in, because it's nice IMO.
+			------------------
+			// Lol, how did I make this stupid mistake?
+			// if flCost < flBestCandidate then continue end
+			// Just now realized I also didn't add the subtraction
+			if flCost > flBestCandidate then iHandle = iHandled - 1 continue end
+			// EDIT TWO: Moving this down here too... for the same reason
+			// of me simply being stupid as the line above shows
+			flBestCandidate = flCost
 			for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
 				for iIndex in pairs( tIndices ) do
 					local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
@@ -376,10 +391,11 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					pPath:MoveCursorToClosestPosition( vClosest )
 					local flCursor = pPath:GetCursorPosition()
 					local flNewCost = pPath:GetPositionOnPath( flCursor ):Distance( vClosest ) + ( pPath:GetLength() - flCursor )
-					// This whole thing is for one reason: we can still semi
-					// path through covers we can't take to check more parts
-					// of the graph, BUT they're not best candidates
-					if flNewCost > flBestCandidate then continue end // This is why I said semi
+					// EDIT: Moved it upwards
+					//	// This whole thing is for one reason: we can still semi
+					//	// path through covers we can't take to check more parts
+					//	// of the graph, BUT they're not best candidates
+					//	if flNewCost > flBestCandidate then continue end // This is why I said semi
 					local flInitialCursor = pPath:GetCursorPosition()
 					local bYup
 					local vDirection = vEnd - vStart
@@ -425,7 +441,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						bYup = true
 						break
 					end
-					if bYup then flBestCandidate = flNewCost end
+					// Don't do this here either
+					// if bYup then flBestCandidate = flNewCost end
 					local t = { tNewCover, flNewCost, tSource }
 					sched.tAdvanceSearchBest = t
 					table.insert( tQueue, t )

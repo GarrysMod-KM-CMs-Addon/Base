@@ -25,7 +25,7 @@ end
 
 ENT.__PROJECTILE_EXPLOSION__ = true
 ENT.EXPLOSION_flDamage = 2048
-ENT.EXPLOSION_flRadius = 96
+ENT.EXPLOSION_flRadius = 512
 
 ENT.__PROJECTILE_ROCKET__ = true
 ENT.ROCKET_flSpeed = 4096
@@ -64,13 +64,49 @@ function ENT:Detonate( MyTable )
 	local vPos = CEntity_GetPos( self )
 	local v = vPos + CEntity_OBBCenter( self )
 	local pOwner = CEntity_GetOwner( self )
-	util_BlastDamage( self, IsValid( pOwner ) && pOwner || self, v, MyTable.EXPLOSION_flRadius, MyTable.EXPLOSION_flDamage )
-	CEntity_EmitSound( self, CEntity_WaterLevel( self ) < 3 && "BaseExplosionEffect.Water" || "BaseExplosionEffect.Sound" )
-	local pEffect = EffectData()
-	pEffect:SetOrigin( v )
-	pEffect:SetNormal( VectorRand() )
-	pEffect:SetFlags( 4 ) // A brighter kaboom
-	util_Effect( "Explosion", pEffect )
+	self:EmitSound( self:WaterLevel() > 0 && "BaseExplosionEffect.Water" || "BaseExplosionEffect.Sound" )
+	local flMagnitude = self.flMagnitude
+	local flDistance = MyTable.EXPLOSION_flRadius
+	util_BlastDamage( self, GetOwner( self ), self:GetPos(), flDistance, MyTable.EXPLOSION_flDamage )
+	flDistance = flDistance - 96
+	for _ = 1, math.max( 5, flDistance * .2 ) do
+		local dir = VectorRand()
+		local tr = util.TraceLine {
+			start = self:GetPos() + dir * 50,
+			endpos = self:GetPos() + dir * 50 + VectorRand() * math.Rand( 0, flDistance ),
+			mask = MASK_SOLID
+		}
+		local ed = EffectData()
+		ed:SetOrigin( tr.HitPos - Vector( 0, 0, 24 ) )
+		ed:SetNormal( VectorRand() )
+		ed:SetFlags( 4 ) // A brighter kaboom
+		util_Effect( "Explosion", ed )
+	end
+	local flSpeed = flDistance * 8
+	for _ = 1, math.max( 5, flDistance * math.Rand( .03, .06 ) ) do
+		local dir = VectorRand()
+		local tr = util.TraceLine {
+			start = self:GetPos() + dir * 50,
+			endpos = self:GetPos() + dir * 50 + VectorRand() * math.Rand( 0, flDistance ),
+			mask = MASK_SOLID
+		}
+		local p = ents.Create "prop_physics"
+		p:SetPos( tr.HitPos )
+		p:SetModel "models/combine_helicopter/helicopter_bomb01.mdl"
+		p:SetNoDraw( true )
+		p:Spawn()
+		p.GAME_bFireBall = true
+		local f = ents.Create "env_fire_trail"
+		f:SetPos( p:GetPos() )
+		f:SetParent( p )
+		f:Spawn()
+		p:GetPhysicsObject():AddVelocity( VectorRand() * math.Rand( 0, flSpeed ) )
+		AddThinkToEntity( p, function( self ) self:Ignite( 999999 ) if math.random( GetFlameStopChance( self ) * FrameTime() ) == 1 || self:WaterLevel() != 0 then self:Remove() return true end end )
+	end
+	for i = 1, math.max( 5, flDistance * .1 ) do
+		local dir = VectorRand()
+		util.Decal( "Scorch", self:GetPos() + dir * 50, self:GetPos() + dir * 50 + VectorRand() * flDistance )
+	end
 	MyTable.bDetonated = true
 	CEntity_Remove( self )
 end

@@ -1,12 +1,12 @@
 // I am too lazy to implement this. We'll need BaseProjectileWeapon first!
 
-DEFINE_BASECLASS "BaseWeapon"
+DEFINE_BASECLASS "BaseProjectileWeapon"
 
 SWEP.Category = "Rocket Propelled Grenades"
 SWEP.PrintName = "#weapon_rpg"
 
 SWEP.Instructions = "Primary to shoot."
-SWEP.Purpose = "A Hollywood Anti-Tank 4 prop." // "Anti-Tank 4."
+SWEP.Purpose = "Anti-Tank 4."
 SWEP.ViewModel = Model "models/weapons/c_rpg.mdl"
 SWEP.WorldModel = Model "models/weapons/w_rocket_launcher.mdl" // NOT w_rpg?! WHAT THE HELL?!
 SWEP.Primary.ClipSize = 1
@@ -28,6 +28,8 @@ SWEP.flViewModelY = -5
 SWEP.vSprintArm = Vector( 1.358, -12, -4 )
 SWEP.vViewModelAim = Vector( -17 - SWEP.flViewModelY, -15, -3.1 )
 SWEP.flCoverY = -8
+SWEP.Primary_flSpreadX = .05
+SWEP.Primary_flSpreadY = .05
 
 sound.Add {
 	name = "RPG_Shot",
@@ -37,19 +39,5 @@ sound.Add {
 	sound = "weapons/ar2/npc_ar2_altfire.wav"
 }
 
-function SWEP:Initialize() self:SetHoldType "RPG" end
-
-function SWEP:PrimaryAttack()
-	if !self:CanPrimaryAttack() then return end
-	local owner = self:GetOwner()
-	self:ShootEffects()
-	owner:SetAnimation( PLAYER_ATTACK1 )
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util.Effect( "MuzzleFlash", ed )
-	self:EmitSound "RPG_Shot"
-	self:TakePrimaryAmmo( 1 )
-	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
-end
+SWEP.sSound = "RPG_Shot"
+SWEP.sHoldType = "RPG"
