@@ -429,7 +429,7 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 	end
 end )
 hook.Add( "Think", "GameImprovements", function()
-	file.Write( "Covers/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
+	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 	file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
 	if cEvents:GetBool() && __EVENTS_LENGTH__ > 0 && math.Rand( 0, cEventProbability:GetFloat() * FrameTime() ) <= 1 then
 		local iRemaining, tEncountered = __EVENTS_LENGTH__, {}

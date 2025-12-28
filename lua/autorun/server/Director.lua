@@ -8,6 +8,14 @@ local Vector = Vector
 
 include "autorun/Director.lua"
 
+util.AddNetworkString "DR_ClientWantsToBeInCombat"
+
+net.Receive( "DR_ClientWantsToBeInCombat", function( _, ply )
+	if ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE then
+		ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+	end
+end )
+
 function Director_GetThreat( pPlayer, pEntity )
 	if IsValid( pEntity.Enemy ) then return DIRECTOR_THREAT_HOLD_FIRE end
 	local f = pEntity.GetEnemy

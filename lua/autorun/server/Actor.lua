@@ -27,7 +27,7 @@ end
 
 // Cover: ( Vector vStart, Vector vEnd, Boolean bRightSide, Table tConnections )
 // CNavArea:GetID() -> SequentialTable[ Cover ]
-__COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. engine.ActiveGamemode() .. ".json" ) || "[]", true )
+__COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json" ) || "[]", true )
 __COVERS_DYNAMIC__ = __COVERS_DYNAMIC__ || {} // CNavArea:GetID() -> { Any -> Cover }
 
 local FLAGS = FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE
