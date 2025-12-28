@@ -126,9 +126,15 @@ function TOOL:Think()
 			else
 				debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
 			end
+			local t = {}
 			for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
 				for iIndex in pairs( tIndices ) do
-					local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
+					local tNewCover = __COVERS_STATIC__[ iAreaID ]
+					if tNewCover then tNewCover = tNewCover[ iIndex ] end
+					if !tNewCover || tNewCover == tCover then continue end
+					local t2 = t[ iAreaID ]
+					if t2 then t2[ iIndex ] = true
+					else t[ iAreaID ] = { [ iIndex ] = true } end
 					local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 					local vDirection = ( vEnd - vStart ):GetNormalized()
 					debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 255 ), true )
@@ -143,6 +149,7 @@ function TOOL:Think()
 					end
 				end
 			end
+			tCover[ 4 ] = t
 		end
 	end
 end
