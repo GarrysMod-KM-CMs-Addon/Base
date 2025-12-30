@@ -24,7 +24,10 @@ SWEP.Slot = 1
 SWEP.Crosshair = "Pistol"
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.bPistolSprint = true
-SWEP.vViewModelAim = Vector( -5.79, -8, 2.99 )
+SWEP.flViewModelX = -4
+SWEP.flViewModelY = -2
+SWEP.flViewModelZ = 1
+SWEP.vViewModelAim = Vector( -5.79 - SWEP.flViewModelY, -8 - SWEP.flViewModelX, 2.99 - SWEP.flViewModelZ )
 
 sound.Add {
 	name = "Glock18_Shot",

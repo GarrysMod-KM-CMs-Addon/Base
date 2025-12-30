@@ -137,7 +137,7 @@ function SWEP:DoRecoil()
 	if IsValid( pOwner ) && pOwner.ViewPunch && pOwner.GetRunSpeed then
 		local flRecoil = self:CalcRecoil( pOwner )
 		self:CallOnClient( "AddRecoil", flRecoil )
-		pOwner:ViewPunch( Angle( util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 ) )
+		pOwner:ViewPunch( Angle( util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 ) * ( pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1 ) )
 	end
 end
 function SWEP:ShootEffects()
