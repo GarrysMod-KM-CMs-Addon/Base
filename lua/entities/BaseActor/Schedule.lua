@@ -35,6 +35,7 @@ ENT.__SCHEDULE__ = {}
 ENT.tPreScheduleResetVariables = {}
 
 function ENT:SelectScheduleInternal( MyTable, ... )
+	if MyTable.m_bScript then return end
 	MyTable.Schedule = nil
 	local p = MyTable.GAME_pBehaviour
 	if p then if p:SelectSchedule( self, MyTable, ... ) then return end end

@@ -1,9 +1,10 @@
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local CEntity_GetPos = CEntity.GetPos
+local CEntity_GetAngles = CEntity.GetAngles
 
 // ENT.Enemy = NULL
-function ENT:SetEnemy( e ) local MyTable = CEntity_GetTable( self ) MyTable.UpdateEnemyMemory( e, CEntity_GetPos( e ), MyTable ) end
+function ENT:SetEnemy( e ) local MyTable = CEntity_GetTable( self ) MyTable.UpdateEnemyMemory( e, CEntity_GetPos( e ), CEntity_GetAngles( e ), MyTable ) end
 function ENT:GetEnemy() return CEntity_GetTable( self ).Enemy end
 
 local IsValid = IsValid
@@ -98,10 +99,7 @@ function ENT:UpdateEnemyMemory( enemy, vec, ang ) self:SetupBullseye( enemy, vec
 local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 function ENT:SetupBullseye( enemy, vec, ang, MyTable )
-	if vec then
-		local center = enemy:GetPos() + enemy:OBBCenter()
-		if self:CanSee( center ) then vec = center end
-	else vec = enemy:GetPos() + enemy:OBBCenter() end
+	if !vec then vec = enemy:GetPos() + enemy:OBBCenter() end
 	if !ang then ang = ( enemy.GetAimVector && enemy:GetAimVector() || enemy:GetForward() ):Angle() end
 	local ent = enemy
 	if ent.__ACTOR_BULLSEYE__ then
@@ -204,6 +202,7 @@ ENT.tAlertEntities = {} // Entities that we might wanna be concerned about, such
 local ipairs = ipairs
 function ENT:Look( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+	if MyTable.m_bScript then return end
 	if CurTime() <= MyTable.flNextLookTime then return end
 	MyTable.flNextLookTime = CurTime() + math_Rand( .08, .12 )
 	local tVisionStrength = {}
@@ -367,6 +366,7 @@ end
 local math_max = math.max
 function ENT:OnHeardSomething( Other, Data )
 	local MyTable = CEntity_GetTable( self )
+	if MyTable.m_bScript then return end
 	local d = MyTable.Disposition( self, Other, MyTable )
 	if MyTable.bCanStartle then MyTable.NoiseReflex( self, MyTable, d, Other, Data ) end
 	if d == D_LI then

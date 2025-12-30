@@ -68,6 +68,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			sched.pIterator = pIterator
 		end
 		local vEnemy = enemy:GetPos()
+		local vTarget = vEnemy + enemy:OBBCenter()
 		local v = sched.vCoverBounds || MyTable.GatherCoverBounds( self, MyTable )
 		sched.vCoverBounds = v
 		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
@@ -77,6 +78,8 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		sched.vMins = vMins
 		local tCovers = {}
 		local d = MyTable.vHullMaxs.x * 4
+		local flSuppressionTraceFraction = MyTable.flSuppressionTraceFraction
+		local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
 		for _ = 0, 32 do
 			local pArea = pIterator()
 			if pArea == nil then
@@ -122,6 +125,27 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 						endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
 						filter = self
 					} ).Hit then continue end
+					if !util_TraceLine( {
+						start = v,
+						endpos = v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+						filter = self
+					} ).Hit then continue end
+					local tr = util_TraceLine {
+						start = v,
+						endpos = vTarget,
+						mask = MASK_SHOT_HULL,
+						filter = { self, enemy, trueenemy }
+					}
+					if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:DistToSqr( vTarget ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR then
+						local d = vEnemy - vCover
+						d[ 3 ] = 0
+						d:Normalize()
+						if !util_TraceLine( {
+							start = v,
+							endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+							filter = self
+						} ).Hit then continue end
+					end
 					if tAllies then
 						local b
 						for pAlly in pairs( tAllies ) do

@@ -55,7 +55,7 @@ function ENT:ComputePath( Path, vGoal, Weighter )
 	end )
 end
 
-// How far do We have to move along the path to be able to suppress anyone? Can return `nil`
+// How far do We have to move along the path to be able to suppress anyone? Can return nil
 
 function ENT:FindPathBattleLine( Path, tEnemies, flTolerance )
 	flTolerance = flTolerance || 256

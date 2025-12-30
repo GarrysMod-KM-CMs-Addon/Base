@@ -19,6 +19,6 @@ function ENT:Initialize()
 	BaseClass.Initialize( self )
 	self:SetModel "models/airboat.mdl"
 	local vMins, vMaxs = self:GetCollisionBounds()
-	self:PhysicsInit( SOLID_VPHYSICS, ( vMins + vMaxs ) * .5 - Vector( 0, 0, 256 ) )
+	self:PhysicsInit( SOLID_VPHYSICS )
 	self:SetSeatPosition( Vector( 0, -8, 32 ) )
 end

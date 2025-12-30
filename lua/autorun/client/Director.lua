@@ -20,6 +20,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 	// Do NOT write anything here! Use DIRECTOR_IDLE_SEQUENCES instead!
 	[ DIRECTOR_THREAT_NULL ] = {
 		Base = { Execute = function( self )
+			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
 			if !self.tHandles.Main then
 				if math_Rand( 0, 100000 * FrameTime() ) <= 1 then
 					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )

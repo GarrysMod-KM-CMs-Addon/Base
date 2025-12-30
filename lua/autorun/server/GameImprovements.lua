@@ -297,6 +297,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	local flDamage = Data.Damage
 	local col
 	local bTracer = Data.Tracer > 0
+	// TODO: Find a way to conceal tracers of your own gun in first person,
+	// that will make the crosshair disappearing actually matter
 	if bTracer then col = TRACER_COLOR[ Data.TracerName || "Bullet" ] || TRACER_COLOR.Bullet end
 	if Data.HullSize == 0 then Data.HullSize = TRACER_SIZE[ Data.TracerName || "Bullet" ] || TRACER_SIZE.Bullet end
 	local pOwner = GetOwner( ent )
@@ -325,7 +327,6 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		pt:SetAngles( ( tr.HitPos - tr.StartPos ):GetNormalized():Angle() )
 		pt:SetKeyValue( "lightfov", "110" )
 		pt:SetKeyValue( "lightcolor", table.concat( col, " " ) )
-		pt:SetKeyValue( "spritedisabled", "1" )
 		pt:SetKeyValue( "farz", "256" )
 		pt:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
 		pt:SetOwner( GetOwner( ent ) )

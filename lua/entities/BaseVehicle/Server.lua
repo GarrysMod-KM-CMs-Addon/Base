@@ -23,7 +23,6 @@ function ENT:Initialize()
 	if bit_band( f, TRAVERSES_WATER ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_WATER ][ self ] = true end
 	if bit_band( f, TRAVERSES_GROUND ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_GROUND ][ self ] = true end
 	if bit_band( f, TRAVERSES_AIR ) != 0 then __VEHICLE_TABLE_LOCAL__[ TRAVERSES_AIR ][ self ] = true end
-	//self:SetSeatPosition(
 end
 hook.Add( "Think", "BaseVehicle", function()
 	local t = {}

@@ -14,13 +14,11 @@ function ENT:SetupDataTables()
 	self:NetworkVar( "Float", 1, "SpriteSize", { KeyName = "raw.spritesize" } )
 	// Used by `Shadows`, mode 1: the distance to the trace's `HitPos`
 	self:NetworkVar( "Float", 2, "TrueDistance", { KeyName = "raw.truedistance" } )
-	// Doesn't spawn a sprite
-	self:NetworkVar( "Bool", 1, "SpriteDisabled", { KeyName = "raw.spritedisabled" } )
 	/*
-	0: Use Splinter Cell: Blacklist ( modified Unreal Engine 2 ) inspired shadows ( recommended )
-	1: Use EXTREMELY EXPENSIVE shadows drawn by Vulcan ( doesn't render AT ALL on weak platforms! )
+	0: Use Splinter Cell: Blacklist (modified Unreal Engine 2) inspired shadows (recommended)
+	1: Use EXTREMELY EXPENSIVE shadows drawn by Vulcan (doesn't render AT ALL on weak platforms!)
 	*/
-	self:NetworkVar( "Bool", 2, "Shadows", { KeyName = "raw.shadows" } )
+	self:NetworkVar( "Bool", 1, "Shadows", { KeyName = "raw.shadows" } )
 	// The texture of the light
 	self:NetworkVar( "String", 0 ,"Texture", { KeyName = "raw.texture" } )
 	// The light color
@@ -102,29 +100,6 @@ else
 			f = ( f != 0 && ( tr.HitPos:Distance( self:GetPos() ) / math_cos( math_acos( math_Clamp( f, -1, 1 ) ) ) ) || tr.HitPos:Distance( self:GetPos() ) ) + 128
 			self.flShadowDist = f
 			self:SetTrueDistance( f )
-		end
-		if self:GetSpriteDisabled() then if IsValid( self.Sprite ) then self.Sprite:Remove() end else
-			if !IsValid( self.Sprite ) then
-				local spr = ents.Create "env_sprite"
-				spr:SetPos( self:GetPos() )
-				spr:SetParent( self )
-				spr:SetKeyValue( "model", "sprites/glow1.spr" )
-				spr:SetKeyValue( "scale", self:GetSpriteSize() != 0 && tonumber( self:GetSpriteSize() )  ||  self:GetBrightness() * .1 )
-				spr:SetKeyValue( "rendermode", "9" )
-				local c = self:GetLightColor():ToColor()
-				spr:Fire( "ColorRedValue", c.r )
-				spr:Fire( "ColorGreenValue", c.g )
-				spr:Fire( "ColorBlueValue", c.b )
-				spr:Spawn()
-				self.Sprite = spr
-			else
-				local spr = self.Sprite
-				spr:SetKeyValue( "scale", self:GetSpriteSize() != 0 && tonumber( self:GetSpriteSize() )  ||  self:GetBrightness() * .1 )
-				local c = self:GetLightColor():ToColor()
-				spr:Fire( "ColorRedValue", c.r )
-				spr:Fire( "ColorGreenValue", c.g )
-				spr:Fire( "ColorBlueValue", c.b )
-			end
 		end
 	end
 	function ENT:OnRemove() if IsValid( self.Sprite ) then self.Sprite:Remove() end end

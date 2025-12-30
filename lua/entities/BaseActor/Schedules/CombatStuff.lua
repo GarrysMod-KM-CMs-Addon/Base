@@ -432,7 +432,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 				filter = { self, enemy, trueenemy }
 			}
 		end
-		if self.flCombatState > 0 && v:DistToSqr( vEnemy ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) ||
+		if MyTable.flCombatState > 0 && v:DistToSqr( vEnemy ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) ||
 		util_TraceLine( {
 			start = v,
 			endpos = vEnemy,
@@ -512,35 +512,37 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 					end
 				end
 			end
-			if IsValid( pEnemy ) then
-				if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-				local flDist = MyTable.flWalkSpeed * 4
-				flDist = flDist * flDist
-				if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-					local flDist = MyTable.flRunSpeed * 4
+			if sched.bMove then
+				if IsValid( pEnemy ) then
+					if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
+					local flDist = MyTable.flWalkSpeed * 4
 					flDist = flDist * flDist
-					if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-						MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
-				else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
-			else
-				local goal = sched.Path:GetCurrentGoal()
-				if goal then
-					MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
-					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-					if sched.bMove then MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable ) end
+					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
+						local flDist = MyTable.flRunSpeed * 4
+						flDist = flDist * flDist
+						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
+							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
+				else
+					local goal = sched.Path:GetCurrentGoal()
+					if goal then
+						MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
+						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+						if sched.bMove then MyTable.ModifyMoveAimVector( MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1 ) end
+					end
+					if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
+					local flDist = self.flWalkSpeed * 4
+					flDist = flDist * flDist
+					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
+						local flDist = MyTable.flRunSpeed * 4
+						flDist = flDist * flDist
+						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
+							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				end
-				if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-				local flDist = MyTable.flWalkSpeed * 4
-				flDist = flDist * flDist
-				if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-					local flDist = MyTable.flRunSpeed * 4
-					flDist = flDist * flDist
-					if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
-						MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
-				else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
-			end
+			else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 		end
 	else
 		local vStand, vDuck = Vector( 0, 0, MyTable.vHullMaxs.z )
@@ -616,37 +618,37 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 				MyTable.RangeAttack( self, MyTable )
 			end
 		else
-			if sched.bMove then
-				local tNearestEnemies = {}
-				for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-				table.SortByMember( tNearestEnemies, 2, true )
-				local tAllies, pEnemy = self:GetAlliesByClass()
-				for _, d in ipairs( tNearestEnemies ) do
-					local ent = d[ 1 ]
-					local v = ent:GetPos() + ent:OBBCenter()
-					local tr = util_TraceLine {
-						start = self:GetShootPos(),
-						endpos = v,
-						mask = MASK_SHOT_HULL,
-						filter = { self, ent }
-					}
-					if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-						local b = true
-						if !tr.Hit && CurTime() > MyTable.flWeaponPrimaryVolleyTime && ent.GAME_tSuppressionAmount then
-							local flThreshold = ent:Health() * .1
-							for other, am in pairs( ent.GAME_tSuppressionAmount ) do
-								if other != self && am > flThreshold then b = nil break end
-							end
-						end
-						if b then
-							MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-							MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-							pEnemy = ent
-							if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
-							break
+			local tNearestEnemies = {}
+			for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
+			table.SortByMember( tNearestEnemies, 2, true )
+			local tAllies, pEnemy = self:GetAlliesByClass()
+			for _, d in ipairs( tNearestEnemies ) do
+				local ent = d[ 1 ]
+				local v = ent:GetPos() + ent:OBBCenter()
+				local tr = util_TraceLine {
+					start = self:GetShootPos(),
+					endpos = v,
+					mask = MASK_SHOT_HULL,
+					filter = { self, ent }
+				}
+				if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
+					local b = true
+					if !tr.Hit && CurTime() > MyTable.flWeaponPrimaryVolleyTime && ent.GAME_tSuppressionAmount then
+						local flThreshold = ent:Health() * .1
+						for other, am in pairs( ent.GAME_tSuppressionAmount ) do
+							if other != self && am > flThreshold then b = nil break end
 						end
 					end
+					if b then
+						MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
+						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+						pEnemy = ent
+						if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+						break
+					end
 				end
+			end
+			if sched.bMove then
 				if IsValid( pEnemy ) then
 					if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
 					local flDist = MyTable.flWalkSpeed * 4

@@ -74,6 +74,11 @@ local __KEY_VALUES__ = {
 			local v = _G[ sClass ]
 			if v then self:SetNPCClass( v ) end
 		else self:SetNPCClass( v ) end
+	end,
+	bscripting = function( self, _, v )
+		if v == "1" then
+			self.m_bScript = true
+		else self.m_bScript = nil end
 	end
 }
 __KEY_VALUES__.additionalequipment = __KEY_VALUES__.cweapon

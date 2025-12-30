@@ -211,6 +211,7 @@ function SetHumanPlayer( ply )
 end
 
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
+	if DONT_ADJUST_PLAYERS then return end
 	timer.Simple( 0, function()
 		if !IsValid( ply ) then return end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
@@ -222,6 +223,7 @@ hook.Add( "PlayerSpawn", "Improvements", function( ply )
 end )
 
 hook.Add( "PlayerInitialSpawn", "Improvements", function( ply )
+	if DONT_ADJUST_PLAYERS then return end
 	timer.Simple( 0, function()
 		if !IsValid( ply ) then return end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
