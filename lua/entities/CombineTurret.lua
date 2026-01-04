@@ -87,7 +87,7 @@ function ENT:Behaviour()
 				mask = MASK_SHOT_HULL
 			} ).Fraction <= self.flSuppressionTraceFraction then continue end
 			self.vaAimTargetPose = v
-			if !self:CanAttackHelper( v ) then return end
+			if !self:CanAttackHelper( pEnemy ) then return end
 			self:RangeAttack()
 			return
 		end

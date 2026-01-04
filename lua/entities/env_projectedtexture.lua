@@ -4,6 +4,7 @@ ENT.Base = "base_point"
 ENT.Type = "point"
 ENT.PrintName = "#env_projectedtexture"
 
+local TRANSMIT_ALWAYS = TRANSMIT_ALWAYS
 function ENT:UpdateTransmitState() return TRANSMIT_ALWAYS end
 
 function ENT:SetupDataTables()
@@ -14,10 +15,8 @@ function ENT:SetupDataTables()
 	self:NetworkVar( "Float", 1, "SpriteSize", { KeyName = "raw.spritesize" } )
 	// Used by `Shadows`, mode 1: the distance to the trace's `HitPos`
 	self:NetworkVar( "Float", 2, "TrueDistance", { KeyName = "raw.truedistance" } )
-	/*
-	0: Use Splinter Cell: Blacklist (modified Unreal Engine 2) inspired shadows (recommended)
-	1: Use EXTREMELY EXPENSIVE shadows drawn by Vulcan (doesn't render AT ALL on weak platforms!)
-	*/
+	// 0: Use Splinter Cell: Blacklist (modified Unreal Engine 2) inspired shadows (recommended)
+	// 1: Use EXTREMELY EXPENSIVE shadows drawn by Vulcan (does not render AT ALL on weak platforms!)
 	self:NetworkVar( "Bool", 1, "Shadows", { KeyName = "raw.shadows" } )
 	// The texture of the light
 	self:NetworkVar( "String", 0 ,"Texture", { KeyName = "raw.texture" } )
@@ -33,25 +32,29 @@ function ENT:SetupDataTables()
 	self:NetworkVar( "Float", 6, "HorFOV", { KeyName = "raw.horfov" } )
 end
 
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 if CLIENT then
-	function ENT:Initialize() self:Update() end
+	function ENT:Initialize() local MyTable = CEntity_GetTable( self ) MyTable.Update( self, MyTable ) end
+	local Vector = Vector
 	function ENT:Think()
 		local d = self:GetShadows() && self:GetDistance() || self:GetTrueDistance()
 		self:SetRenderBounds( Vector( -d, -d, -d ), Vector( d, d, d ) )
-		self:Update()
+		local MyTable = CEntity_GetTable( self )
+		MyTable.Update( self, MyTable )
 		self:SetNextClientThink( CurTime() )
 		return true
 	end
-
-	function ENT:Update()
+	local math_max = math.max
+	local tonumber = tonumber
+	function ENT:Update( MyTable )
 		if #self:GetTexture() <= 0 then self:SetTexture "effects/flashlight/soft" end
-		local pt = self.ProjectedTexture
-		if !pt then self.ProjectedTexture = ProjectedTexture() pt = self.ProjectedTexture end
+		local pt = MyTable.ProjectedTexture
+		if !pt then MyTable.ProjectedTexture = ProjectedTexture() pt = MyTable.ProjectedTexture end
 		pt:SetPos( self:GetPos() )
 		pt:SetAngles( self:GetAngles() )
 		pt:SetTexture( self:GetTexture() )
 		pt:SetShadowFilter( 0 )
-		pt:SetNearZ( math.max( tonumber( self:GetMinDistance() ), 10 ) )
+		pt:SetNearZ( math_max( tonumber( self:GetMinDistance() ), 10 ) )
 		pt:SetFarZ( self:GetDistance() )
 		pt:SetColor( self:GetLightColor():ToColor() )
 		pt:SetBrightness( self:GetBrightness() )
@@ -59,8 +62,6 @@ if CLIENT then
 		pt:SetHorizontalFOV( self:GetHorFOV() )
 		pt:SetVerticalFOV( self:GetVerFOV() )
 		if self:GetShadows() then
-			self.flShadowDist = nil
-			self.flShadowUpdt = 0
 			pt:SetEnableShadows( true )
 		else
 			pt:SetEnableShadows( false )
@@ -98,7 +99,7 @@ else
 			}
 			local f = tr.HitNormal:Dot( -self:GetForward() )
 			f = ( f != 0 && ( tr.HitPos:Distance( self:GetPos() ) / math_cos( math_acos( math_Clamp( f, -1, 1 ) ) ) ) || tr.HitPos:Distance( self:GetPos() ) ) + 128
-			self.flShadowDist = f
+			self.flShadowDistance = f
 			self:SetTrueDistance( f )
 		end
 	end

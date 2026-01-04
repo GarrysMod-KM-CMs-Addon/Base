@@ -198,13 +198,21 @@ end
 function ENT:GetWeaponClipPrimary() local w = ( MyTable || CEntity_GetTable( self ) ).Weapon if IsValid( w ) then return w:Clip1() else return -1 end end
 function ENT:GetWeaponClipSizePrimary() local w = ( MyTable || CEntity_GetTable( self ) ).Weapon if IsValid( w ) then return w:GetMaxClip1() else return -1 end end
 
-local util_TraceHull = util.TraceHull
+local util_TraceLine = util.TraceLine
+local util_DistanceToLine = util.DistanceToLine
 local math_abs = math.abs
 local math_max = math.max
+local math_min = math.min
 local math_AngleDifference = math.AngleDifference
-function ENT:CanAttackHelper( vec, MyTable )
+local isentity = isentity
+function ENT:CanAttackHelper( VecOrEnt, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then return end
+	local pTarget, vTarget
+	if isentity( VecOrEnt ) then
+		pTarget = VecOrEnt
+		vTarget = pTarget:GetPos() + pTarget:OBBCenter()
+	else vTarget = VecOrEnt end
 	local vShoot, vAim = MyTable.GetShootPos( self, MyTable ), MyTable.GetAimVector( self, MyTable )
 	local pWeapon = MyTable.Weapon
 	local flDot = IsValid( pWeapon ) && ( 1 - math_max( pWeapon.Primary_flSpreadX || .05, pWeapon.Primary_flSpreadY || .05 ) ) || .95
@@ -216,11 +224,13 @@ function ENT:CanAttackHelper( vec, MyTable )
 			if ( vPoint - vShoot ):GetNormalized():Dot( vAim ) > flDot then return end
 		end
 	end
-	if vec then
-		local aCurrent, aAim = ( vec - vShoot ):Angle(), vAim:Angle()
-		if math_abs( math_AngleDifference( aCurrent.y, aAim.y ) ) > 1 || math_abs( math_AngleDifference( aCurrent.p, aAim.p ) ) > 1 then return end
-	end
-	return true
+	// Haha, NOT ANYMORE!!!
+	//	if vec then
+	//		local aCurrent, aAim = ( vec - vShoot ):Angle(), vAim:Angle()
+	//		if math_abs( math_AngleDifference( aCurrent.y, aAim.y ) ) > 1 || math_abs( math_AngleDifference( aCurrent.p, aAim.p ) ) > 1 then return end
+	//	end
+	if MyTable.bNoStitching || !IsValid( pTarget ) then return ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > flDot end
+	if ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > math_min( flDot, math.rad( MyTable.flTurnRate ) ) then return true end
 end
 
 function ENT:GatherShootingBounds()

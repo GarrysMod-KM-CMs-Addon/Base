@@ -507,7 +507,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 						MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 						pEnemy = ent
-						if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+						if MyTable.CanAttackHelper( self, ent, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 						break
 					end
 				end
@@ -614,7 +614,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 					MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
 				end
 			end
-			if MyTable.CanAttackHelper( self, enemy:GetPos() + enemy:OBBCenter(), MyTable ) then
+			if MyTable.CanAttackHelper( self, enemy, MyTable ) then
 				MyTable.RangeAttack( self, MyTable )
 			end
 		else
@@ -643,7 +643,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 						MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 						pEnemy = ent
-						if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+						if MyTable.CanAttackHelper( self, ent, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 						break
 					end
 				end

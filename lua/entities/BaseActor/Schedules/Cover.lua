@@ -54,7 +54,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 					MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 					if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then MyTable.WeaponReload( self, MyTable ) end
-					if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then
+					if MyTable.CanAttackHelper( self, ent, MyTable ) then
 						MyTable.RangeAttack( self )
 					end
 					break
@@ -234,7 +234,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 				MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 				pEnemy = ent
-				if MyTable.CanAttackHelper( self, ent:GetPos() + ent:OBBCenter(), MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+				if MyTable.CanAttackHelper( self, ent, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 				break
 			end
 		end

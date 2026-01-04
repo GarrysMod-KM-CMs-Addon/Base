@@ -51,7 +51,7 @@ Actor_RegisterSchedule( "PullAlarm", function( self, sched )
 					self.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 					self.vaAimTargetPose = self.vaAimTargetBody
 					pEnemy = ent
-					if self:CanAttackHelper( ent:GetPos() + ent:OBBCenter() ) then self:RangeAttack() end
+					if self:CanAttackHelper( ent ) then self:RangeAttack() end
 					break
 				end
 			end

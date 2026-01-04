@@ -181,6 +181,10 @@ local math_Clamp = math.Clamp
 
 local CurTime = CurTime
 
+function ENT:ShouldPickUpGun( pWeapon, TheirTable, MyTable )
+	// TODO
+end
+
 // If we are in combat with multiple enemies, and we see that there is
 // no enemy at a position, can we remove that bullseye?
 ENT.bCombatForgetHostiles = true
@@ -199,6 +203,7 @@ ENT.flNextLookTime = 0
 ENT.flLoseSpeed = .2 // 5
 ENT.tVisionStrength = {} // Entity ( Even invalid, will be filtered ) -> Float [ 0, 1 ]
 ENT.tAlertEntities = {} // Entities that we might wanna be concerned about, such as enemies who won't attack first
+ENT.tNextWeaponCheck = {}
 local ipairs = ipairs
 function ENT:Look( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
@@ -223,7 +228,7 @@ function ENT:Look( MyTable )
 	for _, ent in ipairs(
 		// This is the piece of shit that is necessary but absolutely CONSUMES the CPU!
 		// I am 100% sure, and I have tested it.
-		// If you add
+		// If you. for example, add
 		// if true then ents_FindInPVS( self ) return end
 		// below
 		// MyTable.flNextLookTime = CurTime() + math_Rand( .08, .12 )
@@ -234,9 +239,22 @@ function ENT:Look( MyTable )
 	) do
 		if vEyePos:DistToSqr( CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) ) > flVisionDistSqr then continue end
 		local TheirTable = CEntity_GetTable( ent )
-		if TheirTable.__PROJECTILE__ || !TheirTable.__FLARE_ACTIVE__ && !TheirTable.__ACTOR_BULLSEYE__ && !MyTable.IsHateDisposition( self, ent ) || !MyTable.CanSee( self, ent ) then continue end
+		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( ent ) ) then
+			if TheirTable.__PROJECTILE__ ||
+			!TheirTable.__FLARE_ACTIVE__ &&
+			!TheirTable.__ACTOR_BULLSEYE__ &&
+			!MyTable.IsHateDisposition( self, ent ) ||
+			!MyTable.CanSee( self, ent ) then continue end
+		end
 		if tOldVisionStrength[ ent ] then
-			if ent.__ACTOR_BULLSEYE__ then
+			if TheirTable.__WEAPON__ && !IsValid( CEntity_GetOwner( ent ) ) then
+				if CurTime() > ( MyTable.tNextWeaponCheck[ ent ] || 0 ) && tOldVisionStrength[ ent ] >= 1 then // Omagad, a gun!!!
+					MyTable.ShouldPickUpGun( self, ent, TheirTable, MyTable )
+					MyTable.tNextWeaponCheck[ ent ] = CurTime() + 2
+					continue
+				end
+				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
+			elseif TheirTable.__ACTOR_BULLSEYE__ then
 				if !bMelee && HasMeleeAttack( ent ) then bMelee = true end
 				if !bRange && HasRangeAttack( ent ) then bRange = true end
 				if tAllies && TheirTable.Owner == self then
@@ -332,6 +350,9 @@ function ENT:Look( MyTable )
 	MyTable.flLastLookTime = CurTime()
 	MyTable.tVisionStrength = tVisionStrength
 	if bClear && IsValid( ne ) then MyTable.OnAcquireEnemy( self, MyTable ) end
+	local t = {}
+	for ent, flTime in pairs( MyTable.tNextWeaponCheck ) do if IsValid( ent ) then t[ ent ] = flTime end end
+	MyTable.tNextWeaponCheck = t
 end
 
 function ENT:GetStartleSoundLevel( sName )
