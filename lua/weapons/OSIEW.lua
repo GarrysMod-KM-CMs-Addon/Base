@@ -32,9 +32,6 @@ SWEP.Crosshair = "Rifle"
 SWEP.sHoldType = "AR2"
 
 SWEP.__VIEWMODEL_FULLY_MODELED__ = true
-SWEP.flCoverLeftX = 3
-SWEP.flBlindFireLeftX = 5
-SWEP.flBlindFireRightX = -10
 
 sound.Add {
 	name = "OSIEW_Shot",

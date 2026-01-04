@@ -1,5 +1,3 @@
-// I am too lazy to implement this. We'll need BaseProjectileWeapon first!
-
 DEFINE_BASECLASS "BaseProjectileWeapon"
 
 SWEP.Category = "Rocket Propelled Grenades"

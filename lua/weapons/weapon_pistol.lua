@@ -14,7 +14,7 @@ SWEP.Primary.Automatic = false
 SWEP.Primary.Ammo = "Pistol"
 SWEP.Primary_flSpreadX = .0094
 SWEP.Primary_flSpreadY = .0094
-SWEP.Primary_flDamage = 80
+SWEP.Primary_flDamage = 62
 SWEP.Primary_flDelay = .08571428571
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
@@ -25,6 +25,11 @@ SWEP.vViewModelAim = Vector( -5.51, -12, 3.145 )
 SWEP.Crosshair = "Pistol"
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.bPistolSprint = true
+SWEP.flRecoil = 1.6
+SWEP.flSideWaysRecoilMin = -.28
+SWEP.flSideWaysRecoilMax = .28
+SWEP.flRecoilGrowMin = -.5
+SWEP.flRecoilGrowMax = -.9
 
 sound.Add {
 	name = "USP_Match_Shot",

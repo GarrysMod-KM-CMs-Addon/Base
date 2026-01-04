@@ -14,7 +14,7 @@ SWEP.Primary.Ammo = "SMG1"
 SWEP.Primary_flSpreadX = .0083
 SWEP.Primary_flSpreadY = .0083
 SWEP.Primary_flDelay = .06315789473
-SWEP.Primary_flDamage = 60
+SWEP.Primary_flDamage = 68
 SWEP.ViewModelFOV = 45
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
@@ -28,6 +28,11 @@ SWEP.DrawAmmo = true
 SWEP.vViewModelAim = Vector( -6.43, -4, 1.03 )
 SWEP.Crosshair = "SubMachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubMachineGun"
+SWEP.flRecoil = .9
+SWEP.flSideWaysRecoilMin = -.22
+SWEP.flSideWaysRecoilMax = .22
+SWEP.flRecoilGrowMin = -.55
+SWEP.flRecoilGrowMax = -.95
 
 sound.Add {
 	name = "MP7_Shot",

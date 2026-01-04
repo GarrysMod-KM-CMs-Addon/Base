@@ -192,8 +192,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	end
 	local f = self:GetNW2Float( "GAME_flSuppressionEffects", 0 )
 	if f > 0 then
-		DrawBlur( math_Clamp( math_Remap( f, 0, 1, 0, 2 ), 0, 2 ) )
-		DrawMotionBlur( math_Clamp( math_Remap( f, 0, 1, .5, .1 ), .1, .5 ), math_Clamp( f, 0, 1 ), 0 )
+		DrawBlur( math_Clamp( math_Remap( f, 0, 1, 0, 1 ), 0, 1 ) )
+		DrawMotionBlur( math_Clamp( math_Remap( f, 0, 1, .5, .25 ), .25, .5 ), math_Clamp( f, 0, 1 ), 0 )
 	end
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
@@ -218,14 +218,14 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	local flTarget = UTIL_IsUnderSkybox() && math.Remap( flColor, 0, 1, 512, 6084 ) || math.Remap( flColor, 0, 1, 512, 3072 )
 	MyTable.GP_FogDistance = math_Approach( MyTable.GP_FogDistance || 0, flTarget, math_max( 64, math_abs( flTarget - ( MyTable.GP_FogDistance || 0 ) ) * .2 ) * FrameTime() )
 	DrawBloom(
-		math_Remap( flBloom, 0, 1, .33, 0 ), math_Remap( flBloom, 0, 1, 1, 2 ),
+		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 1.33, 2 ),
 		// Setting all three to 1 and then tweaking the other settings
 		// is the way to make the scene actually beautiful, and why
 		// the new versions (since commit 266) are so freakin' beautiful!
 		1, // Size X
 		1, // Size Y
 		1, // Passes
-		math_Remap( flBloom, 0, 1, 1, 2 ), 1, 1, 1
+		math_Remap( flBloom, 0, 1, 1.33, 2 ), 1, 1, 1
 	)
 	DrawColorModify( tDrawColorModify )
 end )
@@ -339,6 +339,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		vView:Rotate( ang )
 		view.origin = pVehicle:GetPos() + vSeat + vView
 		fMoreEffects( ply, view )
+		cThirdPerson:SetBool()
 		return view
 	elseif bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool()
 	elseif cThirdPerson:GetBool() then

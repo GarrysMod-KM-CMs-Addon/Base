@@ -14,7 +14,7 @@ SWEP.Primary.Automatic = false
 SWEP.Primary.Ammo = "Pistol"
 SWEP.Primary_flSpreadX = .0084
 SWEP.Primary_flSpreadY = .0084
-SWEP.Primary_flDamage = 240
+SWEP.Primary_flDamage = 82
 SWEP.Primary_flDelay = .25
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
@@ -24,10 +24,12 @@ SWEP.Slot = 1
 SWEP.vViewModelAim = Vector( -4.62, 0, .67 )
 SWEP.ViewModelFOV = 54
 SWEP.Crosshair = "Revolver"
-SWEP.flSideWaysRecoilMin = -.33
-SWEP.flSideWaysRecoilMax = .33
-SWEP.flRecoil = 5
 SWEP.bPistolSprint = true
+SWEP.flRecoil = 2.9
+SWEP.flSideWaysRecoilMin = -.35
+SWEP.flSideWaysRecoilMax = .35
+SWEP.flRecoilGrowMin = -.4
+SWEP.flRecoilGrowMax = -.85
 
 sound.Add {
 	name = "ColyPython_Shot",

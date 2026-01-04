@@ -23,9 +23,11 @@ SWEP.__WEAPON__ = true
 
 if CLIENT then
 	SWEP.flCrosshairAlpha = 255
-	SWEP.flCurrentRecoil = 0
+	SWEP.flCurrentRecoilForGap = 0
+	SWEP.flCurrentRecoilForCrosshair = 0
 	function SWEP:AddRecoil( flRecoil )
-		self.flCurrentRecoil = self.flCurrentRecoil + flRecoil
+		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + flRecoil
+		self.flCurrentRecoilForCrosshair = self.flCurrentRecoilForCrosshair + 1
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + flRecoil end
 	end
 	SWEP.flReloadTime = 0
@@ -119,7 +121,7 @@ function SWEP:GetAimVector()
 	return v
 end
 
-SWEP.flRecoil = 2 // With the data below, this is degrees
+SWEP.flRecoil = 1
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoilGrowMin = -.5
@@ -324,7 +326,7 @@ if CLIENT then
 	SWEP.flViewModelSprint = 0
 	SWEP.vBlindFireLeft = Vector( -8, 0, 2 )
 	SWEP.vBlindFireLeftAngle = Vector( 0, 0, -22.5 )
-	SWEP.vBlindFireRight = Vector( 2, 0, 1 )
+	SWEP.vBlindFireRight = Vector( -1.5, 0, 1 )
 	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
 	SWEP.vBlindFireUp = Vector( 3, 0, 0 )
 	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
@@ -505,13 +507,21 @@ if CLIENT then
 		local flRecoil, f = MyTable.CalcRecoil( self, ply )
 		if MyTable.Primary.Automatic then
 			f = flRecoil * ( .75 / MyTable.Primary_flDelay )
-			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
+			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * FrameTime() )
 		else
 			f = flRecoil * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
-			MyTable.flCurrentRecoil = math.max( 0, MyTable.flCurrentRecoil - f * FrameTime() )
+			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * FrameTime() )
 		end
-		f = f + flRecoil / MyTable.flRecoilMultiplierThingy
-		if MyTable.flCurrentRecoil > f then MyTable.flCurrentRecoil = f end
+		f = f + flRecoil
+		local f
+		if MyTable.Primary.Automatic then
+			f = .75 * ( .75 / MyTable.Primary_flDelay )
+			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * FrameTime() )
+		else
+			f = .75 * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
+			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * FrameTime() )
+		end
+		if MyTable.flCurrentRecoilForCrosshair > f * 2 then MyTable.flCurrentRecoilForCrosshair = f end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
 		flAimTiltTime = Lerp( math_min( 1, 10 * FrameTime() ), flAimTiltTime, bZoom && flRoll || 0 )
@@ -545,6 +555,7 @@ if CLIENT then
 			vTarget = vTarget + MyTable.vSprintArm
 			vTarget[ 3 ] = vTarget[ 3 ] - 3
 			vTargetAngle = Vector( MyTable.vSprintArmAngle )
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		vFinal = LerpVector( 5 * FrameTime(), vFinal, vTarget )
 		vFinalAngle = LerpVector( 5 * FrameTime(), vFinalAngle, vTargetAngle )

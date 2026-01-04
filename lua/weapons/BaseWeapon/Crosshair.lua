@@ -1,4 +1,3 @@
-SWEP.flRecoilMultiplierThingy = BASE_RECOIL_MULTIPLIER_THINGY // The less, the more shots they can fire without the crosshair disappearing
 SWEP.flCrosshairInAccuracy = 0
 
 local math = math
@@ -9,12 +8,24 @@ function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	if v then flSpreadX = v end
 	local v = MyTable.Primary_flSpreadY
 	if v then flSpreadY = v end
-	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) + ( MyTable.flCurrentRecoil / MyTable.flRecoil * MyTable.flRecoilMultiplierThingy ) * .033
+	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) + ( MyTable.flCurrentRecoilForGap / MyTable.flRecoil ) * .02
 	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
 		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX ) + flInaccuracy
 		return v, v
 	end
 	return flSpreadX + flInaccuracy, flSpreadY + flInaccuracy
+end
+function SWEP:GatherCrosshairSpreadIdeal( MyTable )
+	local flSpreadX, flSpreadY
+	local v = MyTable.Primary_flSpreadX
+	if v then flSpreadX = v end
+	local v = MyTable.Primary_flSpreadY
+	if v then flSpreadY = v end
+	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
+		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX )
+		return v, v
+	end
+	return flSpreadX, flSpreadY
 end
 
 local surface = surface
@@ -33,7 +44,7 @@ SWEP.CrosshairColorOutLine = Color( 0, 0, 0 )
 __WEAPON_CROSSHAIR_TABLE__ = {
 	[ "" ] = function( MyTable, self ) return true end,
 	Shotgun = function( MyTable, self )
-		local flSpread = MyTable.GatherCrosshairSpread( self, MyTable, true )
+		local flSpread = MyTable.GatherCrosshairSpreadIdeal( self, MyTable, true )
 		local flHeight, flWidth = ScrH(), ScrW()
 		local flRadius = flSpread * flWidth * ( 90 / MyTable.flFoV ) * .5
 		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
@@ -253,12 +264,9 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		local flRecoil, f = MyTable.CalcRecoil( self, ply ), MyTable.flAimMultiplier
-		if MyTable.Primary.Automatic then
-			MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / flRecoil * MyTable.flRecoilMultiplierThingy ) )
-		else
-			MyTable.flCrosshairAlpha = ( 255 - 255 * f ) + f * math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoil / flRecoil * MyTable.flRecoilMultiplierThingy ) * 2 )
-		end
+		local f = MyTable.flCurrentRecoilForCrosshair * ( 1 / math_min( 150, self:GetMaxClip1() ) ) / MyTable.Primary_flDelay * 1.75
+		f = f - .33
+		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 * f ) * MyTable.flAimMultiplier
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes

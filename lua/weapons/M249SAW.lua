@@ -27,6 +27,7 @@ SWEP.DrawAmmo = true
 SWEP.flZoomSpeedIn = 4
 SWEP.flZoomSpeedOut = 1
 SWEP.vViewModelAim = Vector( -5.95, 0, 2.35 )
+SWEP.Crosshair = "Rifle"
 
 sound.Add {
 	name = "M249SAW_Shot",

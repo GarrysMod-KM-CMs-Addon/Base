@@ -157,7 +157,7 @@ hook.Add( "Tick", "Director", function()
 		// We're doin' shit to them, so add it!
 		local flAllSuppression, flAllHealth, flAllThreat, bAtLeastOneWhoIsNotIdle = 0, 0, 0
 		for pEntity in pairs( tMusicEntities ) do
-			if !IsValid( pEntity ) then continue end
+			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
 			if ETheirThreat > DIRECTOR_THREAT_HEAT then bAtLeastOneWhoIsNotIdle = true end
@@ -190,7 +190,7 @@ hook.Add( "Tick", "Director", function()
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
 		if EThreat == DIRECTOR_THREAT_HOLD_FIRE || EThreat == DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) else PlyTable.DR_bMagic = nil end
 		if bAlarm || PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
-		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && flAllThreat * ( bAlarmCoolDown && 2 || 1 ) > ply:Health() * .12 then
+		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && ( flAllThreat * ( bAlarmCoolDown && 2 || 1 ) ) > ( /*ply:Health()*/ ply:GetMaxHealth() * .12 ) then
 			EThreat = DIRECTOR_THREAT_MAGIC
 			PlyTable.DR_bMagic = true
 		end

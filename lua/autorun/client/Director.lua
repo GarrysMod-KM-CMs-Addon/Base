@@ -296,13 +296,22 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			end
 		end
 	elseif DIRECTOR_MUSIC_WAS_HOLD_FIRE then
+		 DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
 			if pContainer then
 				if ELayer == DIRECTOR_THREAT then
-					if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
-					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, FrameTime() )
-				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
+					pContainer.m_flVolume = 1
+					local f = pContainer.m_pTable
+					if f then
+						f = f.KickStart
+						if f then f( pContainer ) end
+					end
+				else pContainer.m_flVolume = 0 end
+				//	if ELayer == DIRECTOR_THREAT then
+				//		if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
+				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, FrameTime() )
+				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end

@@ -24,7 +24,11 @@ SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
 SWEP.Crosshair = "Rifle"
-SWEP.flRecoil = 3.5
+SWEP.flRecoil = 1.6
+SWEP.flSideWaysRecoilMin = -.34
+SWEP.flSideWaysRecoilMax = .34
+SWEP.flRecoilGrowMin = -.66
+SWEP.flRecoilGrowMax = -1
 
 if !IsMounted "left4dead2" then
 	SWEP.flViewModelX = -10

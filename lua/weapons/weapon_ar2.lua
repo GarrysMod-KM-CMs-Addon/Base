@@ -16,7 +16,7 @@ SWEP.Primary.Automatic = true
 SWEP.Primary.Ammo = "AR2"
 SWEP.Primary_flSpreadX = .0037
 SWEP.Primary_flSpreadY = .0037
-SWEP.Primary_flDamage = 80
+SWEP.Primary_flDamage = 95
 SWEP.Primary_flDelay = .07
 SWEP.Secondary_flDelay = 1
 SWEP.Secondary.ClipSize = -1
@@ -32,6 +32,11 @@ SWEP.ViewModelFOV = 62
 SWEP.flViewModelY = -2
 SWEP.vViewModelAim = Vector( -5.82 - SWEP.flViewModelY, -8, 1.255 )
 SWEP.vSprintArm = Vector( .6, -1.228, -1.2 )
+SWEP.flRecoil = .7
+SWEP.flSideWaysRecoilMin = -.15
+SWEP.flSideWaysRecoilMax = .15
+SWEP.flRecoilGrowMin = -.8
+SWEP.flRecoilGrowMax = -1
 
 sound.Add {
 	name = "CombineEnergyBallCharge",
