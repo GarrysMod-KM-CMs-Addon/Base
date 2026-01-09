@@ -15,6 +15,7 @@ SWEP.Slot = 0
 SWEP.ViewModelFOV = 54
 SWEP.bPistolSprint = true
 SWEP.bDontDrawAmmo = true
+SWEP.Crosshair = "Special"
 
 sound.Add {
 	name = "CrowbarSwing",
