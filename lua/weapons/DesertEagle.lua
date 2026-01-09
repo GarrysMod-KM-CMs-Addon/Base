@@ -31,9 +31,6 @@ SWEP.flViewModelX = -8
 SWEP.flViewModelY = -2
 SWEP.flViewModelZ = 1
 
-SWEP.flBlindFireLeftX = 6
-SWEP.flBlindFireRightX = -16
-
 SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -6.36 - SWEP.flViewModelY, 2.18 - SWEP.flViewModelZ )
 
 SWEP.__VIEWMODEL_FULLY_MODELED__ = true
