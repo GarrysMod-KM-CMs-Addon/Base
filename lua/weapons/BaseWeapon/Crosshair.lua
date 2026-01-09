@@ -232,12 +232,16 @@ local surface_DrawTexturedRect = surface.DrawTexturedRect
 local surface_DrawRect = surface.DrawRect
 local math_min = math.min
 local cThirdPerson = GetConVar "bThirdPerson"
+local flLastDoDrawCrosshairCall = 0
 function SWEP:DoDrawCrosshair()
 	if developer:GetBool() then return end
+	local f = CurTime()
+	local flFrameTime = f - flLastDoDrawCrosshairCall
+	flLastDoDrawCrosshairCall = f
 	local MyTable = CEntity_GetTable( self )
 	local ply = LocalPlayer()
 	local flAimMultiplier = MyTable.flAimMultiplier
-	MyTable.flCrosshairInAccuracy = Lerp( math.min( 15 * FrameTime() ), MyTable.flCrosshairInAccuracy, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .066 + .033, 0, .1 ) )
+	MyTable.flCrosshairInAccuracy = Lerp( math_min( 15 * flFrameTime ), MyTable.flCrosshairInAccuracy, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .066 + .033, 0, .1 ) )
 	if MyTable.sAimSound && MyTable.vViewModelAim then
 		if MyTable.bAiming then
 			if flAimMultiplier > .9 then

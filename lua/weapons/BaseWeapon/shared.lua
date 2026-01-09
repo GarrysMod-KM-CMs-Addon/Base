@@ -220,7 +220,11 @@ if CLIENT then
 	end
 	local SLIDE_ANGLE = -45
 	local util_TraceLine = util.TraceLine
+	local flLastCalcViewCall = 0
 	function SWEP:CalcView( ply, pos, ang )
+		local f = CurTime()
+		local flFrameTime = f - flLastCalcViewCall
+		flLastCalcViewCall = f
 		local MyTable = CEntity_GetTable( self )
 		vTarget, vTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 		vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
@@ -262,16 +266,16 @@ if CLIENT then
 			vTarget = vTarget - vBezier
 			vTargetAngle = vTargetAngle - vBezierAngle
 		end
-		vViewFinal = LerpVector( math_min( 1, 5 * FrameTime() ), vViewFinal, vTarget )
-		vViewFinalAngle = LerpVector( math_min( 1, 5 * FrameTime() ), vViewFinalAngle, vTargetAngle )
+		vViewFinal = LerpVector( math_min( 1, 5 * flFrameTime ), vViewFinal, vTarget )
+		vViewFinalAngle = LerpVector( math_min( 1, 5 * flFrameTime ), vViewFinalAngle, vTargetAngle )
 		ang:RotateAroundAxis( ang:Right(), vViewFinalAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vViewFinalAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vViewFinalAngle.z )
 		pos = pos + vViewFinal.z * ang:Up()
 		pos = pos + vViewFinal.y * ang:Forward()
 		pos = pos + vViewFinal.x * ang:Right()
-		vViewFinalRatherQuick = LerpVector( math_min( 1, 20 * FrameTime() ), vViewFinalRatherQuick, vViewTargetRatherQuick )
-		vViewFinalRatherQuickAngle = LerpVector( math_min( 1, 20 * FrameTime() ), vViewFinalRatherQuickAngle, vViewTargetRatherQuickAngle )
+		vViewFinalRatherQuick = LerpVector( math_min( 1, 20 * flFrameTime ), vViewFinalRatherQuick, vViewTargetRatherQuick )
+		vViewFinalRatherQuickAngle = LerpVector( math_min( 1, 20 * flFrameTime ), vViewFinalRatherQuickAngle, vViewTargetRatherQuickAngle )
 		ang:RotateAroundAxis( ang:Right(), vViewFinalRatherQuickAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vViewFinalRatherQuickAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vViewFinalRatherQuickAngle.z )
@@ -284,7 +288,7 @@ if CLIENT then
 		local flSwayAngle = MyTable.flSwayAngle * flMultiplier
 		local flSwayAngleNeg = -flSwayAngle
 		local eye = ply:EyeAngles()
-		MyTable.flLastEyeYaw = Lerp( math_min( 1, 5 * FrameTime() ), math_Clamp( MyTable.flLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale, MyTable.flSwayScale ), 0 )
+		MyTable.flLastEyeYaw = Lerp( math_min( 1, 5 * flFrameTime ), math_Clamp( MyTable.flLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale, MyTable.flSwayScale ), 0 )
 		MyTable.flLastTrueEyeYaw = eye[ 2 ]
 		MyTable.aLastViewEyePosition[ 2 ] = -MyTable.flLastEyeYaw
 		ang:RotateAroundAxis( ang:Right(), -math_Clamp( flSwayAngle * MyTable.aLastViewEyePosition.p / MyTable.flSwayScale, flSwayAngleNeg, flSwayAngle ) )
@@ -330,7 +334,11 @@ if CLIENT then
 	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
 	SWEP.vBlindFireUp = Vector( 3, 0, 0 )
 	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
+	local flLastCalcViewModelViewCall = 0
 	function SWEP:CalcViewModelView( _, pos, ang )
+		local f = CurTime()
+		local flFrameTime = f - flLastCalcViewModelViewCall
+		flLastCalcViewModelViewCall = f
 		local MyTable = CEntity_GetTable( self )
 		local ply = LocalPlayer()
 		local f = math_Clamp( ply:Health() / ply:GetMaxHealth(), 0, 1 )
@@ -360,14 +368,14 @@ if CLIENT then
 			if ( MyTable.flBarrelBackCurrent || 0 ) > f then
 				MyTable.flBarrelBackCurrent = f
 			else
-				f = Lerp( math_min( 1, 15 * FrameTime() ), MyTable.flBarrelBackCurrent || 0, f )
+				f = Lerp( math_min( 1, 15 * flFrameTime ), MyTable.flBarrelBackCurrent || 0, f )
 				MyTable.flBarrelBackCurrent = f
 			end
 			MyTable.flBarrelBackCurrent = f
 			vInstantTarget[ 2 ] = vInstantTarget[ 2 ] - f
-			MyTable.flInAimShoot = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.flInAimShoot || 0, bZoom && 1 || 0 )
+			MyTable.flInAimShoot = Lerp( math_min( 1, 10 * flFrameTime ), MyTable.flInAimShoot || 0, bZoom && 1 || 0 )
 		end
-		if MyTable.flBarrelBack then MyTable.flBarrelBack = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.flBarrelBack, 0 ) end
+		if MyTable.flBarrelBack then MyTable.flBarrelBack = Lerp( math_min( 1, 10 * flFrameTime ), MyTable.flBarrelBack, 0 ) end
 		local flSprint = MyTable.flViewModelSprint
 		local f = math_min( .5, CEntity_GetVelocity( ply ):Length() / CPlayer_GetRunSpeed( ply ) * .5 ) * MyTable.flBobScale
 		local flBreathe = RealTime() * 18
@@ -381,7 +389,7 @@ if CLIENT then
 		vInstantTarget = vInstantTarget - Vector( MyTable.flViewModelY, 0, MyTable.flViewModelZ ) * flSprint
 		vTarget = vTarget + Vector( MyTable.flViewModelY, MyTable.flViewModelX, MyTable.flViewModelZ )
 		if !MyTable.bCoverNotAnimated && bInCover then
-			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
+			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 			if MyTable.__VIEWMODEL_FULLY_MODELED__ then
 				local f = CEntity_GetNW2Int( ply, "CTRL_Variants" )
 				if f == COVER_VARIANTS_RIGHT then
@@ -430,15 +438,15 @@ if CLIENT then
 			end
 			local bOnGround = CEntity_IsOnGround( ply )
 			if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then
-				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
+				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 				bOnGroundLast = true
 			elseif bOnGround then
 				bOnGroundLast = true
 				if !bSliding && bSprinting && !MyTable.bSprintNotAnimated then
-					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 1 )
+					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 1 )
 				else
 					if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) end
-					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
+					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 					local flVelocity = CEntity_GetVelocity( ply ):Length()
 					if !bZoom then
 						if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
@@ -455,7 +463,7 @@ if CLIENT then
 					end
 				end
 			else
-				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * FrameTime() ), flSprint, 0 )
+				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 				flLandTime = RealTime() + .31
 				if bOnGroundLast then
 					flJumpTime = RealTime() + .31
@@ -507,24 +515,24 @@ if CLIENT then
 		local flRecoil, f = MyTable.CalcRecoil( self, ply )
 		if MyTable.Primary.Automatic then
 			f = flRecoil * ( .75 / MyTable.Primary_flDelay )
-			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * FrameTime() )
+			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		else
 			f = flRecoil * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
-			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * FrameTime() )
+			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		end
 		f = f + flRecoil
 		local f
 		if MyTable.Primary.Automatic then
 			f = .75 * ( .75 / MyTable.Primary_flDelay )
-			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * FrameTime() )
+			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 		else
 			f = .75 * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
-			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * FrameTime() )
+			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 		end
 		if MyTable.flCurrentRecoilForCrosshair > f * 2 then MyTable.flCurrentRecoilForCrosshair = f end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
-		flAimTiltTime = Lerp( math_min( 1, 10 * FrameTime() ), flAimTiltTime, bZoom && flRoll || 0 )
+		flAimTiltTime = Lerp( math_min( 1, 10 * flFrameTime ), flAimTiltTime, bZoom && flRoll || 0 )
 		local flTime = ( -( flAimTiltTime - ( flRoll * .5 ) ) ^ 2 + ( flRoll * .5 ) ^ 2 ) / ( flRoll * .5 )
 		MyTable.flAimTiltTime = flAimTiltTime
 		vTargetAngle = vTargetAngle + ( bZoom && Vector( -flTime / ( flRoll / 3 ), 0, -flTime ) || Vector( 3 * flTime / flRoll, 0, flTime ) )
@@ -532,22 +540,22 @@ if CLIENT then
 		local eye = ply:EyeAngles()
 		MyTable.aLastEyePosition[ 1 ] = math_AngleDifference( aAim[ 1 ], eye[ 1 ] )
 		MyTable.aLastEyePosition[ 3 ] = math_AngleDifference( aAim[ 3 ], eye[ 3 ] )
-		aAim = LerpAngle( math_min( 1, 5 * FrameTime() ), aAim, eye )
+		aAim = LerpAngle( math_min( 1, 5 * flFrameTime ), aAim, eye )
 		local flMultiplier
-		if bZoom then flMultiplier = Lerp( math_min( 1, 5 * FrameTime() ), MyTable.flAimMultiplier, 0 )
-		else flMultiplier = Lerp( math_min( 1, 5 * FrameTime() ), MyTable.flAimMultiplier, 1 ) end
+		if bZoom then flMultiplier = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flAimMultiplier, 0 )
+		else flMultiplier = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flAimMultiplier, 1 ) end
 		MyTable.flAimMultiplier = flMultiplier
 		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
 			vInstantTarget = Vector( 0, 0, 999999 )
 			flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER )
 		end
-		MyTable.flLastEyeYaw = Lerp( math_min( 1, 5 * FrameTime() ), math_Clamp( MyTable.flLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale, MyTable.flSwayScale ), 0 )
+		MyTable.flLastEyeYaw = Lerp( math_min( 1, 5 * flFrameTime ), math_Clamp( MyTable.flLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale, MyTable.flSwayScale ), 0 )
 		MyTable.flLastTrueEyeYaw = eye[ 2 ]
 		MyTable.aLastEyePosition[ 2 ] = -MyTable.flLastEyeYaw
 		if MyTable.__VIEWMODEL_FULLY_MODELED__ then
 			flMultiplier = 1
 		else
-			MyTable.flAimLastEyeYaw = Lerp( math_min( 1, 5 * FrameTime() ), math_Clamp( MyTable.flAimLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flAimLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale * .33, MyTable.flSwayScale * .33 ), 0 )
+			MyTable.flAimLastEyeYaw = Lerp( math_min( 1, 5 * flFrameTime ), math_Clamp( MyTable.flAimLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flAimLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale * .33, MyTable.flSwayScale * .33 ), 0 )
 			MyTable.flAimLastTrueEyeYaw = eye[ 2 ]
 			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - MyTable.flAimLastEyeYaw / MyTable.flSwayScale * 3 * 45 * ( 1 - flMultiplier )
 		end
@@ -557,8 +565,8 @@ if CLIENT then
 			vTargetAngle = Vector( MyTable.vSprintArmAngle )
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
-		vFinal = LerpVector( 5 * FrameTime(), vFinal, vTarget )
-		vFinalAngle = LerpVector( 5 * FrameTime(), vFinalAngle, vTargetAngle )
+		vFinal = LerpVector( 5 * flFrameTime, vFinal, vTarget )
+		vFinalAngle = LerpVector( 5 * flFrameTime, vFinalAngle, vTargetAngle )
 		ang:RotateAroundAxis( ang:Right(), vFinalAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vFinalAngle.z )
@@ -571,8 +579,8 @@ if CLIENT then
 		pos = pos + vInstantTarget.z * ang:Up()
 		pos = pos + vInstantTarget.y * ang:Forward()
 		pos = pos + vInstantTarget.x * ang:Right()
-		vFinalRatherQuick = LerpVector( math_min( 1, 10 * FrameTime() ), vFinalRatherQuick, vTargetRatherQuick )
-		vFinalRatherQuickAngle = LerpVector( math_min( 1, 10 * FrameTime() ), vFinalRatherQuickAngle, vTargetRatherQuickAngle )
+		vFinalRatherQuick = LerpVector( math_min( 1, 10 * flFrameTime ), vFinalRatherQuick, vTargetRatherQuick )
+		vFinalRatherQuickAngle = LerpVector( math_min( 1, 10 * flFrameTime ), vFinalRatherQuickAngle, vTargetRatherQuickAngle )
 		ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle.z )
