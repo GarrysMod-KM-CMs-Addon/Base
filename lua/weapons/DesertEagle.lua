@@ -27,6 +27,7 @@ SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoil = 5
 SWEP.flAimShoot = 1
 
+SWEP.vPistolSprint = Vector( -7, 0, -10 )
 SWEP.flViewModelX = -8
 SWEP.flViewModelY = -2
 SWEP.flViewModelZ = 1
