@@ -190,7 +190,7 @@ if CLIENT then
 	SWEP.BobScale = 0
 	SWEP.vSprintArm = Vector( 1.228, 1.358, -.94 )
 	SWEP.vSprintArmAngle = Vector( -10.554, 34.167, -20 )
-	SWEP.vPistolSprint = Vector(-10, 0, -10 )
+	SWEP.vPistolSprint = Vector( -10, 0, -10 )
 	SWEP.vPistolSprintAngle = Vector( 45, 0, 0 )
 	SWEP.flAimMultiplier = 1
 	SWEP.flFoV = UNIVERSAL_FOV
