@@ -50,7 +50,7 @@ sound.Add {
 	sound = "weapons/shotgun/shotgun_cock.wav"
 }
 
-SWEP.vViewModelAim = Vector( -3.37, -10, 3.55 )
+SWEP.vViewModelAim = Vector( -10, -3.37, 3.55 )
 SWEP.vViewModelAimAngle = Vector( 0, 0, 14 )
 
 function SWEP:Reload()

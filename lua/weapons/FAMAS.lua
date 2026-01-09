@@ -23,7 +23,7 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
-SWEP.vViewModelAim = Vector( -6.2, 0, 1 )
+SWEP.vViewModelAim = Vector( 0, -6.2, 1 )
 SWEP.Crosshair = "Rifle"
 
 sound.Add {

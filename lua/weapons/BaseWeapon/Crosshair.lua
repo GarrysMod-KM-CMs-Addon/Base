@@ -1,4 +1,6 @@
 SWEP.flCrosshairInAccuracy = 0
+SWEP.Primary_flSpreadX = 0
+SWEP.Primary_flSpreadY = 0
 
 local math = math
 local math_max = math.max
@@ -31,13 +33,18 @@ end
 local surface = surface
 local surface_SetTexture = surface.SetTexture
 local surface_GetTextureID = surface.GetTextureID
-local surface_SetDrawColor = surface.SetDrawColor
+local surface_SetDrawColor = surface_SetDrawColor
 local surface_DrawTexturedRectRotated = surface.DrawTexturedRectRotated
 
 local CROSSHAIR_PART_SIZE = ScrH() * .016
 local CROSSHAIR_PART_SIZE_WIDTH = ScrH() * .004
 local CROSSHAIR_PART_SIZE_SUB = CROSSHAIR_PART_SIZE * .5
 // local CROSSHAIR_PART_SIZE_SUB_SUB = CROSSHAIR_PART_SIZE_SUB * .5
+
+local surface_DrawRect = surface.DrawRect
+local surface_SetDrawColor = surface.SetDrawColor
+
+SWEP.Crosshair = "Rifle"
 
 SWEP.CrosshairColorBase = Color( 255, 255, 255 )
 SWEP.CrosshairColorOutLine = Color( 0, 0, 0 )
@@ -62,6 +69,8 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		for I = flStart, flEnd do surface.DrawCircle( flX, flY, I, co.r, co.g, co.b, flCrosshairAlpha ) end
 		return true
 	end,
+	// I should technically call this one "Generic" from now on, but the name "Rifle" just stuck,
+	// and I don't want to change it, even thought it would be easy
 	Rifle = function( MyTable, self )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -229,7 +238,6 @@ local CPlayer_IsSprinting = CPlayer.IsSprinting
 local CPlayer_KeyDown = CPlayer.KeyDown
 SWEP.bDontDrawCrosshairDuringZoom = true
 local surface_DrawTexturedRect = surface.DrawTexturedRect
-local surface_DrawRect = surface.DrawRect
 local math_min = math.min
 local cThirdPerson = GetConVar "bThirdPerson"
 local flLastDoDrawCrosshairCall = 0
@@ -270,7 +278,11 @@ function SWEP:DoDrawCrosshair()
 	else
 		local f = MyTable.flCurrentRecoilForCrosshair * ( 1 / math_min( 150, self:GetMaxClip1() ) ) / MyTable.Primary_flDelay * 1.75
 		f = f - .33
-		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 * f ) * MyTable.flAimMultiplier
+		f = math_max( 0, 255 - 255 * f )
+		if MyTable.vViewModelAim then
+			f = f * MyTable.flAimMultiplier
+		else f = Lerp( 1 - MyTable.flAimMultiplier, f, 255 ) end
+		MyTable.flCrosshairAlpha = f
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes
@@ -278,7 +290,7 @@ function SWEP:DoDrawCrosshair()
 			
 		else
 			local flW, flH = ScrW() * .9, ScrH() * .9
-			surface.SetDrawColor( 32, 32, 32, 255 )
+			surface_SetDrawColor( 32, 32, 32, 255 )
 			local flWidth, flHeight, sFont
 			if self:GetMaxClip1() <= 15 then
 				flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
@@ -295,25 +307,25 @@ function SWEP:DoDrawCrosshair()
 			end
 			for _ = 1, self:GetMaxClip1() do
 				flX = flX - flWidth - 1
-				surface.DrawRect( flX, flY, flWidth, flHeight )
+				surface_DrawRect( flX, flY, flWidth, flHeight )
 			end
 			// TODO: Reloading animation
-			//	surface.SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
+			//	surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
 			//	local flX, flY = flW - flWidth, flH - flHeight
 			//	for _ = 1, self:GetMaxClip1() do
 			//		flX = flX - flWidth - 1
-			//		surface.DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+			//		surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
 			//	end
-			surface.SetDrawColor( 255, 255, 255, 255 )
+			surface_SetDrawColor( 255, 255, 255, 255 )
 			local flX, flY = flW - flWidth, flH - flHeight
 			for _ = 1, self:Clip1() do
 				flX = flX - flWidth - 1
-				surface.DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
 			end
-			surface.SetDrawColor( 64, 64, 64, 255 )
+			surface_SetDrawColor( 64, 64, 64, 255 )
 			for _ = self:Clip1() + 1, self:GetMaxClip1() do
 				flX = flX - flWidth - 1
-				surface.DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
 			end
 		end
 	end

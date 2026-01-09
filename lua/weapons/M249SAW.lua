@@ -12,7 +12,7 @@ SWEP.Primary.ClipSize = 200
 SWEP.Primary.DefaultClip = 200
 SWEP.Primary.Automatic = true
 SWEP.Primary.Ammo = "SMG1"
-SWEP.Primary_flDelay = .07058823529
+SWEP.Primary_flDelay = .05
 SWEP.Primary_flSpreadX = .0087
 SWEP.Primary_flSpreadY = .0087
 SWEP.Primary_flDamage = 80
@@ -26,8 +26,9 @@ SWEP.Slot = 2
 SWEP.DrawAmmo = true
 SWEP.flZoomSpeedIn = 4
 SWEP.flZoomSpeedOut = 1
-SWEP.vViewModelAim = Vector( -5.95, 0, 2.35 )
+SWEP.vViewModelAim = Vector( 0, -5.95, 2.35 )
 SWEP.Crosshair = "Rifle"
+SWEP.flAimShoot = 4
 
 sound.Add {
 	name = "M249SAW_Shot",

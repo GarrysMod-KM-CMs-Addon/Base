@@ -25,7 +25,7 @@ SWEP.Spawnable = true
 SWEP.Slot = 2
 SWEP.bSilenced = false
 SWEP.CSMuzzleFlashes = true
-SWEP.vSprintArm = Vector( 1.358, -3.228, -.94 )
+SWEP.vSprintArm = Vector( -3.228, 1.358, -.94 )
 SWEP.Crosshair = "Rifle"
 
 sound.Add {

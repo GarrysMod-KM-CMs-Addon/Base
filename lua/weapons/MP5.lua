@@ -27,7 +27,7 @@ SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
 SWEP.vSprintArm = Vector( 1.358, -3.228, -.94 )
-SWEP.vViewModelAim = Vector( -5.3, -8, 2.3 )
+SWEP.vViewModelAim = Vector( -8, -5.3, 2.3 )
 SWEP.Crosshair = "SubMachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubMachineGun"
 

@@ -26,10 +26,12 @@ SWEP.Weight = 1
 SWEP.Slot = 3
 SWEP.DrawAmmo = true
 SWEP.Crosshair = "Shotgun"
-SWEP.vSprintArm = Vector( 1.358, -6.228, -.94 )
-SWEP.flSideWaysRecoilMin = -.33
-SWEP.flSideWaysRecoilMax = .33
-SWEP.flRecoil = 5
+SWEP.vSprintArm = Vector( -6.228, 1.358, -.2 )
+SWEP.flRecoil = 6.8
+SWEP.flSideWaysRecoilMin = -.45
+SWEP.flSideWaysRecoilMax = .45
+SWEP.flRecoilGrowMin = -.6
+SWEP.flRecoilGrowMax = -1
 
 SWEP.ViewModelFOV = 54
 SWEP.flViewModelY = -4
