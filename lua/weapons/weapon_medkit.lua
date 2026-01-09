@@ -31,6 +31,7 @@ SWEP.flHeal = SWEP.Primary.ClipSize
 SWEP.flReFillRate = .05
 SWEP.flReFillAmount = 1
 SWEP.bPistolSprint = true
+SWEP.Crosshair = ""
 
 local CurTime = CurTime
 function SWEP:Initialize()
