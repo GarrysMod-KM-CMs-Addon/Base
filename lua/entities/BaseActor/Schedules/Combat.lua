@@ -322,10 +322,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		else self:SetSchedule "TakeCover" end
 		return
 	end
-	if math_random(2)==1 then
-		sched.bAdvance=true
-		sched.bRetreat=nil
-	end
 	local tCover = MyTable.tCover
 	if !tCover then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local bWeAreAlreadyDoingShitGodDammit
@@ -1117,3 +1113,4 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 end )
 
 include "CombatStuff.lua"
+
