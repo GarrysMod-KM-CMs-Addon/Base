@@ -46,7 +46,7 @@ SWEP.flViewModelX = -6.5
 SWEP.flViewModelY = -6.5
 SWEP.flViewModelZ = 2.5
 
-SWEP.vSprintArm = Vector( -3.358, 6.228, -.94 )
+SWEP.vSprint = Vector( -3.358, 6.228, -.94 )
 SWEP.vViewModelAim = Vector( -10 - SWEP.flViewModelX, -8.955 - SWEP.flViewModelY, 4.2 - SWEP.flViewModelZ )
 
 function SWEP:SetupDataTables()

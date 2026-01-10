@@ -188,8 +188,8 @@ if CLIENT then
 	SWEP.flSway = 4
 	SWEP.SwayScale = 0
 	SWEP.BobScale = 0
-	SWEP.vSprintArm = Vector( 1.228, 1.358, -.94 )
-	SWEP.vSprintArmAngle = Vector( -10.554, 34.167, -20 )
+	SWEP.vSprint = Vector( 1.228, 1.358, -.94 )
+	SWEP.vSprintAngle = Vector( -10.554, 34.167, -20 )
 	SWEP.vPistolSprint = Vector( -10, 0, -10 )
 	SWEP.vPistolSprintAngle = Vector( 45, 0, 0 )
 	SWEP.flAimMultiplier = 1
@@ -382,8 +382,8 @@ if CLIENT then
 			vInstantTarget = vInstantTarget + ( MyTable.vPistolSprint - Vector( -math_cos( flBreathe ) * f, math_cos( flBreathe * .5 ) * f, 0 ) ) * flSprint
 			vInstantTargetAngle = vInstantTargetAngle + ( MyTable.vPistolSprintAngle - Vector( math_cos( flBreathe * .5 ) * f, 0, 0 ) ) * flSprint
 		else
-			vInstantTarget = vInstantTarget + ( MyTable.vSprintArm - Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, math_cos( flBreathe ) * f ) ) * flSprint
-			vInstantTargetAngle = vInstantTargetAngle + ( MyTable.vSprintArmAngle - Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f, 0 ) ) * flSprint
+			vInstantTarget = vInstantTarget + ( MyTable.vSprint - Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, math_cos( flBreathe ) * f ) ) * flSprint
+			vInstantTargetAngle = vInstantTargetAngle + ( MyTable.vSprintAngle - Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f, 0 ) ) * flSprint
 		end
 		vInstantTarget = vInstantTarget - Vector( MyTable.flViewModelY, 0, MyTable.flViewModelZ ) * flSprint
 		if !MyTable.bCoverNotAnimated && bInCover then
@@ -558,9 +558,9 @@ if CLIENT then
 			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - MyTable.flAimLastEyeYaw / MyTable.flSwayScale * 3 * 45 * ( 1 - flMultiplier )
 		end
 		if bSliding then
-			vTarget = vTarget + MyTable.vSprintArm
+			vTarget = vTarget + MyTable.vSprint
 			vTarget[ 3 ] = vTarget[ 3 ] - 3
-			vTargetAngle = Vector( MyTable.vSprintArmAngle )
+			vTargetAngle = Vector( MyTable.vSprintAngle )
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		vInstantTarget = vInstantTarget + Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ )
@@ -590,7 +590,7 @@ if CLIENT then
 		local flSwayNeg = -flSway
 		ang:RotateAroundAxis( ang:Right(), math_Clamp( flSway * MyTable.aLastEyePosition.p / MyTable.flSwayScale, flSwayNeg, flSway ) )
 		ang:RotateAroundAxis( ang:Up(), math_Clamp( flSwayNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale, flSwayNeg, flSway ) )
-		local flSwayVector = MyTable.flSway * .415
+		local flSwayVector = flSway * .415
 		local flSwayVectorNeg = -flSwayVector
 		pos = pos + math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.p / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up()
 		pos = pos + math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right()

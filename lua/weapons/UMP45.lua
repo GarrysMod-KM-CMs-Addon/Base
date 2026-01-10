@@ -24,7 +24,7 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
-SWEP.vSprintArm = Vector( -8.228, 1.358, -.94 )
+SWEP.vSprint = Vector( -8.228, 1.358, -.94 )
 SWEP.Crosshair = "SubMachineGun"
 
 sound.Add {

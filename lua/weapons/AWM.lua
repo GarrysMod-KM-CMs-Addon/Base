@@ -28,7 +28,7 @@ SWEP.flZoomFoVMin = 8.25
 SWEP.flZoomFoVMax = 1.98
 SWEP.flCustomZoomFoV = SWEP.flZoomFoVMin
 SWEP.vViewModelAim = Vector( -13.5, -7.45, 2.3 )
-SWEP.vSprintArm = Vector( -3.228, 1.358, -0.94 )
+SWEP.vSprint = Vector( -3.228, 1.358, -0.94 )
 SWEP.bSniper = true
 
 function SWEP:FreezeMovement()
