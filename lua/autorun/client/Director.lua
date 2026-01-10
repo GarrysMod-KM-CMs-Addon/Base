@@ -22,7 +22,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 		Base = { Execute = function( self )
 			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
 			if !self.tHandles.Main then
-				if math_Rand( 0, 100000 * FrameTime() ) <= 1 then
+				if math_Rand( 0, 150000 * FrameTime() ) <= 1 then
 					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
 					if s then Director_Music_Play( self, "Main", s ) end
 				end
@@ -133,9 +133,9 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			if t then
 				local p = Director_Music_Container()
 				p.m_pTable = t
-				p.m_flStartTime = RealTime()
+				p.m_flStartTime = CurTime()
 				local f = p.Time
-				p.m_flEndTime = f && f() || math_Rand( 120, 240 )
+				p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
 				local p = Director_Music_Container()

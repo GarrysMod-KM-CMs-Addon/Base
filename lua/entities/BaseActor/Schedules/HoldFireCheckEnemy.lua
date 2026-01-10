@@ -18,8 +18,8 @@ Actor_RegisterSchedule( "HoldFireCheckEnemy", function( self, sched )
 	local v = pEnemy:GetPos()
 	self:ComputePath( pEnemyPath, v )
 	v = v + pEnemy:OBBCenter()
-	local b = self:Visible( pEnemy )
-	if b && self:GetPos():Distance( v ) <= self.flCoverMoveDistance then
+	local f, b = self:GetPos():Distance( v ), self:BoundingRadius()
+	if self:Visible( pEnemy ) && f <= b * 16 then
 		// TODO: Replace all of this bullshit with two checks:
 		// first off, sweep in front of us, then, behind us
 		// (yes, I straight up stole this idea from Splinter Cell: Blacklist)
@@ -33,7 +33,7 @@ Actor_RegisterSchedule( "HoldFireCheckEnemy", function( self, sched )
 	else
 		self.vaAimTargetBody = v
 		self.vaAimTargetPose = self.vaAimTargetBody
-		self:MoveAlongPath( pEnemyPath, b && self.flWalkSpeed || self.flRunSpeed, 1 )
+		self:MoveAlongPath( pEnemyPath, f <= b * 32 && self.flWalkSpeed || self.flRunSpeed, 1 )
 	end
 end )
 

@@ -177,7 +177,14 @@ function ENT:Think()
 		s = math.abs( flSpeed )
 		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * s
 		local v = self:GetRight() * flSpeed - p:GetVelocity()
-		p:AddVelocity( v:GetNormalized() * math.min( v:Length(), s ) * FrameTime() )
+		v = v:GetNormalized() * math.min( v:Length(), s )
+		// Stupid ass костыль which really needs to go.
+		// That, and this hack itself can even be done better🤣
+		local l = v:Length()
+		v[ 3 ] = 0
+		v:Normalize()
+		v = v * l
+		p:AddVelocity( v * FrameTime() )
 	end
 	if !IsValid( self.pDriver ) then self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, 0, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 	return BaseClass.Think( self )
