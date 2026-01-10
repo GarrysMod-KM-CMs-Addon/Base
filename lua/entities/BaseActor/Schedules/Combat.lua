@@ -825,6 +825,13 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local f = MyTable.flPathTolerance
 	if self:GetPos():DistToSqr( vec ) > ( f * f ) then MyTable.vCover = nil MyTable.tCover = nil return end
 	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
+	// We don't repath often, so have to check this
+	if !util_TraceLine( {
+		start = v,
+		endpos = enemy:GetPos(),
+		mask = MASK_SHOT_HULL,
+		filter = { self, enemy }
+	} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
 	// Don't even try to repath often!
 	local pEnemyPath = MyTable.pLastEnemyPath || sched.pEnemyPath
 	if !pEnemyPath then
@@ -1113,4 +1120,3 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 end )
 
 include "CombatStuff.lua"
-
