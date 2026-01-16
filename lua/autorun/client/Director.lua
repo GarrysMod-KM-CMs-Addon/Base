@@ -55,6 +55,13 @@ function Director_Music_Play( self, Index, sName, flVolume, flPitch )
 	self.tHandles[ Index ] = { pSound, flVolume, flPitch, RealTime() + SoundDuration( sound.GetProperties( sName ).sound ) }
 end
 
+function Director_Music_Stop( self, Index )
+	local tHandles = self.tHandles
+	local pSound = tHandles[ Index ]
+	tHandles[ Index ] = nil
+	if pSound then pSound:Stop() end
+end
+
 Director_Music( "MUS_Transition_Instant", "Music/Default/Transition_Instant.wav" )
 
 // We have switched to HOLD_FIRE... do we even need these anymore?
