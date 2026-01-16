@@ -10,7 +10,7 @@ function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	if v then flSpreadX = v end
 	local v = MyTable.Primary_flSpreadY
 	if v then flSpreadY = v end
-	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) + ( MyTable.flCurrentRecoilForGap / MyTable.flRecoil ) * .02
+	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) + ( MyTable.flCurrentRecoilForGap / MyTable.flRecoil ) * .033
 	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
 		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX ) + flInaccuracy
 		return v, v
@@ -276,9 +276,7 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		local f = MyTable.flCurrentRecoilForCrosshair * ( 1 / math_min( 150, self:GetMaxClip1() ) ) / MyTable.Primary_flDelay * 1.75
-		f = f - .33
-		f = math_max( 0, 255 - 255 * f )
+		f = math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoilForCrosshair * ( .1 / MyTable.Primary_flDelay ) - 1 ) )
 		if MyTable.vViewModelAim then
 			f = f * MyTable.flAimMultiplier
 		else f = Lerp( 1 - MyTable.flAimMultiplier, f, 255 ) end
