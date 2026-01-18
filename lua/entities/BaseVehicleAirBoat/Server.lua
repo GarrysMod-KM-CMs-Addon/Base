@@ -28,10 +28,10 @@ ENT.sWeaponAttachment = "gun" // This sucks... WHO THE HELL NAMED THE ATTACHMENT
 ENT.sWeaponPitchPoseParameter = "vehicle_weapon_pitch"
 ENT.sWeaponYawPoseParameter = "vehicle_weapon_yaw"
 ENT.flAimSpeed = 80
-ENT.Weapon_flDelay = .1
-ENT.Weapon_flDamage = 80
-ENT.Weapon_flSpreadX = .02
-ENT.Weapon_flSpreadY = .02
+ENT.Primary_flDelay = .08
+ENT.Primary_flDamage = 80
+ENT.Primary_flSpreadX = .02
+ENT.Primary_flSpreadY = .02
 function ENT:CanWeapon() return self:FindBodygroupByName( self.sWeaponBodyGroup ) != -1 end
 function ENT:HasWeapon() return self:GetBodygroup( self:FindBodygroupByName( self.sWeaponBodyGroup ) ) == 1 end
 
@@ -45,8 +45,8 @@ function ENT:FireWeapon()
 	self:FireBullets {
 		Src = at.Pos,
 		Dir = at.Ang:Forward(),
-		Damage = self.Weapon_flDamage,
-		Spread = Vector( self.Weapon_flSpreadX, self.Weapon_flSpreadY ),
+		Damage = self.Primary_flDamage,
+		Spread = Vector( self.Primary_flSpreadX, self.Primary_flSpreadY ),
 		Attacker = IsValid( self.pDriver ) && self.pDriver || self
 	}
 	self:EmitSound "M249SAW_Shot"
@@ -55,7 +55,7 @@ function ENT:FireWeapon()
 	ed:SetAttachment( l )
 	ed:SetFlags( 7 )
 	util.Effect( "MuzzleFlash", ed )
-	self.flNextShot = CurTime() + self.Weapon_flDelay
+	self.flNextShot = CurTime() + self.Primary_flDelay
 end
 
 ENT.sPropSpinSequence = "propeller_spin1"
@@ -179,7 +179,7 @@ function ENT:Think()
 		local v = self:GetRight() * flSpeed - p:GetVelocity()
 		v = v:GetNormalized() * math.min( v:Length(), s )
 		// Stupid ass костыль which really needs to go.
-		// That, and this hack itself can even be done better🤣
+		// That, and this hack itself can probably even be done better🤣
 		local l = v:Length()
 		v[ 3 ] = 0
 		v:Normalize()

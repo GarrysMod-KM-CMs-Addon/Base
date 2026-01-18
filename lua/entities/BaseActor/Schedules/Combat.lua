@@ -458,7 +458,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local iHandled, bAtTheResult, tMyCover = 1, true, tCover
 			while !table_IsEmpty( tQueue ) do
 				bAtTheResult = nil
-				if iHandled > 12 then break end
+				if iHandled > 4 then break end
 				iHandled = iHandled + 1
 				table.SortByMember( tQueue, 2 )
 				local tSource = table.remove( tQueue )
@@ -846,6 +846,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
 	d[ 3 ] = 0
 	d:Normalize()
+	if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
 	if !util_TraceLine( {
 		start = v,
 		endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
@@ -856,24 +857,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		MyTable.tCover = nil
 		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return
-	end
-	local vEnemy = enemy:GetPos()
-	local vTarget = vEnemy + enemy:OBBCenter()
-	local tr = util_TraceLine {
-		start = v,
-		endpos = vTarget,
-		mask = MASK_SHOT_HULL,
-		filter = { self, enemy, trueenemy }
-	}
-	if tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:DistToSqr( vTarget ) <= ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) then
-		local d = vEnemy - vec
-		d[ 3 ] = 0
-		d:Normalize()
-		if !util_TraceLine( {
-			start = v,
-			endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
-			filter = self
-		} ).Hit then return end
 	end
 	v = vec + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
 	sched.bDuck = nil
@@ -886,6 +869,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	if !MyTable.CanExpose( self ) then MyTable.flSuppressed = CurTime() + math.Clamp( math.min( 0, ( MyTable.GetExposedWeight( self, MyTable ) / self:Health() ) * .2 ), 0, 2 ) return end
 	if bWeAreAlreadyDoingShitGodDammit || CurTime() <= ( MyTable.flSuppressed || 0 ) then return end
+	sched.flSuppressed = CurTime() + 2 // Do NOT run this often, even if can!
 	local flAlarm, vPos, pAlarm = math.huge, self:GetShootPos(), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
 	local t = __ALARMS__[ self:Classify() ]
 	if t then
@@ -932,18 +916,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local pPath = sched.pEnemyPath
 	if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
 	MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-	if MyTable.flCombatState < 0 && math_random( 2 ) == 1 then sched.bRetreat = true return else
-		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-		if tAllies then
-			local iShootingAllies, iAllies = 0, table.Count( tAllies )
-			if iAllies <= 1 then
-				if math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-			else
-				for ent in pairs( tAllies ) do if ent.bSuppressing then iShootingAllies = iShootingAllies + 1 end end
-				if math_Rand( 0, iAllies / iShootingAllies ) <= 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-			end
-		elseif math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
-	end
+	if math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true end
 	local aDirection
 	local tGoal = pPath:NextSegment()
 	if tGoal then aDirection = ( tGoal.pos - vec ):Angle()
@@ -1061,6 +1034,24 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		sched.bSuppressing = true
 		return sched
 	end
+	local flLength = pPath:GetLength()
+	local f = self:BoundingRadius()
+	if flLength > f then
+		for i = f, math.min( f * 8, flLength ), f do
+			local vPosition = pPath:GetPositionOnPath( i )
+			if !util_TraceLine( {
+				start = vPosition + vHeight,
+				endpos = enemy:GetPos(),
+				filter = { self, enemy },
+				mask = MASK_SHOT_HULL
+			} ).Hit then
+				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
+				s.vFrom = vPosition
+				s.Enemy = enemy
+				return
+			end
+		end
+	end
 	if vLeftTarget && vRightTarget then
 		if math_random( 2 ) == 1 then
 			SetupSchedule( vLeft, vLeftTarget )
@@ -1083,10 +1074,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local flLength = pPath:GetLength()
 			local vForce, vForceTarget, bForceFar
 			local f = self:BoundingRadius()
-			if flLength < f then
-			else
-				local flEnd, flStep = f * 4, f * .5
-				for i = f, math.min( flEnd, flLength ), flStep do
+			if flLength > f then
+				for i = f, math.min( f * 8, flLength ), f do
 					vForce = pPath:GetPositionOnPath( i )
 					vForceTarget = fDo( vForce, tAngles )
 					if vForceTarget then SetupSchedule( vForce, vForceTarget ) return end
@@ -1096,8 +1085,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		else sched.bRetreat = true /*return -- why did I put this here?*/ end
 		return
 	end
-	if !sched.pEnemyPath then sched.pEnemyPath = Path "Follow" end
-	MyTable.ComputeFlankPath( self, sched.pEnemyPath, enemy, MyTable )
 	if !sched.bFromCombatFormation && MyTable.flCombatState > 0 then
 		local p = sched.pEnemyPath
 		local i = self:FindPathStackUpLine( p, tEnemies )

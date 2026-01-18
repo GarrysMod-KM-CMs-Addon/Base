@@ -108,10 +108,15 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 					local vCover = vStart + vDirection * iCurrent + vOff
 					pPath:MoveCursorToClosestPosition( vCover )
 					local dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() )
-					pPath:MoveCursor( 1 )
+					pPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
 					dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection
 					dDirection[ 3 ] = 0
 					dDirection:Normalize()
+					if dDirection:IsZero() then
+						dDirection = vEnemy - vCover
+						dDirection[ 3 ] = 0
+						dDirection:Normalize()
+					end
 					if util_TraceHull( {
 						start = vCover,
 						endpos = vCover,
@@ -173,7 +178,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil return end
 		end
 	end
-	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
+	local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 	local v = vec + Vector( 0, 0, vMaxs[ 3 ] )
 	// Don't even try to repath often!
 	local pEnemyPath = MyTable.pLastEnemyPath || sched.pEnemyPath
@@ -184,9 +189,11 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 	end
 	pEnemyPath:MoveCursorToClosestPosition( vec )
 	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
-	pEnemyPath:MoveCursor( 1 )
+	pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
 	d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
+	d[ 3 ] = 0
 	d:Normalize()
+	if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
 	if !util_TraceLine( {
 		start = v,
 		endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,

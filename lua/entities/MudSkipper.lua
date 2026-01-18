@@ -18,7 +18,6 @@ if !SERVER then return end
 function ENT:Initialize()
 	BaseClass.Initialize( self )
 	self:SetModel "models/airboat.mdl"
-	local vMins, vMaxs = self:GetCollisionBounds()
 	self:PhysicsInit( SOLID_VPHYSICS )
 	self:SetSeatPosition( Vector( 0, -8, 32 ) )
 end
