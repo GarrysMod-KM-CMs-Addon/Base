@@ -133,6 +133,7 @@ end
 hook.Add( "DoPlayerDeath", "GameImprovements", function( ply )
 	local pWeapon = ply:GetActiveWeapon()
 	if IsValid( pWeapon ) then ply:DropWeapon( pWeapon ) end
+	for _, pWeapon in ipairs( ply:GetWeapons() ) do ply:DropWeapon( pWeapon ) end
 end )
 hook.Add( "PlayerDeath", "GameImprovements", function( ply, _, at )
 	if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end
@@ -143,7 +144,6 @@ hook.Add( "PlayerDeath", "GameImprovements", function( ply, _, at )
 			if v then if v( at, ply ) then b = nil end end
 		end
 	end
-	for _, pWeapon in ipairs( ply:GetWeapons() ) do ply:DropWeapon( pWeapon ) end
 	fOnKilled( ply, at )
 end )
 hook.Add( "PlayerDeathSilent", "GameImprovements", function( ply ) if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end end )

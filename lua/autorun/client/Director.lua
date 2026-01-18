@@ -51,15 +51,16 @@ function Director_Music_Play( self, Index, sName, flVolume, flPitch )
 	local pSound = CreateSound( LocalPlayer(), sName )
 	flVolume = flVolume || 1
 	flPitch = flPitch || 100
+	Director_Music_Stop( self, Index )
 	pSound:PlayEx( math.max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * self.m_flVolume ), flPitch )
-	self.tHandles[ Index ] = { pSound, flVolume, flPitch, RealTime() + SoundDuration( sound.GetProperties( sName ).sound ) }
+	self.tHandles[ Index ] = { pSound, flVolume, flPitch, SoundDuration( sound.GetProperties( sName ).sound ), SysTime() }
 end
 
 function Director_Music_Stop( self, Index )
 	local tHandles = self.tHandles
 	local pSound = tHandles[ Index ]
 	tHandles[ Index ] = nil
-	if pSound then pSound:Stop() end
+	if pSound then pSound[ 1 ]:Stop() end
 end
 
 Director_Music( "MUS_Transition_Instant", "Music/Default/Transition_Instant.wav" )
@@ -95,7 +96,9 @@ function Director_Music_UpdateInternal( self, ... )
 	local tNewHandles = {}
 	local flVolume = self.m_flVolume
 	for Index, tData in pairs( self.tHandles ) do
-		if RealTime() > tData[ 4 ] then tData[ 1 ]:Stop() continue end
+		tData[ 4 ] = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
+		if tData[ 4 ] <= 0 then tData[ 1 ]:Stop() continue end
+		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
 		local pSound = tData[ 1 ]
 		pSound:ChangeVolume( math.max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
@@ -136,6 +139,18 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 	local ply = LocalPlayer()
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
+			//
+			local t = DIRECTOR_MUSIC_TABLE[ ELayer ].MassiveAction3
+			if t then
+				local p = Director_Music_Container()
+				p.m_pTable = t
+				p.m_flStartTime = CurTime()
+				local f = p.Time
+				p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
+				DIRECTOR_MUSIC[ ELayer ] = p
+				continue
+			end
+			//
 			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
 			if t then
 				local p = Director_Music_Container()
@@ -258,7 +273,6 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 		if bDone then DIRECTOR_TRANSITION = nil end
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
-				Director_Music_UpdateInternal( pContainer )
 				if ELayer == ELayerFrom then
 					pContainer.m_flVolume = flVolumeA
 				elseif ELayer == ELayerTo then
@@ -266,15 +280,18 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				else
 					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 				end
+				Director_Music_UpdateInternal( pContainer )
 			end
 		end
 		return
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
-		local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable
+		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
+		local t = pSource.m_pTable
 		local f = t.CheckIntro
 		if f && f "HoldFire" then
 			DIRECTOR_TRANSITION = Director_Music_Container()
 			DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
+			DIRECTOR_TRANSITION.m_pSource = pSource
 			DIRECTOR_TRANSITION.m_flVolume = 1
 			DIRECTOR_TRANSITION.m_bToCombat = true
 			DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
