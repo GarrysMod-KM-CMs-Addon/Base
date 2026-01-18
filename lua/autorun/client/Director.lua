@@ -139,18 +139,6 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 	local ply = LocalPlayer()
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
-			//
-			local t = DIRECTOR_MUSIC_TABLE[ ELayer ].MassiveAction3
-			if t then
-				local p = Director_Music_Container()
-				p.m_pTable = t
-				p.m_flStartTime = CurTime()
-				local f = p.Time
-				p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
-				DIRECTOR_MUSIC[ ELayer ] = p
-				continue
-			end
-			//
 			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
 			if t then
 				local p = Director_Music_Container()
