@@ -154,7 +154,6 @@ hook.Add( "Tick", "Director", function()
 		end
 		local tSpotted = PlyTable.DR_tSpotted || {}
 		local tNewMusicEntities = {}
-		// We're doin' shit to them, so add it!
 		local flAllSuppression, flAllHealth, flAllThreat, bAtLeastOneWhoIsNotIdle = 0, 0, 0
 		for pEntity in pairs( tMusicEntities ) do
 			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
@@ -167,10 +166,20 @@ hook.Add( "Tick", "Director", function()
 			if f && f( pEntity, ply ) == D_LI then
 				flAllThreat = flAllThreat - ( pEntity.GAME_flThreat || 1 )
 			else
+				// We're doin' shit to them, so add it!
 				flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
 				f = pEntity:Health()
 				if f > 0 then flAllHealth = flAllHealth + f end
-				if f > 0 then flAllThreat = flAllThreat + ( pEntity.GAME_flThreat || 1 ) end
+				if f > 0 then
+					f = pEntity.GAME_flThreat
+					if f then flAllThreat = flAllThreat + f
+					else
+						f = .25
+						if HasRangeAttack( pEntity ) then f = 1
+						elseif HasMeleeAttack( pEntity ) then f = .25 end
+						flAllThreat = flAllThreat + f
+					end
+				end
 			end
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
@@ -194,7 +203,7 @@ hook.Add( "Tick", "Director", function()
 			EThreat = DIRECTOR_THREAT_MAGIC
 			PlyTable.DR_bMagic = true
 		end
-		ply.DR_EThreat = EThreat
+		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. tostring( flIntensity ) )
 		local flTension = PlyTable.DR_flMusicTension || 0

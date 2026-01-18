@@ -276,7 +276,8 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		f = math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoilForCrosshair * ( .1 / MyTable.Primary_flDelay ) - 1 ) )
+		// TODO: Improve this!
+		f = math_max( 0, 255 - 255 * ( MyTable.flCurrentRecoilForCrosshair * ( self:GetMaxClip1() * MyTable.Primary_flDelay ) * .5 - 1 ) )
 		if MyTable.vViewModelAim then
 			f = f * MyTable.flAimMultiplier
 		else f = Lerp( 1 - MyTable.flAimMultiplier, f, 255 ) end

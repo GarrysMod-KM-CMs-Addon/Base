@@ -130,6 +130,10 @@ local function fOnKilled( pEntity, pAttacker )
 	end
 end
 
+hook.Add( "DoPlayerDeath", "GameImprovements", function( ply )
+	local pWeapon = ply:GetActiveWeapon()
+	if IsValid( pWeapon ) then ply:DropWeapon( pWeapon ) end
+end )
 hook.Add( "PlayerDeath", "GameImprovements", function( ply, _, at )
 	if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end
 	if IsValid( at ) && at:IsPlayer() then
@@ -514,6 +518,7 @@ end )
 
 COVER_BOUND_SIZE = 3
 
+// IF YOU EDIT THIS, BE SURE TO EDIT ControlsPrediction.lua TOO!
 local CEntity_IsOnGround = CEntity.IsOnGround
 local CEntity_WaterLevel = CEntity.WaterLevel
 local CEntity_Remove = CEntity.Remove
@@ -531,6 +536,13 @@ local function BloodlossStuff( ply, cmd )
 	end
 	if flBlood <= .6 then cmd:AddKey( IN_DUCK ) cmd:AddKey( IN_WALK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
 end
+local cWalkNotRun = CreateConVar(
+	"bWalkNotRun",
+	1,
+	FCVAR_CHEAT + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
+	"Frankensteined ass cvar for dat Far Cry 3 feel...\n\n\nDOES NOT AFFECT ACTORS!",
+	0, 1
+)
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
 
@@ -611,7 +623,15 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		cmd:RemoveKey( IN_SPEED )
 	end
 
-	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK ) end
+	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK )
+	elseif cWalkNotRun:GetBool() then
+		local b = cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 )
+		if b then cmd:AddKey( IN_WALK )
+		else
+			local p = ply:GetActiveWeapon()
+			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
+		end
+	end
 
 	local v = __PLAYER_MODEL__[ ply:GetModel() ]
 	local bAllDirectionalSprint = Either( v, v && v.bAllDirectionalSprint, ply.CTRL_bAllDirectionalSprint ) || ( ( Either( ply.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, ply.CTRL_bCantSlide ) && GetVelocity( ply ):Length() >= ply:GetRunSpeed() ) || ply:Crouching() )
@@ -624,7 +644,8 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		if !bGroundCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) || ply.CTRL_bHeldSprint then
 			ply.CTRL_bHeldSprint = true
 			cmd:AddKey( IN_SPEED )
-			if cmd:GetForwardMove() <= 0 then
+			local p = ply:GetActiveWeapon()
+			if cmd:GetForwardMove() <= 0 || IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then
 				// ply.CTRL_bSprintBlockUnTilUnPressed = true
 				if bGround then ply.CTRL_bHeldSprint = nil end
 				cmd:RemoveKey( IN_SPEED )

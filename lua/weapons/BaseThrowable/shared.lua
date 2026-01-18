@@ -8,6 +8,8 @@ SWEP.Primary.Automatic = true
 SWEP.bPistolSprint = true
 SWEP.Slot = 4
 
+SWEP.Crosshair = "Special"
+
 SWEP.__GRENADE__ = true
 SWEP.GRENADE_flMinimumTime = 1
 SWEP.GRENADE_flMaximumTime = 1
