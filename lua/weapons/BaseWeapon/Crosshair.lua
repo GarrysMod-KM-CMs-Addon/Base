@@ -243,7 +243,7 @@ local cThirdPerson = GetConVar "bThirdPerson"
 local flLastDoDrawCrosshairCall = 0
 function SWEP:DoDrawCrosshair()
 	if developer:GetBool() then return end
-	local f = CurTime()
+	local f = SysTime()
 	local flFrameTime = f - flLastDoDrawCrosshairCall
 	flLastDoDrawCrosshairCall = f
 	local MyTable = CEntity_GetTable( self )

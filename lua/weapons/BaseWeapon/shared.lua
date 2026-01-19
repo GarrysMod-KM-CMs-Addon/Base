@@ -222,7 +222,7 @@ if CLIENT then
 	local util_TraceLine = util.TraceLine
 	local flLastCalcViewCall = 0
 	function SWEP:CalcView( ply, pos, ang )
-		local f = CurTime()
+		local f = SysTime()
 		local flFrameTime = f - flLastCalcViewCall
 		flLastCalcViewCall = f
 		local MyTable = CEntity_GetTable( self )
@@ -336,7 +336,7 @@ if CLIENT then
 	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
 	local flLastCalcViewModelViewCall = 0
 	function SWEP:CalcViewModelView( _, pos, ang )
-		local f = CurTime()
+		local f = SysTime()
 		local flFrameTime = f - flLastCalcViewModelViewCall
 		flLastCalcViewModelViewCall = f
 		local MyTable = CEntity_GetTable( self )
