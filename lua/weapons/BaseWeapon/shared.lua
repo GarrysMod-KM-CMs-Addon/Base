@@ -513,22 +513,22 @@ if CLIENT then
 		end
 		local flRecoil, f = MyTable.CalcRecoil( self, ply )
 		if MyTable.Primary.Automatic then
-			f = flRecoil * ( .75 / MyTable.Primary_flDelay )
+			f = flRecoil * ( .5 / MyTable.Primary_flDelay )
 			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		else
-			f = flRecoil * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
+			f = flRecoil * ( .5 / ( MyTable.Primary_flDelay + .1 ) )
 			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		end
 		f = f + flRecoil
-		local f
 		if MyTable.Primary.Automatic then
-			f = .75 * ( .75 / MyTable.Primary_flDelay )
+			f = .5 / MyTable.Primary_flDelay
 			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 		else
-			f = .75 * ( .75 / ( MyTable.Primary_flDelay + .1 ) )
+			f = .5 / ( MyTable.Primary_flDelay + .1 )
 			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 		end
-		if MyTable.flCurrentRecoilForCrosshair > f * 2 then MyTable.flCurrentRecoilForCrosshair = f end
+		f = f + ( ( ( MyTable.Primary_flDelay / .5 ) * ( 1000 / self:GetMaxClip1() ) ) - 1.2 ) * .25
+		if MyTable.flCurrentRecoilForCrosshair >= f then MyTable.flCurrentRecoilForCrosshair = f end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
 		flAimTiltTime = Lerp( math_min( 1, 10 * flFrameTime ), flAimTiltTime, bZoom && flRoll || 0 )
