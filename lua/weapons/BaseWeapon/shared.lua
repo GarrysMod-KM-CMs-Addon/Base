@@ -527,7 +527,7 @@ if CLIENT then
 			f = .5 / ( MyTable.Primary_flDelay + .1 )
 			MyTable.flCurrentRecoilForCrosshair = math.max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 		end
-		f = f + 3 + ( ( ( ( MyTable.Primary_flDelay / .5 ) * ( 1000 / math.max( 50, self:GetMaxClip1() ) ) ) - 1.2 ) * .25 )
+		f = f + 3 + ( ( ( ( MyTable.Primary_flDelay / .5 ) * ( 1000 / math.max( 50, self:GetMaxClip1() ) ) ) - 1 ) * .33 )
 		if MyTable.flCurrentRecoilForCrosshair >= f then MyTable.flCurrentRecoilForCrosshair = f MyTable.flCurrentRecoilForGap = 0 end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
