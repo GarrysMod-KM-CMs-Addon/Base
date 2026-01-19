@@ -43,6 +43,7 @@ function Director_Music_Container()
 	}
 end
 
+local SysTime = SysTime
 local LocalPlayer = LocalPlayer
 // local game_GetWorld = game.GetWorld
 local table_insert = table.insert
@@ -53,7 +54,7 @@ function Director_Music_Play( self, Index, sName, flVolume, flPitch )
 	flPitch = flPitch || 100
 	Director_Music_Stop( self, Index )
 	pSound:PlayEx( math.max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * self.m_flVolume ), flPitch )
-	self.tHandles[ Index ] = { pSound, flVolume, flPitch, SoundDuration( sound.GetProperties( sName ).sound ), SysTime() }
+	self.tHandles[ Index ] = { pSound, flVolume, flPitch, SoundDuration( sound.GetProperties( sName ).sound ), SysTime(), sName }
 end
 
 function Director_Music_Stop( self, Index )
@@ -92,16 +93,17 @@ DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self
 	flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, FrameTime() ) || Lerp( .1 * FrameTime(), flVolumeB, 1 )
 	return false, 0, flVolumeB
 end }
+local math_max = math.max
 function Director_Music_UpdateInternal( self, ... )
 	local tNewHandles = {}
 	local flVolume = self.m_flVolume
 	for Index, tData in pairs( self.tHandles ) do
-		tData[ 4 ] = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
 		if tData[ 4 ] <= 0 then tData[ 1 ]:Stop() continue end
+		tData[ 4 ] = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
 		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
 		local pSound = tData[ 1 ]
-		pSound:ChangeVolume( math.max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
+		pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
 		pSound:ChangePitch( tData[ 3 ] )
 	end
 	self.tHandles = tNewHandles
@@ -115,6 +117,8 @@ DIRECTOR_THREAT = DIRECTOR_THREAT || DIRECTOR_THREAT_NULL
 DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_MUSIC_LAST_THREAT || DIRECTOR_THREAT_NULL
 
 DIRECTOR_MUSIC = DIRECTOR_MUSIC || {}
+
+local RealTime = RealTime
 
 function Director_VoiceLineHook(
 		flDuration ) // sName - This is actually a String of the sound's name ( Data.SoundName )
@@ -139,8 +143,27 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 	local ply = LocalPlayer()
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
+			// You can uncomment this for testing
+			if ELayer == DIRECTOR_THREAT_COMBAT then
+				local t = DIRECTOR_MUSIC_TABLE[ ELayer ].BurningFuel
+				if t then
+					local p = Director_Music_Container()
+					p.m_pTable = t
+					p.m_flStartTime = CurTime()
+					local f = p.Time
+					p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
+					DIRECTOR_MUSIC[ ELayer ] = p
+					continue
+				end
+			end
 			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
 			if t then
+				local b
+				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
+					local p = DIRECTOR_MUSIC[ ELayer ]
+					if p && p.m_pTable == t then b = true break end
+				end
+				if b then continue end
 				local p = Director_Music_Container()
 				p.m_pTable = t
 				p.m_flStartTime = CurTime()

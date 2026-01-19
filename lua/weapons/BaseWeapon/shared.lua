@@ -178,6 +178,7 @@ if CLIENT then
 	local vViewFinalRatherQuick, vViewFinalRatherQuickAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 	local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 	local flLandTime, flJumpTime = 0, 0
+	SWEP.flSwayStabilizer = .415
 	SWEP.ViewModelFOV = 62
 	SWEP.flViewModelX = 0
 	SWEP.flViewModelY = 0
@@ -292,7 +293,7 @@ if CLIENT then
 		MyTable.aLastViewEyePosition[ 2 ] = -MyTable.flLastEyeYaw
 		ang:RotateAroundAxis( ang:Right(), -math_Clamp( flSway * MyTable.aLastViewEyePosition.p / MyTable.flSwayScale, flSwayNeg, flSway ) )
 		ang:RotateAroundAxis( ang:Up(), -math_Clamp( flSwayNeg * MyTable.aLastViewEyePosition.y / MyTable.flSwayScale, flSwayNeg, flSway ) )
-		local flSwayVector = flSway * .415
+		local flSwayVector = flSway * MyTable.flSwayStabilizer
 		local flSwayVectorNeg = -flSwayVector
 		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastViewEyePosition.p / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up()
 		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastViewEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right()
@@ -590,7 +591,7 @@ if CLIENT then
 		local flSwayNeg = -flSway
 		ang:RotateAroundAxis( ang:Right(), math_Clamp( flSway * MyTable.aLastEyePosition.p / MyTable.flSwayScale, flSwayNeg, flSway ) )
 		ang:RotateAroundAxis( ang:Up(), math_Clamp( flSwayNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale, flSwayNeg, flSway ) )
-		local flSwayVector = flSway * .415
+		local flSwayVector = flSway * MyTable.flSwayStabilizer
 		local flSwayVectorNeg = -flSwayVector
 		pos = pos + math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.p / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up()
 		pos = pos + math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right()

@@ -536,13 +536,6 @@ local function BloodlossStuff( ply, cmd )
 	end
 	if flBlood <= .6 then cmd:AddKey( IN_DUCK ) cmd:AddKey( IN_WALK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
 end
-local cWalkNotRun = CreateConVar(
-	"bWalkNotRun",
-	1,
-	FCVAR_CHEAT + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
-	"Frankensteined ass cvar for dat Far Cry 3 feel...\n\n\nDOES NOT AFFECT ACTORS!",
-	0, 1
-)
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
 
@@ -618,19 +611,18 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 
 	if ply:GetNW2Bool "CTRL_bSliding" then cmd:RemoveKey( IN_ATTACK ) cmd:RemoveKey( IN_ATTACK2 ) end
 
-	if ply.CTRL_bSprintBlockUnTilUnPressed then
-		if !cmd:KeyDown( IN_SPEED ) then ply.CTRL_bSprintBlockUnTilUnPressed = nil end
-		cmd:RemoveKey( IN_SPEED )
-	end
-
 	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK )
-	elseif cWalkNotRun:GetBool() then
+	elseif !cmd:KeyDown( IN_SPEED ) then
 		local b = cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 )
-		if b then cmd:AddKey( IN_WALK )
-		else
+		if b then cmd:AddKey( IN_WALK ) else
 			local p = ply:GetActiveWeapon()
 			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
 		end
+	end
+
+	if ply.CTRL_bSprintBlockUnTilUnPressed then
+		if !cmd:KeyDown( IN_SPEED ) then ply.CTRL_bSprintBlockUnTilUnPressed = nil end
+		cmd:RemoveKey( IN_SPEED )
 	end
 
 	local v = __PLAYER_MODEL__[ ply:GetModel() ]

@@ -75,6 +75,7 @@ hook.Add( "PopulateToolMenu", "CascadeShadowMappingServer", function()
 		pPanel:ClearControls()
 		pPanel:ControlHelp "#CascadeShadowMappingInformation"
 		local p = pPanel:CheckBox( "#CascadeShadowMapping", "bCascadeShadowMapping" )
+		p:SetValue( false )
 		pPanel:ControlHelp "#CascadeShadowMappingHelp"
 	end )
 end )
