@@ -57,7 +57,7 @@ hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
 		local PlyTable = CEntity_GetTable( ply )
 		local pFlashlight = PlyTable.GAME_pFlashlight
-		if IsValid( pFlashlight ) then pFlashlight:SetPos( ply:GetShootPos() ) end
+		if IsValid( pFlashlight ) then pFlashlight:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 ) end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
 		if v then
 			v = v.Think
