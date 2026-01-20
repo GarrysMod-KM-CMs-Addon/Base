@@ -140,6 +140,8 @@ BREEZE_VECTOR_COLOR = BREEZE_COLOR:ToVector()
 local Lerp = Lerp
 local math_min = math.min
 
+local ANALYZATION_STEP = 22.5 / 4
+
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
@@ -170,8 +172,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	local vEye, aEye = EyePos(), EyeVector():Angle()
 	local iPasses = 1
 	local vColor = Vector( 0, 0, 0 )
-	for flPitch = -22.5, 22.5, 4.5 do
-		for flYaw = -22.5, 22.5, 4.5 do
+	for flPitch = -22.5, 22.5, ANALYZATION_STEP do
+		for flYaw = -22.5, 22.5, ANALYZATION_STEP do
 			iPasses = iPasses + 1
 			aEye[ 1 ] = aEye[ 1 ] + flPitch
 			aEye[ 2 ] = aEye[ 2 ] + flYaw
