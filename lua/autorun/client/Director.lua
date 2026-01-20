@@ -94,12 +94,15 @@ DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self
 	return false, 0, flVolumeB
 end }
 local math_max = math.max
+local pairs = pairs
 function Director_Music_UpdateInternal( self, ... )
 	local tNewHandles = {}
 	local flVolume = self.m_flVolume
+	local flRealFrameTime = RealFrameTime()
 	for Index, tData in pairs( self.tHandles ) do
-		if tData[ 4 ] <= 0 then tData[ 1 ]:Stop() continue end
-		tData[ 4 ] = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
+		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
+		tData[ 4 ] = f
+		if f <= flRealFrameTime then tData[ 1 ]:Stop() continue end
 		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
 		local pSound = tData[ 1 ]
@@ -139,23 +142,24 @@ function Director_VoiceLineHookToCombat( flDuration )
 end
 
 local LocalPlayer = LocalPlayer
+local CurTime = CurTime
 hook.Add( "RenderScreenspaceEffects", "Director", function()
 	local ply = LocalPlayer()
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
 			// You can uncomment this for testing
-			if ELayer == DIRECTOR_THREAT_COMBAT then
-				local t = DIRECTOR_MUSIC_TABLE[ ELayer ].BurningFuel
-				if t then
-					local p = Director_Music_Container()
-					p.m_pTable = t
-					p.m_flStartTime = CurTime()
-					local f = p.Time
-					p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
-					DIRECTOR_MUSIC[ ELayer ] = p
-					continue
-				end
-			end
+			//	if ELayer == DIRECTOR_THREAT_COMBAT then
+			//		local t = DIRECTOR_MUSIC_TABLE[ ELayer ].TRACK
+			//		if t then
+			//			local p = Director_Music_Container()
+			//			p.m_pTable = t
+			//			p.m_flStartTime = CurTime()
+			//			local f = p.Time
+			//			p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
+			//			DIRECTOR_MUSIC[ ELayer ] = p
+			//			continue
+			//		end
+			//	end
 			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
 			if t then
 				local b
