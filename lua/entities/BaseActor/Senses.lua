@@ -181,8 +181,20 @@ local math_Clamp = math.Clamp
 
 local CurTime = CurTime
 
-function ENT:ShouldPickUpGun( pWeapon, TheirTable, MyTable )
-	// TODO
+// The name is a fluke lmao - you should handle the picking up code here too.
+function ENT:ShouldPickUpGun( pWeapon, vEyePos, TheirTable, MyTable )
+	if MyTable.bCannotCarryWeapons || pWeapon:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 9437184/*3072*/ then return end
+	local pSchedule = MyTable.Schedule
+	if pSchedule && pSchedule.m_sName == "PickUpGun" then return end
+	// I already have this gun... but why not take the other too?
+	//	local sTargetClass = pWeapon:GetClass()
+	//	for wep in pairs( MyTable.tWeapons ) do
+	//		if wep:GetClass() == sTargetClass then
+	//			return
+	//		end
+	//	end
+	pSchedule = MyTable.SetSchedule( self, "PickUpGun", MyTable )
+	pSchedule.pWeapon = pWeapon
 end
 
 // If we are in combat with multiple enemies, and we see that there is
@@ -192,7 +204,7 @@ ENT.bCombatForgetHostiles = true
 ENT.flLastLookTime = 0
 ENT.flNextLookTime = 0
 // If we've seen something, and then it went out of sight, don't delete the info about it yet!
-// Instead, decrease the vision strength ofit by this and only delete the info about it when it's zero.
+// Instead, decrease the vision strength of it by this and only delete the info about it when it's zero.
 // This way, it's harder for enemies to run away, since every half a second they're re-noticed,
 // as opposed to having to wait the whole spot time over and over again when they're a pixel out of sight
 //
@@ -223,8 +235,9 @@ function ENT:Look( MyTable )
 	local bCombatForgetHostiles = MyTable.bCombatForgetHostiles
 	local bCombatForgetLastHostile = MyTable.bCombatForgetLastHostile
 	local fReportPositionAsClear = MyTable.ReportPositionAsClear
-	local bClear = !IsValid( MyTable.Enemy )
+	local bNotClear = IsValid( MyTable.Enemy )
 	local bMelee, bRange
+	local tWeapons = {}
 	for _, ent in ipairs(
 		// This is the piece of shit that is necessary but absolutely CONSUMES the CPU!
 		// I am 100% sure, and I have tested it.
@@ -249,7 +262,7 @@ function ENT:Look( MyTable )
 		if tOldVisionStrength[ ent ] then
 			if TheirTable.__WEAPON__ && !IsValid( CEntity_GetOwner( ent ) ) then
 				if CurTime() > ( MyTable.tNextWeaponCheck[ ent ] || 0 ) && tOldVisionStrength[ ent ] >= 1 then // Omagad, a gun!!!
-					MyTable.ShouldPickUpGun( self, ent, TheirTable, MyTable )
+					table_insert( tWeapons, { ent, ent:GetPos():DistToSqr( vEyePos ) } )
 					MyTable.tNextWeaponCheck[ ent ] = CurTime() + 2
 					continue
 				end
@@ -318,6 +331,12 @@ function ENT:Look( MyTable )
 				end
 			end
 		else tVisionStrength[ ent ] = 0 end
+	end
+	table.SortByMember( tWeapons, 2, true )
+	for _, t in ipairs( tWeapons ) do
+		local ent = t[ 1 ]
+		if !IsValid( ent ) then continue end
+		MyTable.ShouldPickUpGun( self, ent, vEyePos, TheirTable, MyTable )
 	end
 	MyTable.tAlertEntities = tAlertEntities
 	local f = MyTable.flLoseSpeed

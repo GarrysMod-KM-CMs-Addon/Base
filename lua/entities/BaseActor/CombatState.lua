@@ -38,7 +38,7 @@ function ENT:CalcCombatState( MyTable )
 	local vMe = CEntity_GetPos( self )
 	local flSupLong, flSupShort = MyTable.flCombatStateSuppressionLong, MyTable.flCombatStateSuppressionShort
 	// If some of us are already retreating, join them
-	local t = MyTable.GetAlliesByClass( self )
+	local t, i = MyTable.GetAlliesByClass( self ), 1
 	if t then
 		for ally in pairs( t ) do
 			if !IsValid( ally ) then continue end
@@ -46,10 +46,12 @@ function ENT:CalcCombatState( MyTable )
 			local tAlly = CEntity_GetTable( ally )
 			local n = tAlly.flCombatStateSuppressionLong || 0
 			if n > flSupLong then flSupLong = n end
+			i = i + ( ally.GAME_flThreat || 1 )
 			// local n = tAlly.flCombatStateSuppressionShort || 0
 			// if n > flSupShort then flSupShort = n end
 		end
 	end
+	h = h * i
 	MyTable.flCombatStateSuppressionLong = flSupLong
 	// MyTable.flCombatStateSuppressionShort = flSupShort
 	local f = math_Clamp( math_Remap( flSupLong, 0, h * MyTable.flCombatStateSuppressionLongEffect, 1, -1 ), -1, 1 )
