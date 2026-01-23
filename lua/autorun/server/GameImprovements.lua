@@ -256,7 +256,7 @@ hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, 
 		b = !ply.GAME_bSecondHurtViewPunch
 		ply.GAME_bSecondHurtViewPunch = b
 		local f = ply:GetMaxHealth()
-		ply:ViewPunch( Angle( 0, 0, flDamage * ( flHealth > f && .01 || math.Remap( flHealth, 0, f, .05, .01 ) ) * ( b && 1 || -1 ) ) )
+		ply:ViewPunch( Angle( 0, 0, flDamage * ( flHealth > f && .8 || math.Remap( flHealth, 0, f, 4, .4 ) ) * ( b && 1 || -1 ) ) )
 	end
 end )
 

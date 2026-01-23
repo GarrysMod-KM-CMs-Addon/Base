@@ -34,12 +34,15 @@ if CLIENT then
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
 end
 
+function SWEP:PlayReloadSounds() end
+
 function SWEP:Reload()
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
 	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
 	self:SetClip1( 0 )
 	if self:DefaultReload( ACT_VM_RELOAD ) then
+		self:PlayReloadSounds()
 		if !pReloadOwner:IsPlayer() then return end
 		f = pReloadOwner:GetViewModel()
 		f = f:SequenceDuration( f:SelectWeightedSequence( ACT_VM_RELOAD ) )
@@ -363,18 +366,6 @@ if CLIENT then
 		end
 		vInstantTarget, vInstantTargetAngle = Vector( 0, 0, 0 ), Vector( 0, 0, 0 )
 		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
-		if MyTable.flAimShoot then
-			local f = ( MyTable.flInAimShoot || 0 ) * ( MyTable.flBarrelBack || 0 ) * MyTable.flAimShoot
-			if ( MyTable.flBarrelBackCurrent || 0 ) > f then
-				MyTable.flBarrelBackCurrent = f
-			else
-				f = Lerp( math_min( 1, 15 * flFrameTime ), MyTable.flBarrelBackCurrent || 0, f )
-				MyTable.flBarrelBackCurrent = f
-			end
-			MyTable.flBarrelBackCurrent = f
-			vInstantTarget[ 1 ] = vInstantTarget[ 1 ] - f
-			MyTable.flInAimShoot = Lerp( math_min( 1, 10 * flFrameTime ), MyTable.flInAimShoot || 0, bZoom && 1 || 0 )
-		end
 		if MyTable.flBarrelBack then MyTable.flBarrelBack = Lerp( math_min( 1, 10 * flFrameTime ), MyTable.flBarrelBack, 0 ) end
 		local flSprint = MyTable.flViewModelSprint
 		local f = math_min( .5, CEntity_GetVelocity( ply ):Length() / CPlayer_GetRunSpeed( ply ) * .5 ) * MyTable.flBobScale
@@ -563,6 +554,18 @@ if CLIENT then
 			vTarget[ 3 ] = vTarget[ 3 ] - 3
 			vTargetAngle = Vector( MyTable.vSprintAngle )
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
+		end
+		if MyTable.flAimShoot then
+			local f = ( MyTable.flInAimShoot || 0 ) * ( MyTable.flBarrelBack || 0 ) * MyTable.flAimShoot
+			if ( MyTable.flBarrelBackCurrent || 0 ) > f then
+				MyTable.flBarrelBackCurrent = f
+			else
+				f = Lerp( math_min( 1, 15 * flFrameTime ), MyTable.flBarrelBackCurrent || 0, f )
+				MyTable.flBarrelBackCurrent = f
+			end
+			MyTable.flBarrelBackCurrent = f
+			pos = pos - ang:Forward() * f
+			MyTable.flInAimShoot = Lerp( math_min( 1, 10 * flFrameTime ), MyTable.flInAimShoot || 0, bZoom && 1 || 0 )
 		end
 		vInstantTarget = vInstantTarget + Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ )
 		vFinal = LerpVector( math_min( 1, 5 * flFrameTime ), vFinal, vTarget )

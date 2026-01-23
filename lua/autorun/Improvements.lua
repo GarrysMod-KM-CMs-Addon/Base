@@ -21,6 +21,26 @@ TRAVERSES_AIR = 4
 
 UNIVERSAL_FOV = 80
 
+local cDisableLevelOfDetail = CreateConVar(
+	"bDisableLevelOfDetail",
+	0,
+	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
+	"Disabled LoD. Not the same LoD that changes model vertices.\n\nThe one which optimizes code.\n\nNOT RECOMMENDED!",
+	0, 1
+)
+local SysTime = SysTime
+local math_min = math.min
+local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
+function LevelOfDetail( pContainer, sKey, flMultiplier )
+	if cDisableLevelOfDetail:GetBool() then pContainer[ sKey ] = 0 return true end
+	local f = pContainer[ sKey ]
+	if f then
+		if SysTime() <= f then return end
+		pContainer[ sKey ] = SysTime() + math_min( physenv_GetLastSimulationTime() * 5000 * ( flMultiplier || 1 ), 1 )
+		return true
+	else pContainer[ sKey ] = SysTime() + math_min( physenv_GetLastSimulationTime() * 5000 * ( flMultiplier || 1 ), 1 ) end
+end
+
 physenv.SetPerformanceSettings {
 	MaxVelocity = 999999,
 	MaxAngularVelocity = 999999

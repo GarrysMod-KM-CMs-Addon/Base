@@ -134,7 +134,7 @@ local FrameTime = FrameTime
 
 local math_Remap = math.Remap
 
-BREEZE_COLOR = Color( 40, 120, 200 )
+BREEZE_COLOR = Color( 80, 180, 240 )
 BREEZE_VECTOR_COLOR = BREEZE_COLOR:ToVector()
 
 local Lerp = Lerp
@@ -211,8 +211,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) )
 		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ), math_Clamp( 1 - f, 0, 1 ), 0 )
 	end
-	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math.Remap( flColor, 0, 1, .33, .66 ), 1 * FrameTime() )
-	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ 4, vColor, BREEZE_VECTOR_COLOR )
+	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
+	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), 1 * FrameTime() )
 	MyTable.GP_FogR = math_Approach( MyTable.GP_FogR || 255, vTargetColor[ 1 ] * 255, 32 * FrameTime() )
 	MyTable.GP_FogG = math_Approach( MyTable.GP_FogG || 255, vTargetColor[ 2 ] * 255, 32 * FrameTime() )
 	MyTable.GP_FogB = math_Approach( MyTable.GP_FogB || 255, vTargetColor[ 3 ] * 255, 32 * FrameTime() )
@@ -226,7 +226,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulr" ] = tDrawColorModify[ "$pp_colour_mulr" ] + flFogR * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulg" ] = tDrawColorModify[ "$pp_colour_mulg" ] + flFogG * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulb" ] = tDrawColorModify[ "$pp_colour_mulb" ] + flFogB * flMultiplier
-	MyTable.GP_FogDistance = Lerp( math_min( 1, .1 * FrameTime() ), MyTable.GP_FogDistance || 0, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 16384 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
+	MyTable.GP_FogDistance = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.GP_FogDistance || 0, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
 	DrawBloom(
 		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 1.33, 2 ),
 		// Setting all three to 1 and then tweaking the other settings
