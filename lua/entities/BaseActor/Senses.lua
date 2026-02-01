@@ -87,7 +87,9 @@ function ENT:ReportPositionAsClear( vec, MyTable )
 			for _, tData in pairs( CEntity_GetTable( pAlly ).tBullseyes ) do
 				local p = tData[ 1 ]
 				if !IsValid( p ) then continue end
-				if CEntity_GetPos( p ):DistToSqr( vec ) <= 65536/*256*/ then CEntity_Remove( p ) end
+				if CEntity_GetPos( p ):DistToSqr( vec ) <= 65536/*256*/ then
+					CEntity_Remove( p )
+				end
 			end
 		end
 	end

@@ -147,24 +147,13 @@ function ENT:WeaponReload( MyTable )
 		end
 	end )
 end
-
-local cDamageMultiplier = CreateConVar(
-	"flActorDamageMultiplier",
-	1,
-	FCVAR_CHEAT + FCVAR_NEVER_AS_STRING,
-	"Allows to make Actors more/less deadly\nDefault, Realistic: 1\nFun: From .05 to .2"
-)
-
 function ENT:WeaponPrimaryAttack( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
-	local wep = MyTable.Weapon
-	if !IsValid( wep ) then return end
-	if CurTime() <= wep:GetNextPrimaryFire() then return end
-	local WeaponTable = CEntity_GetTable( wep )
-	local flDamage = WeaponTable.Primary_flDamage
-	if flDamage then WeaponTable.Primary_flDamage = flDamage * cDamageMultiplier:GetFloat() end
-	wep:PrimaryAttack()
-	WeaponTable.Primary_flDamage = flDamage
+	local pWeapon = MyTable.Weapon
+	if !IsValid( pWeapon ) then return end
+	if CurTime() <= pWeapon:GetNextPrimaryFire() then return end
+	local WeaponTable = CEntity_GetTable( pWeapon )
+	WeaponTable.PrimaryAttack( pWeapon )
 	self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
 	return true
 end

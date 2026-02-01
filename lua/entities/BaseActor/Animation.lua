@@ -1,3 +1,14 @@
+local coroutine_wait = coroutine.wait
+// You MUST call AnimationSystemHalt before this!
+function ENT:PlaySequenceAndWait( sName, flSpeed )
+	local flLength = self:SetSequence( sName )
+	self:ResetSequenceInfo()
+	self:SetCycle( 0 )
+	self:SetPlaybackRate( flSpeed )
+	coroutine_wait( flLength / flSpeed )
+	self:SetSequence( 0 )
+end
+
 ENT.tSequences = {}
 ENT.tPromoteSequences = {}
 

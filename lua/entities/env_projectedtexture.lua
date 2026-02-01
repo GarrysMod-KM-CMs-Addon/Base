@@ -10,26 +10,24 @@ function ENT:UpdateTransmitState() return TRANSMIT_ALWAYS end
 function ENT:SetupDataTables()
 	// Use 0-1 everywhere EXCEPT `lightcolor`! Internally NOT stored as a 0-255 integer!
 	//In `lightcolor`, this is remapped from [0,255] to [0,1]!
-	self:NetworkVar( "Float", 0, "Brightness", { KeyName = "raw.brightness" } )
-	// Sprite size if `SpriteDisabled` isn't on
-	self:NetworkVar( "Float", 1, "SpriteSize", { KeyName = "raw.spritesize" } )
+	self:NetworkVar( "Float", "Brightness", { KeyName = "raw.brightness" } )
 	// Used by `Shadows`, mode 1: the distance to the trace's `HitPos`
-	self:NetworkVar( "Float", 2, "TrueDistance", { KeyName = "raw.truedistance" } )
+	self:NetworkVar( "Float", "TrueDistance", { KeyName = "raw.truedistance" } )
 	// 0: Use Splinter Cell: Blacklist (modified Unreal Engine 2) inspired shadows (recommended)
 	// 1: Use EXTREMELY EXPENSIVE shadows drawn by Vulcan (does not render AT ALL on weak platforms!)
-	self:NetworkVar( "Bool", 1, "Shadows", { KeyName = "raw.shadows" } )
+	self:NetworkVar( "Bool", "Shadows", { KeyName = "raw.shadows" } )
 	// The texture of the light
-	self:NetworkVar( "String", 0 ,"Texture", { KeyName = "raw.texture" } )
+	self:NetworkVar( "String" ,"Texture", { KeyName = "raw.texture" } )
 	// The light color
-	self:NetworkVar( "Vector", 0 ,"LightColor", { KeyName = "raw.lightcolor" } )
+	self:NetworkVar( "Vector" ,"LightColor", { KeyName = "raw.lightcolor" } )
 	// Minimum distance. Clamped if less than 10.
-	self:NetworkVar( "Float", 3, "MinDistance", { KeyName = "raw.mindistance" } )
+	self:NetworkVar( "Float", "MinDistance", { KeyName = "raw.mindistance" } )
 	// How far does the light go?
-	self:NetworkVar( "Float", 4, "Distance", { KeyName = "raw.distance" } )
+	self:NetworkVar( "Float", "Distance", { KeyName = "raw.distance" } )
 	// The amount of degrees to light up vertically
-	self:NetworkVar( "Float", 5, "VerFOV", { KeyName = "raw.verfov" } )
+	self:NetworkVar( "Float", "VerFOV", { KeyName = "raw.verfov" } )
 	// The amount of degrees to light up horizontally
-	self:NetworkVar( "Float", 6, "HorFOV", { KeyName = "raw.horfov" } )
+	self:NetworkVar( "Float", "HorFOV", { KeyName = "raw.horfov" } )
 end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
@@ -93,12 +91,12 @@ else
 			end
 			local tr = util_TraceLine {
 				start = self:GetPos(),
-				endpos = self:GetPos() + self:GetForward() * self:GetDistance(),
+				endpos = self:GetPos() + self:GetForward() * 999999,
 				filter = function( ent ) return t[ ent ] == nil end,
 				mask = MASK_VISIBLE_AND_NPCS
 			}
 			local f = tr.HitNormal:Dot( -self:GetForward() )
-			f = ( f != 0 && ( tr.HitPos:Distance( self:GetPos() ) / math_cos( math_acos( math_Clamp( f, -1, 1 ) ) ) ) || tr.HitPos:Distance( self:GetPos() ) ) + 128
+			f = math.Clamp( ( f != 0 && ( tr.HitPos:Distance( self:GetPos() ) / math_cos( math_acos( math_Clamp( f, -1, 1 ) ) ) ) || tr.HitPos:Distance( self:GetPos() ) ) + 128, 0, self:GetDistance() )
 			self.flShadowDistance = f
 			self:SetTrueDistance( f )
 		end
@@ -119,9 +117,7 @@ else
 		elseif k == "mindistance" || k == "nearz" then self:SetMinDistance( v )
 		elseif k == "distance" || k == "farz" then self:SetDistance( v )
 		elseif k == "texture" then self:SetTexture( v )
-		elseif k == "shadows" || k == "shadowquality" then self:SetShadows( v == "1" )
-		elseif k == "spritesize" then self:SetSpriteSize( tonumber( v ) || 0 )
-		elseif k == "spritedisabled" then self:SetSpriteDisabled( v == "1" ) end
+		elseif k == "shadows" || k == "shadowquality" then self:SetShadows( v == "1" ) end
 	end
 	function ENT:AcceptInput( k, _, _, v )
 		k = string.lower( k )
@@ -137,8 +133,6 @@ else
 		elseif k == "sethorfov" then self:SetHorFOV( v )
 		elseif k == "setverfov" then self:SetVerFOV( v )
 		elseif k == "setfov" || k == "fov" then self:SetHorFOV( v ) self:SetVerFOV( v )
-		elseif k == "shadows"  ||  k  ==  "enableshadows" then self:SetShadows( v  ==  "1" )
-		elseif k == "setspritesize" then self:SetSpriteSize(tonumber( v ) || 0)
-		elseif k == "setspritedisabled" then self:SetSpriteDisabled(tonumber( v )) end
+		elseif k == "shadows"  ||  k  ==  "enableshadows" then self:SetShadows( v  ==  "1" ) end
 	end
 end

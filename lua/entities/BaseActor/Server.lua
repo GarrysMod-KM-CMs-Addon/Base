@@ -99,7 +99,7 @@ function ENT:OnKilled( dmg )
 		for pActor in pairs( __ACTOR_LIST__ ) do
 			if !pActor:CanSee( self ) then continue end
 			local pSchedule = pActor.Schedule
-			if pSchedule && pSchedule.m_sName != "StartleNoise" then continue end
+			if !pSchedule || pSchedule.m_sName != "StartleNoise" then continue end
 			local sSound = pSchedule.tData.SoundName
 			pActor.tSoundHarmless[ sSound ] = nil
 			pActor.tSoundHarmful[ sSound ] = ( pActor.tSoundHarmful[ sSound ] || 0 ) + 1
@@ -280,6 +280,8 @@ function ENT:HandleTurning( MyTable )
 		else aDesAim = ( v - MyTable.GetShootPos( self, MyTable ) ):Angle() end
 	else aDesAim = Angles end
 	local flTurnRate = MyTable.flTurnRate
+	local f = MyTable.flOverrideTurnRateThisTick
+	if f then flTurnRate = f MyTable.flOverrideTurnRateThisTick = nil end
 	if ppAimPitch != -1 then
 		local p = CEntity_GetPoseParameter( self, "aim_pitch" )
 		local des = math_AngleDifference( aDesAim.p, Angles.p + p )
@@ -312,8 +314,8 @@ function ENT:RunBehaviour()
 	while true do
 		if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
 		local MyTable = CEntity_GetTable( self )
-		local f = MyTable.CallMeInRunBehaviour
-		if f then f( self, MyTable ) end
+		local f = MyTable.fCallMeInRunBehaviour
+		if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
 		local f = CEntity_Health( self )
 		MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
 		MyTable.flCombatStateSuppressionShort = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionShort, 0, f * MyTable.flCombatStateSuppressionShortMax ), 0, f * MyTable.flCombatStateSuppressionShortRec * FrameTime() )
