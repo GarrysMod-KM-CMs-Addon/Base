@@ -7,6 +7,7 @@
 
 DEFINE_BASECLASS "BaseWeapon"
 
+SWEP.__DO_NOT_DROP__ = true
 SWEP.Category = "Hands"
 SWEP.PrintName = "#Hands"
 SWEP.Instructions = ""

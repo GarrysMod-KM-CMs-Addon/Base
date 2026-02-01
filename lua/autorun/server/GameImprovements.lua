@@ -338,7 +338,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		pt:Spawn()
 		timer.Simple( .1, function() if IsValid( pt ) then pt:Remove() end end )
 		net.Start "DynamicLight"
-			net.WriteFloat( col[ 4 ] * .008 ) // Brightness
+			net.WriteFloat( col[ 4 ] * .006 ) // Brightness
 			net.WriteFloat( 32 ) // Size
 			net.WriteFloat( 4 ) // Existence length
 			net.WriteVector( tr.HitPos ) // Position
@@ -472,32 +472,8 @@ hook.Add( "Think", "GameImprovements", function()
 		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 		if ent.GAME_Think then ent:GAME_Think() end
 		if !ent.GAME_bPhysCollideHook then ent:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end ) ent.GAME_bPhysCollideHook = true end
-		if CEntity_WaterLevel( ent ) > 0 || ent.GAME_bDontIgnite then CEntity_Extinguish( ent ) elseif CEntity_IsOnFire( ent ) then CEntity_Ignite( ent, 999999 ) end
-		if !ent.GAME_bDontIgnite && CEntity_IsOnFire( ent ) && math.random( ( ent.GAME_bFireBall && 200000 || ( 400000 / ent:BoundingRadius() ) ) * FrameTime() ) == 1 then
-			for _ = 0, 3 do
-				local dir = VectorRand()
-				local tr = util_TraceLine {
-					start = ent:GetPos() + ent:OBBCenter(),
-					endpos = ent:GetPos() + ent:OBBCenter() + VectorRand() * math.Rand( 0, ent:BoundingRadius() ),
-					mask = MASK_SOLID,
-					filter = ent
-				}
-				if tr.Entity == ent then continue end
-				local p = ents.Create "prop_physics"
-				p:SetPos( tr.HitPos )
-				p:SetModel "models/combine_helicopter/helicopter_bomb01.mdl"
-				p:SetNoDraw( true )
-				p:Spawn()
-				p.GAME_bFireBall = true
-				local f = ents.Create "env_fire_trail"
-				f:SetPos( p:GetPos() )
-				f:SetParent( p )
-				f:Spawn()
-				p:GetPhysicsObject():AddVelocity( VectorRand() * math.Rand( 0, ent:BoundingRadius() * 24 ) )
-				AddThinkToEntity( p, function( ent ) CEntity_Ignite( ent, 999999 ) if math.random( GetFlameStopChance( ent ) * FrameTime() ) == 1 || ent:WaterLevel() != 0 then ent:Remove() return true end end )
-				break
-			end
-		end
+		// TODO: Custom fire system?
+		CEntity_Extinguish( ent )
 		if PersistAll:GetBool() && ent:MapCreationID() == -1 && !ent:IsPlayer() && ( !ent:IsWeapon() || ent:IsWeapon() && ( !IsValid( ent:GetOwner() ) || IsValid( ent:GetOwner() ) && !ent:GetOwner():IsPlayer() ) ) then ent:SetPersistent( true ) end
 		local tSuppressionAmount = {}
 		if ent.GAME_tSuppressionAmount then
@@ -538,6 +514,8 @@ local function BloodlossStuff( ply, cmd )
 end
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
+
+	ply.m_iOriginalButtons = cmd:GetButtons()
 
 	local veh = ply.GAME_pVehicle
 	if IsValid( veh ) then

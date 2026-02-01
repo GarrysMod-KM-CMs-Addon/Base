@@ -56,6 +56,11 @@ local VectorZ28 = Vector( 0, 0, 28 )
 hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
 		local PlyTable = CEntity_GetTable( ply )
+		local v = __PLAYER_MODEL__[ ply:GetModel() ]
+		if v then
+			v = v.Tick
+			if v then return v( ply, PlyTable ) end
+		end
 		local pFlashlight = PlyTable.GAME_pFlashlight
 		if IsValid( pFlashlight ) then pFlashlight:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 ) end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
@@ -184,7 +189,7 @@ hook.Add( "Tick", "Director", function()
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
 			if f then if CurTime() > f then EThreat = ETheirThreat end
-			else tSpotted[ pEntity ] = CurTime() + .5 end
+			else tSpotted[ pEntity ] = CurTime() + DIRECTOR_MUSIC_VO_WAIT end
 		end
 		local tNewSpotted = {}
 		for pEntity, flTime in pairs( tSpotted ) do
@@ -193,7 +198,7 @@ hook.Add( "Tick", "Director", function()
 			tNewSpotted[ pEntity ] = flTime
 		end
 		PlyTable.DR_tSpotted = tNewSpotted
-		local f = flAllSuppression / flAllHealth
+		local f = math.max( 0, flAllSuppression ) / flAllHealth
 		if f != f then f = 0 end // NaN
 		flIntensity = flIntensity + f
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
@@ -211,6 +216,6 @@ hook.Add( "Tick", "Director", function()
 		else flTension = Lerp( .25 * FrameTime(), flTension || 0, flIntensity ) end
 		if flTension != flTension then flTension = 0 end // NaN
 		PlyTable.DR_flMusicTension = flTension
-		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. tostring( flTension ) )
+		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. tostring( flTension || 0 ) )
 	end
 end )

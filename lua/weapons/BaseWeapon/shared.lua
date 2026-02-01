@@ -145,13 +145,16 @@ function SWEP:DoRecoil()
 		pOwner:ViewPunch( Angle( util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 ) * ( pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1 ) )
 	end
 end
+
+local IN_ZOOM = IN_ZOOM
+local ACT_VM_PRIMARYATTACK = ACT_VM_PRIMARYATTACK
+local PLAYER_ATTACK1 = PLAYER_ATTACK1
 function SWEP:ShootEffects()
 	self:DoRecoil()
 	local pOwner = self:GetOwner()
-	if !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) ) || !self.flAimShoot then
-		self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
-	end
-	self:GetOwner():SetAnimation( PLAYER_ATTACK1 )
+	if !IsValid( pOwner ) then return end
+	if !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) ) || !self.flAimShoot then self:SendWeaponAnim( ACT_VM_PRIMARYATTACK ) end
+	pOwner:SetAnimation( PLAYER_ATTACK1 )
 end
 
 local math = math
@@ -189,7 +192,7 @@ if CLIENT then
 	SWEP.vViewModelAim = false
 	SWEP.vViewModelAimAngle = false
 	SWEP.flSwayScale = 60
-	SWEP.flSway = 4
+	SWEP.flSway = 6
 	SWEP.SwayScale = 0
 	SWEP.BobScale = 0
 	SWEP.vSprint = Vector( 1.228, 1.358, -.94 )
@@ -287,7 +290,9 @@ if CLIENT then
 		pos = pos + vViewFinalRatherQuick[ 3 ] * ang:Up()
 		MyTable.aLastViewEyePosition = aViewAim - ply:EyeAngles()
 		local flMultiplier = MyTable.flAimMultiplier || 0
-		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER ) end
+		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
+			flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER )
+		else flMultiplier = 0 end
 		local flSway = MyTable.flSway * flMultiplier
 		local flSwayNeg = -flSway
 		local eye = ply:EyeAngles()
@@ -386,15 +391,15 @@ if CLIENT then
 					vTargetAngle.x = vTargetAngle.x + 45
 					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX
-					vTarget.y = vTarget.y - 10 - MyTable.flViewModelY
+					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 ) - 4
 				elseif f == COVER_VARIANTS_LEFT then
 					vTargetAngle.x = vTargetAngle.x + 45
 					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX
-					vTarget.y = vTarget.y + ( MyTable.flCoverLeftX || -3.5 ) - MyTable.flViewModelY
+					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 ) + 4
 				else
 					vTargetAngle.x = vTargetAngle.x + 45
-					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 1 ] || 2 )
+					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 )
 					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX
 					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 				end
