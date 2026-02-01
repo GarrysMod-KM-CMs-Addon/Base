@@ -342,6 +342,8 @@ if CLIENT then
 	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
 	SWEP.vBlindFireUp = Vector( 0, 3, 0 )
 	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
+	SWEP.m_flZoomInTime = 0
+	SWEP.m_flZoomOutTime = 0
 	local flLastCalcViewModelViewCall = 0
 	function SWEP:CalcViewModelView( _, pos, ang )
 		local f = SysTime()
@@ -356,7 +358,7 @@ if CLIENT then
 		local bSprinting = CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )
 		local bSliding = CEntity_GetNW2Bool( ply, "CTRL_bSliding" )
 		local bInCover = CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" )
-		local bZoom = !bSprinting && !bSliding && !bInCover && CEntity_IsOnGround( ply ) && CPlayer_KeyDown( ply, IN_ZOOM )
+		local bZoom = !bSprinting && !bSliding && !bInCover && CEntity_IsOnGround( ply ) && ply.m_bWantsToZoom
 		bBezierAllowOff = nil
 		local flBreathe = RealTime() * 5
 		local vAim

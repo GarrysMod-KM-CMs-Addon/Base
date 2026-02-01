@@ -345,7 +345,7 @@ function SWEP:DoDrawCrosshair()
 		return true
 	end
 	if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
-	if flAimMultiplier <= .5 && !cThirdPerson:GetBool() && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim && CPlayer_KeyDown( ply, IN_ZOOM ) then return true end
+	if flAimMultiplier <= .5 && !cThirdPerson:GetBool() && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
 	local v = __WEAPON_CROSSHAIR_TABLE__[ MyTable.Crosshair ]
 	if v != nil && v( MyTable, self ) then return true end
 	local flHeight, flWidth = ScrH(), ScrW()

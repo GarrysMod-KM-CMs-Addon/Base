@@ -311,16 +311,14 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
 		local bTarget = IsValid( pTarget )
-		if bTarget then
-			vTargetVelocity = ent:GetVelocity()
-			dDamage = DamageInfo()
-			dDamage:SetAttacker( pOwner )
-			// Not setting the inflictor prevents WALK and STEP movetype knockback
-			// dDamage:SetInflictor( ent )
-			dDamage:SetDamage( dmg:GetDamage() )
-			dDamage:SetDamageType( DMG_BULLET )
-			dDamage:SetDamagePosition( tr.HitPos )
-		end
+		local dDamage = DamageInfo()
+		dDamage:SetAttacker( pOwner )
+		// Not setting the inflictor prevents WALK and STEP movetype knockback
+		// dDamage:SetInflictor( ent )
+		dDamage:SetDamage( dmg:GetDamage() )
+		dDamage:SetDamageType( DMG_BULLET )
+		dDamage:SetDamagePosition( tr.HitPos )
+		if bTarget then vTargetVelocity = ent:GetVelocity() end
 		local t = OldCallBack( atk, tr, dDamage ) || { damage = true, effects = true }
 		if t.damage && bTarget then pTarget:TakeDamageInfo( dDamage ) end
 		local b = t.effects
@@ -517,6 +515,25 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 
 	ply.m_iOriginalButtons = cmd:GetButtons()
 
+	if cmd:KeyDown( IN_ZOOM ) then
+		if SysTime() <= ( ply.m_flZoomOutTime || 0 ) then
+			cmd:RemoveKey( IN_ZOOM )
+		elseif !ply.m_bWasZooming then
+			if SysTime() > ( ply.m_flZoomOutTime || 0 ) then
+				ply.m_flZoomInTime = SysTime() + .4
+				ply.m_bWasZooming = true
+			end
+		end
+	else
+		if ply.m_bWasZooming then
+			if SysTime() > ( ply.m_flZoomInTime || 0 ) then
+				ply.m_flZoomOutTime = SysTime() + .4
+				ply.m_bWasZooming = nil
+			end
+			cmd:AddKey( IN_ZOOM )
+		end
+	end
+
 	local veh = ply.GAME_pVehicle
 	if IsValid( veh ) then
 		if !ply.GAME_sRestoreGun then
@@ -705,6 +722,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				ply.GAME_flPeekUpMinimumTime = nil
 				return
 			end
+			cmd:AddKey( IN_WALK )
 			ply:SetNW2Bool "CTRL_bInCover"
 			ply.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
@@ -825,6 +843,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				ply.GAME_sCoverState = nil
 				return
 			else
+				cmd:AddKey( IN_WALK )
 				local d = ply.GAME_vPeekSource - ply:GetPos()
 				d[ 3 ] = 0
 				d:Normalize()
