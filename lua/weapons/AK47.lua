@@ -55,14 +55,16 @@ sound.Add {
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^AK47Shot.wav"
+	sound = "^AK47Shot.wav",
+	volume = .5
 }
 sound.Add {
 	name = "AK47_Shot_Auto",
 	channel = CHAN_AUTO,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^AK47Shot.wav"
+	sound = "^AK47Shot.wav",
+	volume = .5
 }
 
 function SWEP:Initialize() self:SetHoldType "AR2" end

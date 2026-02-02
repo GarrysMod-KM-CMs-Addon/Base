@@ -340,8 +340,8 @@ if CLIENT then
 	SWEP.vBlindFireLeftAngle = Vector( 0, 0, -22.5 )
 	SWEP.vBlindFireRight = Vector( 0, -1.5, 1 )
 	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
-	SWEP.vBlindFireUp = Vector( 0, 3, 0 )
-	SWEP.vBlindFireUpAngle = Vector( 0, 0, -110 )
+	SWEP.vBlindFireUp = Vector( 0, 0, 0 )
+	SWEP.vBlindFireUpAngle = Vector( 0, 0, -130 )
 	SWEP.m_flZoomInTime = 0
 	SWEP.m_flZoomOutTime = 0
 	local flLastCalcViewModelViewCall = 0

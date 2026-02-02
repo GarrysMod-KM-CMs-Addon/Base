@@ -24,6 +24,8 @@ end
 
 function ENT:AnimationSystemTick()
 	local tPromote, tSequences = self.tPromoteSequences, self.tSequences
+	local s = self.m_sIdleSequence
+	if s && table.IsEmpty( tPromote ) then tPromote = { [ s ] = ( self.m_flIdleSequenceSpeed || 1 ) } end
 	for seq in pairs( tPromote ) do
 		if !tSequences[ seq ] then
 			local lay = self:AddGestureSequence( self:LookupSequence( seq ), false )
