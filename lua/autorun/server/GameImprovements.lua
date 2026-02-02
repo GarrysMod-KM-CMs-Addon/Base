@@ -713,11 +713,13 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			end
 		elseif s == "MOVE" then
 			if cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) then ply.GAME_sCoverState = nil return end
-			if cmd:KeyDown( IN_ZOOM ) then
+			if !ply.GAME_flPeekTime then
+				ply.GAME_flPeekTime = CurTime() + .1
+			elseif cmd:KeyDown( IN_ZOOM ) then
 				ply.GAME_flPeekFireTime = nil
 			elseif cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 				ply.GAME_flPeekFireTime = CurTime() + .2
-			elseif CurTime() > ( ply.GAME_flPeekFireTime || 0 ) then
+			elseif CurTime() > ( ply.GAME_flPeekFireTime || 0 ) && CurTime() > ( ply.GAME_flPeekTime || 0 ) then
 				ply.GAME_sCoverState = "FROM"
 				ply.GAME_flPeekUpMinimumTime = nil
 				return
@@ -727,7 +729,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			ply.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
 			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
-			if CurTime() <= ply.GAME_flPeekUpMinimumTime then
+			if CurTime() <= ( ply.GAME_flPeekUpMinimumTime || 0 ) then
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
@@ -735,7 +737,8 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			local d = ply.GAME_vPeekTarget - ply:GetPos()
 			d[ 3 ] = 0
 			d:Normalize()
-			local dEyeFlat = -ply.GAME_vPeekSourceHitNormal
+			local dEyeFlat = ply:GetAimVector()
+			dEyeFlat[ 3 ] = 0
 			dEyeFlat:Normalize()
 			local bMove
 			local s = ply.GAME_bPeekForceCrouch
@@ -783,6 +786,8 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				} ).Hit
 			end
 			if bMove then
+				ply.GAME_flPeekUpMinimumTime = math.max( ply.GAME_flPeekUpMinimumTime, CurTime() + .15 )
+				ply.GAME_flPeekTime = CurTime() + .15
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
@@ -790,6 +795,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				cmd:SetSideMove( ply:GetRunSpeed() * d:Dot( ply:GetRight() ) )
 			else ply:SetNW2Bool "CTRL_bPredictedCantShoot" end
 		else//if s == "FROM" then
+			ply.GAME_flPeekTime = nil
 			ply:SetNW2Bool "CTRL_bPredictedCantShoot"
 			if cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) then ply.GAME_sCoverState = nil return end
 			local bInCover
@@ -855,6 +861,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			end
 		end
 	else
+		ply.GAME_flPeekFireTime = nil
 		local wep = ply:GetActiveWeapon()
 		if IsValid( wep ) && !cmd:KeyDown( IN_ZOOM ) then
 			local cap = wep.GetCapabilities
@@ -976,9 +983,9 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			end
 			if bUp then
 				local f = math.NormalizeAngle( math.AngleDifference( ( -trDuck.HitNormal ):Angle()[ 2 ], aEye[ 2 ] ) )
-				if bLeft && f < -11.25 then
+				if bLeft && f < -2 then
 					VARIANTS = COVER_VARIANTS_LEFT
-				elseif bRight && f > 11.25 then
+				elseif bRight && f > 2 then
 					VARIANTS = COVER_VARIANTS_RIGHT
 				else
 					VARIANTS = COVER_VARIANTS_BOTH
@@ -986,9 +993,9 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			else
 				if bLeft && bRight then
 					local f = math.NormalizeAngle( math.AngleDifference( ( -trDuck.HitNormal ):Angle()[ 2 ], aEye[ 2 ] ) )
-					if f < -11.25 then
+					if f < -2 then
 						VARIANTS = COVER_VARIANTS_LEFT
-					elseif f > 11.25 then
+					elseif f > 2 then
 						VARIANTS = COVER_VARIANTS_RIGHT
 					end
 				elseif bLeft then
@@ -1007,7 +1014,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 					ply.GAME_sCoverState = "MOVE"
 					ply.GAME_bPeekForceCrouch = bLeftForceCrouch
 					ply.GAME_vPeekTarget = vLeft
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5
+					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < 1
 					ply.GAME_vPeekSource = ply:GetPos()
 					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
 					ply.GAME_EPeek = COVER_FIRE_LEFT
@@ -1018,7 +1025,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 					ply.GAME_sCoverState = "MOVE"
 					ply.GAME_bPeekForceCrouch = bRightForceCrouch
 					ply.GAME_vPeekTarget = vRight
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5
+					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < 1
 					ply.GAME_vPeekSource = ply:GetPos()
 					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
 					ply.GAME_EPeek = COVER_FIRE_RIGHT

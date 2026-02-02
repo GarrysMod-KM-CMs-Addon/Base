@@ -412,7 +412,7 @@ if CLIENT then
 				vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 			end
 		else
-			local p = CEntity_GetNW2Int( ply, "CTRL_Peek" )
+			local p, b = CEntity_GetNW2Int( ply, "CTRL_Peek" )
 			if p == COVER_FIRE_LEFT then
 				vTargetAngle.z = vTargetAngle.z - 22.5
 			elseif p == COVER_FIRE_RIGHT then
@@ -422,15 +422,19 @@ if CLIENT then
 					vTarget = vTarget + ( MyTable.vBlindFireUp || vector_origin )
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireUpAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_LEFT then
+					if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, 1, .5 ) b = true end
 					vTarget = vTarget + ( MyTable.vBlindFireLeft || vector_origin )
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireLeftAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_RIGHT then
+					if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) b = true end
 					vTarget = vTarget + ( MyTable.vBlindFireRight || vector_origin )
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireRightAngle || vector_origin )
 				end
 			elseif p == COVER_BLINDFIRE_LEFT then
+				if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, 1, .5 ) b = true end
 				vTargetAngle.z = vTargetAngle.z - 45
 			elseif p == COVER_BLINDFIRE_RIGHT then
+				if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) b = true end
 				vTargetAngle.z = vTargetAngle.z + 45
 			end
 			local bOnGround = CEntity_IsOnGround( ply )
@@ -438,11 +442,11 @@ if CLIENT then
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 				bOnGroundLast = true
 			elseif bOnGround then
+				if !b && CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) end
 				bOnGroundLast = true
 				if !bSliding && bSprinting && !MyTable.bSprintNotAnimated then
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 1 )
 				else
-					if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) end
 					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), flSprint, 0 )
 					local flVelocity = CEntity_GetVelocity( ply ):Length()
 					if !bZoom then

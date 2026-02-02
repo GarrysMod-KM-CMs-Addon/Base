@@ -1,11 +1,11 @@
 // This is shared for a reason, and includes more than just client graphics
 
 // Gets the human percieved brightness of a color
-function GetBrightness( c ) return c[ 1 ] * .00083372549 + c[ 2 ] * .00280470588 + c[ 3 ] * .00028313725 end
-// Same as above except uses vector colors
-function GetBrightnessVC( v ) return v[ 1 ]  * .2126 + v[ 2 ] * .7152  + v[ 3 ] * .0722 end
-// Also same as above except uses red/green/blue floats
-function GetBrightnessRGB( r, g, b ) return r * .00083372549 + g * .00280470588 + b * .00028313725 end
+function GetBrightness( r, g, b ) return r * .00083372549 + g * .00280470588 + b * .00028313725 end
+// Same as above but uses Colors
+function GetBrightnessColor( c ) return c.r * .00083372549 + c.g * .00280470588 + c.b * .00028313725 end
+// Same as above but uses Vectors
+function GetBrightnessVector( v ) return v[ 1 ]  * .2126 + v[ 2 ] * .7152  + v[ 3 ] * .0722 end
 
 if SERVER then
 	CreateConVar(
@@ -142,6 +142,8 @@ local math_min = math.min
 
 local ANALYZATION_STEP = 22.5 / 4
 
+local mDepthOfField = Material "pp/dof"
+
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
@@ -217,7 +219,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	MyTable.GP_FogG = math_Approach( MyTable.GP_FogG || 255, vTargetColor[ 2 ] * 255, 32 * FrameTime() )
 	MyTable.GP_FogB = math_Approach( MyTable.GP_FogB || 255, vTargetColor[ 3 ] * 255, 32 * FrameTime() )
 	local flFogR, flFogG, flFogB = MyTable.GP_FogR, MyTable.GP_FogG, MyTable.GP_FogB
-	local flBrightness = GetBrightnessRGB( flFogR, flFogG, flFogB )
+	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
 	local flMultiplier = math_Remap( flBrightness, 0, 1, 1, 0 )
 	flFogR, flFogG, flFogB = flFogR * .00392156862, flFogG * .00392156862, flFogB * .00392156862
 	tDrawColorModify[ "$pp_colour_addr" ] = tDrawColorModify[ "$pp_colour_addr" ] + flFogR * .2 * flMultiplier
@@ -238,6 +240,23 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		math_Remap( flBloom, 0, 1, 1.33, 2 ), 1, 1, 1
 	)
 	DrawColorModify( tDrawColorModify )
+	cam.Start3D()
+		local flDistance = Lerp(
+			math_min( 1, 2 * FrameTime() ),
+			MyTable.m_flDepthOfField || 0,
+			math.Clamp( self:GetEyeTrace().HitPos:Distance( EyePos() ), 0, 6000 )
+		)
+		MyTable.m_flDepthOfField = flDistance
+		local flSpacing = flDistance
+		flDistance = flDistance * 1.5
+		local vEye, vForward = EyePos(), EyeVector()
+		render.UpdateRefractTexture()
+		for i = 0, 16 do
+			render.SetMaterial( mDepthOfField )
+			local flSize = ( flDistance + flSpacing * i ) * 8
+			render.DrawSprite( vEye + vForward * ( flDistance + flSpacing * i ), flSize, flSize, color_white )
+		end
+	cam.End3D()
 end )
 
 local render = render
@@ -256,7 +275,7 @@ hook.Add( "SetupWorldFog", "Graphics", function()
 	render_FogColor( MyTable.GP_FogR || 255, MyTable.GP_FogG || 255, MyTable.GP_FogB || 255 )
 	render_FogStart( 0 )
 	render_FogEnd( MyTable.GP_FogDistance || 0 )
-	local flBrightness = GetBrightnessRGB( MyTable.GP_FogR || 255, MyTable.GP_FogG || 255, MyTable.GP_FogB || 255 )
+	local flBrightness = GetBrightness( MyTable.GP_FogR || 255, MyTable.GP_FogG || 255, MyTable.GP_FogB || 255 )
 	render_FogMaxDensity( ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( MyTable.GP_FogDensityMul || 0 ) )
 	return true
 end )
