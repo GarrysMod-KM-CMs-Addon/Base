@@ -25,6 +25,7 @@ SWEP.Slot = 2
 SWEP.DrawAmmo = true
 SWEP.vViewModelAim = Vector( 0, -6.2, 1 )
 SWEP.Crosshair = "Rifle"
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 sound.Add {
 	name = "FAMAS_Shot",

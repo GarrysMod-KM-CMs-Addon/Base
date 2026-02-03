@@ -23,6 +23,7 @@ SWEP.Primary_flSpreadY = .0088
 SWEP.Primary_flDamage = 256
 SWEP.Primary_flDelay = .08
 SWEP.Primary_sTracer = "HelicopterTracer"
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 SWEP.flRecoil = 4
 

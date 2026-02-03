@@ -19,6 +19,7 @@ SWEP.Spawnable = true
 SWEP.Slot = 1
 SWEP.HANDLE = { FlareGun = true }
 SWEP.vViewModelAim = Vector( -12, -5.51, 3.145 )
+SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 
 sound.Add {
 	name = "FlareShot",

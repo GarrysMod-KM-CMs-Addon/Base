@@ -37,6 +37,7 @@ SWEP.flSideWaysRecoilMin = -.15
 SWEP.flSideWaysRecoilMax = .15
 SWEP.flRecoilGrowMin = -.8
 SWEP.flRecoilGrowMax = -1
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 sound.Add {
 	name = "CombineEnergyBallCharge",

@@ -27,8 +27,6 @@ sound.Add {
 
 function SWEP:Initialize() self:SetHoldType "Melee" end
 
-SWEP.Melee_flRangeAdd = 32
-
 function SWEP:PrimaryAttack()
 	if !self:CanPrimaryAttack() then return end
 	local owner = self:GetOwner()
@@ -38,7 +36,7 @@ function SWEP:PrimaryAttack()
 		Dir = self:GetAimVector(),
 		Tracer = 0,
 		Damage = ( owner.GAME_flHandDamage || 40 ) * 14,
-		Distance = ( owner.GAME_flReach || 64 ) + self.Melee_flRangeAdd
+		Distance = ( owner.GAME_flReach || 64 )
 	}
 	owner:SetAnimation( PLAYER_ATTACK1 )
 	self:SendWeaponAnim( ACT_VM_MISSCENTER )

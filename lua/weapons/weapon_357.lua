@@ -30,6 +30,7 @@ SWEP.flSideWaysRecoilMin = -.35
 SWEP.flSideWaysRecoilMax = .35
 SWEP.flRecoilGrowMin = -.4
 SWEP.flRecoilGrowMax = -.85
+SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 
 sound.Add {
 	name = "ColyPython_Shot",

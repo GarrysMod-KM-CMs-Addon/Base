@@ -30,6 +30,7 @@ SWEP.flCustomZoomFoV = SWEP.flZoomFoVMin
 SWEP.vViewModelAim = Vector( -13.5, -7.45, 2.3 )
 SWEP.vSprint = Vector( -3.228, 1.358, -0.94 )
 SWEP.bSniper = true
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 function SWEP:FreezeMovement()
 	local owner = self:GetOwner()

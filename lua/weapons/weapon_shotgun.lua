@@ -17,7 +17,7 @@ SWEP.Primary_flSpreadX = .042
 SWEP.Primary_flSpreadY = .042
 SWEP.Primary_flDelay = .2
 SWEP.Primary_flPumpDelay = .4
-SWEP.Primary_flDamage = 32
+SWEP.Primary_flDamage = 60
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = false
@@ -36,6 +36,7 @@ SWEP.flSideWaysRecoilMin = -.45
 SWEP.flSideWaysRecoilMax = .45
 SWEP.flRecoilGrowMin = -.6
 SWEP.flRecoilGrowMax = -1
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 SWEP.bSemi = true
 SWEP.bPumped = true
