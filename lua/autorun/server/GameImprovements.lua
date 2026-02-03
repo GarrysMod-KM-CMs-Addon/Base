@@ -11,7 +11,7 @@ HUMAN_RUN_SPEED, HUMAN_PROWL_SPEED, HUMAN_WALK_SPEED, HUMAN_JUMP_HEIGHT = 300, 2
 
 local RunConsoleCommand = RunConsoleCommand
 RunConsoleCommand( "sv_accelerate", ACCELERATION_NORMAL )
-RunConsoleCommand( "sv_friction", "4" )
+RunConsoleCommand( "sv_friction", ACCELERATION_NORMAL )
 
 HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
 HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )

@@ -306,7 +306,7 @@ function GetVelocity( ent )
 	if v then return v end
 	v = EntTable.GAME_pVehicle
 	if IsValid( v ) then return GetVelocity( v ) end
-	if EntTable.__GetVelocity__ then return EntTable:__GetVelocity__() end
+	if EntTable.__GetVelocity__ then return EntTable.__GetVelocity__( ent, EntTable ) end
 	if ent:IsPlayer() || ent:IsNPC() then return CEntity_GetVelocity( ent ) else
 		if SERVER && ent:IsNextBot() then
 			local v = EntTable.loco:GetVelocity()
@@ -322,6 +322,25 @@ function GetVelocity( ent )
 		if IsValid( phys ) then return phys:GetVelocity() end
 	end
 	return Vector( 0, 0, 0 )
+end
+
+local CEntity_GetTable = CEntity.GetTable
+local CEntity_SetVelocity = CEntity.SetVelocity
+local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
+local Vector = Vector
+local CurTime = CurTime
+function SetVelocity( ent, vVelocity )
+	local EntTable = CEntity_GetTable( ent )
+	v = EntTable.GAME_pVehicle
+	if IsValid( v ) then SetVelocity( v, vVelocity ) end
+	if EntTable.__SetVelocity__ then EntTable.__SetVelocity__( ent, vVelocity, EntTable ) end
+	if ent:IsPlayer() then
+		CEntity_SetVelocity( ent, vVelocity - CEntity_GetVelocity( ent ) )
+	elseif ent:IsNPC() then CEntity_SetVelocity( ent, vVelocity ) else
+		if SERVER && ent:IsNextBot() then EntTable.loco:SetVelocity( vVelocity ) return end
+		local phys = CEntity_GetPhysicsObject( ent )
+		if IsValid( phys ) then phys:SetVelocity( vVelocity ) end
+	end
 end
 
 for _, n in ipairs( file.Find( "Player/*.lua", "LUA" ) ) do ProtectedCall( function() include( "Player/" .. n ) end ) end
