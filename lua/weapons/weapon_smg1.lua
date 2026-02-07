@@ -14,7 +14,7 @@ SWEP.Primary.Ammo = "SMG1"
 SWEP.Primary_flSpreadX = .0083
 SWEP.Primary_flSpreadY = .0083
 SWEP.Primary_flDelay = .06315789473
-SWEP.Primary_flDamage = 68
+SWEP.Primary_flDamage = 20
 SWEP.ViewModelFOV = 45
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
@@ -33,6 +33,7 @@ SWEP.flSideWaysRecoilMin = -.22
 SWEP.flSideWaysRecoilMax = .22
 SWEP.flRecoilGrowMin = -.55
 SWEP.flRecoilGrowMax = -.95
+SWEP.flAimShoot = 5
 
 sound.Add {
 	name = "MP7_Shot",

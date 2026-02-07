@@ -9,7 +9,7 @@ SWEP.Primary_flDamage = 0
 SWEP.Primary_flDelay = 0
 SWEP.Primary_iNum = 1
 SWEP.Primary_iTracer = 1
-SWEP.Primary_sTracer = "Bullet"
+// SWEP.Primary_sTracer = "Bullet"
 
 SWEP.Instructions = "Primary to shoot."
 

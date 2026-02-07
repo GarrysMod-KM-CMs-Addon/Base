@@ -173,7 +173,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	end
 	local vEye, aEye = EyePos(), EyeVector():Angle()
 	local iPasses = 1
-	local vColor = Vector( 0, 0, 0 )
+	local vColor = Vector()
 	for flPitch = -22.5, 22.5, ANALYZATION_STEP do
 		for flYaw = -22.5, 22.5, ANALYZATION_STEP do
 			iPasses = iPasses + 1

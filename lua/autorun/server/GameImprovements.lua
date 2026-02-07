@@ -13,6 +13,9 @@ local RunConsoleCommand = RunConsoleCommand
 RunConsoleCommand( "sv_accelerate", ACCELERATION_NORMAL )
 RunConsoleCommand( "sv_friction", ACCELERATION_NORMAL )
 
+GRAVITY_NORMAL = 800
+RunConsoleCommand( "sv_gravity", GRAVITY_NORMAL )
+
 HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
 HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )
 
@@ -1141,20 +1144,17 @@ NOT_A_VOICELINE[ "npc/zombie/moan_loop2.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop3.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop4.wav" ] = true
 
-util.AddNetworkString "EmitSound"
-
 local player_Iterator = player.Iterator
 hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	if _Comp then
-		if _Comp.KM_CMs_Addon then
-			return
+		if _Comp.KM_CMs_Addon then return
 		else _Comp.KM_CMs_Addon = true end
 	end
 	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
 	local ent = Data.Entity
 	local dent = GetOwner( ent )
 	if Data.Volume <= .05 then return true end
-	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 2 || 1.5 ), 5, 18000 )
+	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 1.95547 || 1.5 ), 5, 18000 )
 	local vPos = Data.Pos || ( ent:GetPos() + ent:OBBCenter() )
 	for act in pairs( __ACTOR_LIST__ ) do
 		if act == ent || act == dent then continue end

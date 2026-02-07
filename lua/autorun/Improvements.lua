@@ -36,9 +36,9 @@ function LevelOfDetail( pContainer, sKey, flMultiplier )
 	local f = pContainer[ sKey ]
 	if f then
 		if SysTime() <= f then return end
-		pContainer[ sKey ] = SysTime() + math_min( physenv_GetLastSimulationTime() * 5000 * ( flMultiplier || 1 ), 1 )
+		pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 5000 ) ^ .5 * ( flMultiplier || 1 ), 1 )
 		return true
-	else pContainer[ sKey ] = SysTime() + math_min( physenv_GetLastSimulationTime() * 5000 * ( flMultiplier || 1 ), 1 ) end
+	else pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 5000 ) ^ .5 * ( flMultiplier || 1 ), 1 ) end
 end
 
 physenv.SetPerformanceSettings {
@@ -94,7 +94,7 @@ end
 function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, flFrameTime )
 	local vDelta = vTarget - vPos
 	local flDistance = vDelta:Length()
-	if flDistance == 0 then return Vector( 0, 0, 0 ) end
+	if flDistance == 0 then return Vector() end
 	local vDir = vDelta:GetNormalized()
 	local flMaxSpeedToStop = ( 2 * flAcceleration * flDistance ) ^ .5
 	flSpeed = math_min( vCurrent:Length() + flAcceleration * ( flFrameTime || FrameTime() ), flMaxSpeedToStop )
@@ -321,7 +321,7 @@ function GetVelocity( ent )
 		local phys = CEntity_GetPhysicsObject( ent )
 		if IsValid( phys ) then return phys:GetVelocity() end
 	end
-	return Vector( 0, 0, 0 )
+	return Vector()
 end
 
 local CEntity_GetTable = CEntity.GetTable
