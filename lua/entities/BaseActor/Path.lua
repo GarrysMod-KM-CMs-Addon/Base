@@ -136,48 +136,6 @@ function ENT:FindPathBattleLineNoAlliesToVector( Path, vShoot, flTolerance )
 	end
 end
 
-function ENT:FindPathStackUpLineInternal( Path, tEnemies, flTolerance )
-end
-
-function ENT:ShouldStackUp( Path, flTolerance )
-	flTolerance = flTolerance || 192
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	local flSuppressionTraceFraction = self.flSuppressionTraceFraction
-	local N
-	local pEnemy = self.Enemy
-	if !IsValid( pEnemy ) then return end
-	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
-	local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
-	local tFilter = IsValid( pTrueEnemy ) && { self, pEnemy, pTrueEnemy } || { self, pEnemy }
-	for I = 0, math_min( Path:GetLength(), flTolerance * 2.6 ), flTolerance do
-		local vec = Path:GetPositionOnPath( I )
-		local tr = util.TraceLine {
-			start = vec + vStand,
-			endpos = vEnemy,
-			mask = MASK_SHOT_HULL,
-			filter = tFilter
-		}
-		if tr.Fraction > flSuppressionTraceFraction then return N else N = I end
-		if !vDuck then continue end
-		local tr = util.TraceLine {
-			start = vec + vDuck,
-			endpos = vEnemy,
-			mask = MASK_SHOT_HULL,
-			filter = tFilter
-		}
-		if tr.Fraction > flSuppressionTraceFraction then return N else N = I end
-	end
-	return N
-end
-
-function ENT:FindPathStackUpLine( pPath, tEnemies, flTolerance )
-	flTolerance = flTolerance || 192
-	local N = self:FindPathStackUpLineInternal( pPath, tEnemies, flTolerance )
-	if N && N <= flTolerance * 2.6 then return end
-	return N
-end
-
 local bit_band = bit.band
 function ENT:ComputeVehiclePath( Path, vGoal )
 	local MyTable = CEntity_GetTable( self )
@@ -322,11 +280,12 @@ local util_TraceLine = util.TraceLine
 local math_min = math.min
 
 // Tries to jump to vTarget
-function ENT:Jump( vTarget )
+function ENT:Jump( vTarget, MyTable )
 	local flGravity = sv_gravity:GetFloat()
 	local vVelocity = self.loco:GetVelocity()
 	local flOriginal = self.loco:GetJumpHeight() // NOT flJumpHeight!!!
-	if vVelocity:LengthSqr() < self.flWalkSpeed * .5 then vVelocity = ( vTarget - self:GetPos() ):GetNormalized() * flOriginal end
+	// TODO: Go back and try to jump again like a real human would
+	if vVelocity:Length() < self.flWalkSpeed * .5 then return end
 	local vStart = self:GetPos()
 	local vMiddle = LerpVector( .5, vStart, vTarget )
 	local flZ = vStart.z
@@ -353,12 +312,12 @@ function ENT:Jump( vTarget )
 	local dTargetFlat = vTarget - self:GetPos()
 	dTargetFlat.z = 0
 	dTargetFlat:Normalize()
-	local flFlatDistance = vStart:Distance2D( vTarget )
-	local flDifference = ( 1 - math_max( 0, dVelocityFlat:Dot( dTargetFlat ) ) ) * flFlatDistance
-	if flDifference > ( self.flPathTolerance * .5 ) then return end
-	if self:GetPos():DistToSqr( vTarget ) > ( flJumpLength * flJumpLength ) then return end
-	self.loco:SetJumpHeight( math_Clamp( ( ( ( vStart:Distance( vTarget ) + self:OBBMaxs().x * .5 ) / vVelocity:Length() ) * .5 * flGravity ) ^ 2 / ( 2 * flGravity ), 0, flOriginal ) )
-	self.loco:Jump()
+	local flDistance = vStart:Distance( vTarget )
+	local flDifference = ( 1 - math_max( 0, dVelocityFlat:Dot( dTargetFlat ) ) ) * flDistance
+	if flDifference > self:OBBMaxs()[ 1 ] then return end
+	if flDistance > flJumpLength then return end
+	self.loco:SetJumpHeight( math_Clamp( ( ( ( flDifference + flDistance ) / vVelocity:Length() ) * .5 * flGravity ) ^ 2 / ( 2 * flGravity ), 0, flOriginal ) )
+	self.loco:JumpAcrossGap( vTarget, self:GetForward() )
 	self.loco:SetJumpHeight( flOriginal )
 	self.m_flJumpStartTime = CurTime()
 	self.m_bJumping = true

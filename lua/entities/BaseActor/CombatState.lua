@@ -14,9 +14,9 @@ ENT.flCombatStateSuppressionShortRec = 4
 ENT.flCombatStateSuppressionShortEffect = 8
 
 ENT.flCombatStateSuppressionLong = 0
-ENT.flCombatStateSuppressionLongMax = 768
+ENT.flCombatStateSuppressionLongMax = 1024
 ENT.flCombatStateSuppressionLongRec = 2
-ENT.flCombatStateSuppressionLongEffect = 512
+ENT.flCombatStateSuppressionLongEffect = 768
 
 local math = math
 local math_Clamp = math.Clamp

@@ -13,6 +13,35 @@ include "Behaviour.lua"
 include "Animation.lua"
 include "Mind.lua"
 
+local CEntity = FindMetaTable "Entity"
+
+local CEntity_GetTable = CEntity.GetTable
+
+local coroutine_create = coroutine.create
+local coroutine_status = coroutine.status
+local coroutine_resume = coroutine.resume
+function ENT:BehaveStart()
+	local MyTable = CEntity_GetTable( self )
+	MyTable.RunBehaviour( self, MyTable )
+end
+function ENT:BehaveUpdate( flInterval )
+	local MyTable = CEntity_GetTable( self )
+	local coBehaveThread = MyTable.m_coBehaveThread
+	if !coBehaveThread then return end
+	if coroutine_status( coBehaveThread ) == "dead" then
+		MyTable.m_coBehaveThread = nil
+		MyTable.RunBehaviour( self, MyTable )
+		ErrorNoHalt( self, "MY COROUTINE DIED!\n" )
+		return
+	end
+	local bOk, sMessage = coroutine_resume( coBehaveThread, MyTable )
+	if bOk == false then
+		MyTable.m_coBehaveThread = nil
+		ErrorNoHalt( self, "Error: ", sMessage, "\n" )
+		MyTable.RunBehaviour( self, MyTable )
+	end
+end
+
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
 ENT.vHullDuckMins = HULL_HUMAN_MINS // HULL_HUMAN_DUCK_MINS
@@ -29,9 +58,6 @@ ENT.flThirst = -1
 ENT.flThirstLimit = -1
 
 ENT.flBoldness = -1
-
-local CEntity = FindMetaTable "Entity"
-local CEntity_GetTable = CEntity.GetTable
 
 local math = math
 local math_max = math.max
@@ -310,22 +336,23 @@ function ENT:HandleTurning( MyTable )
 	for _ = 1, 8 do loco:FaceTowards( v ) end
 end
 
-function ENT:RunBehaviour()
-	while true do
-		if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
-		local MyTable = CEntity_GetTable( self )
-		local f = MyTable.fCallMeInRunBehaviour
-		if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
-		local f = CEntity_Health( self )
-		MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
-		MyTable.flCombatStateSuppressionShort = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionShort, 0, f * MyTable.flCombatStateSuppressionShortMax ), 0, f * MyTable.flCombatStateSuppressionShortRec * FrameTime() )
-		MyTable.flCombatStateSuppressionLong = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionLong, 0, f * MyTable.flCombatStateSuppressionLongMax ), 0, f * MyTable.flCombatStateSuppressionLongRec * FrameTime() )
-		MyTable.HandleTurning( self, MyTable )
-		MyTable.Look( self, MyTable )
-		MyTable.CalcCombatState( self, MyTable )
-		MyTable.Behaviour( self, MyTable )
-		coroutine_yield()
-	end
+function ENT:RunBehaviour( MyTable )
+	MyTable.m_coBehaveThread = coroutine_create( function( MyTable )
+		while true do
+			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
+			local f = MyTable.fCallMeInRunBehaviour
+			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
+			local f = CEntity_Health( self )
+			MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
+			MyTable.flCombatStateSuppressionShort = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionShort, 0, f * MyTable.flCombatStateSuppressionShortMax ), 0, f * MyTable.flCombatStateSuppressionShortRec * FrameTime() )
+			MyTable.flCombatStateSuppressionLong = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionLong, 0, f * MyTable.flCombatStateSuppressionLongMax ), 0, f * MyTable.flCombatStateSuppressionLongRec * FrameTime() )
+			MyTable.HandleTurning( self, MyTable )
+			MyTable.Look( self, MyTable )
+			MyTable.CalcCombatState( self, MyTable )
+			MyTable.Behaviour( self, MyTable )
+			coroutine_yield()
+		end
+	end )
 end
 
 /*

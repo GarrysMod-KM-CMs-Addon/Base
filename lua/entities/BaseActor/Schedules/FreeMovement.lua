@@ -2,6 +2,8 @@ local table_IsEmpty = table.IsEmpty
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
+	MyTable.vCover = nil
+	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 	if MyTable.flCombatState < 0 || !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end

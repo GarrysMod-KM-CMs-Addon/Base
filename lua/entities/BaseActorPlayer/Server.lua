@@ -97,13 +97,13 @@ function ENT:Behaviour()
 	self:RunMind()
 	local v = QuickSlide_Handle( self )
 	if v then
-		self.loco:Approach( Vector( 0, 0, 0 ), 1 )
+		self.loco:Approach( Vector(), 1 )
 		self.loco:SetVelocity( v )
-		self.loco:Approach( Vector( 0, 0, 0 ), 1 )
+		self.loco:Approach( Vector(), 1 )
 		self.loco:SetDesiredSpeed( 0 )
 		self.loco:SetAcceleration( 0 )
 		self.loco:SetDeceleration( 0 )
-		self.loco:Approach( Vector( 0, 0, 0 ), 1 )
+		self.loco:Approach( Vector(), 1 )
 	end
 end
 

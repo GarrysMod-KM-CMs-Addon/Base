@@ -205,7 +205,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			mask = MASK_SHOT_HULL,
 			filter = self
 		} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
-		local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] )
+		local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] * .9 )
 		if util_TraceLine( {
 			start = v,
 			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,

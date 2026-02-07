@@ -64,5 +64,3 @@ function CActorBehaviour:Tick() end
 
 hook.Add( "Think", "ActorBehaviour", function() for beh in pairs( __ACTOR_BEHAVIOURS__ ) do beh:Tick() end end )
 hook.Add( "PostCleanupMap", "ActorBehaviour", function() for beh in pairs( __ACTOR_BEHAVIOURS__ ) do beh:Remove() end end )
-
-include "Behaviours/CombatFormation.lua"

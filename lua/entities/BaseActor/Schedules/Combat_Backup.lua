@@ -869,9 +869,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
 		filter = self
 	} ).Hit && 1 || 0
-	local b = CurTime() > ( sched.flSweep || 0 )
-	if b && math.Rand( 0, 500 * FrameTime() ) <= 1 then sched.flSweep = CurTime() + math.Rand( .75, 2 ) end
-	MyTable.vaAimTargetBody = ( b && d || -d ):Angle()
+	MyTable.vaAimTargetBody = d:Angle()
 	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	if !MyTable.CanExpose( self ) then MyTable.flSuppressed = CurTime() + math.Clamp( math.min( 0, ( MyTable.GetExposedWeight( self, MyTable ) / self:Health() ) * .2 ), 0, 2 ) return end
 	if bWeAreAlreadyDoingShitGodDammit || CurTime() <= ( MyTable.flSuppressed || 0 ) then return end
@@ -922,69 +920,47 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local pPath = sched.pEnemyPath
 	if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
 	MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-	local vStart, vEnd, bRight = tCover[ 1 ], tCover[ 2 ], tCover[ 3 ]
-	local dDirection = vEnd - vStart
-	dDirection:Normalize()
-	local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
-	// This must be here. flSize is too close and flSize * 2 is too far.
-	// I love math. And if this keeps going, I'll soon love meth too.
-	local flSizeOff = flSize * 1.5
-	if vStart:DistToSqr( self:GetPos() ) < vEnd:DistToSqr( self:GetPos() ) then
-		local vPos = vEnd - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && flSize || -flSize )
-		local vCheck = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-		if !util_TraceLine( {
-			start = vCheck,
-			endpos = enemy:GetPos() + enemy:OBBCenter(),
-			filter = { self, enemy, trueenemy },
-			mask = MASK_SHOT_HULL
-		} ).Hit then
-			local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-			s.vFrom = vPos
-			s.Enemy = enemy
-			return
-		end
-		vPos = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && flSize || -flSize )
-		vCheck = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-		if !util_TraceLine( {
-			start = vCheck,
-			endpos = enemy:GetPos() + enemy:OBBCenter(),
-			filter = { self, enemy, trueenemy },
-			mask = MASK_SHOT_HULL
-		} ).Hit then
-			local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-			s.vFrom = vPos
-			s.Enemy = enemy
-			return
-		end
-	else
-		local vPos = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && flSize || -flSize )
-		local vCheck = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-		if !util_TraceLine( {
-			start = vCheck,
-			endpos = enemy:GetPos() + enemy:OBBCenter(),
-			filter = { self, enemy, trueenemy },
-			mask = MASK_SHOT_HULL
-		} ).Hit then
-			local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-			s.vFrom = vPos
-			s.Enemy = enemy
-			return
-		end
-		vPos = vEnd - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && flSize || -flSize )
-		vCheck = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-		if !util_TraceLine( {
-			start = vCheck,
-			endpos = enemy:GetPos() + enemy:OBBCenter(),
-			filter = { self, enemy, trueenemy },
-			mask = MASK_SHOT_HULL
-		} ).Hit then
-			local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-			s.vFrom = vPos
-			s.Enemy = enemy
-			return
+	if math_random( 2 ) == 1 then sched[ MyTable.flCombatState > 0 && "bAdvance" || "bRetreat" ] = true return end
+	local aDirection
+	local tGoal = pPath:NextSegment()
+	if tGoal then aDirection = ( tGoal.pos - vec ):Angle()
+	else aDirection = ( enemy:GetPos() - vec ):Angle() end
+	local vTarget = enemy:GetPos() + enemy:OBBCenter()
+	local vHeight = Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
+	local tPitchAngles = enemy:GetPos().z > self:GetPos().z && ACTOR_PITCH_ANGLES_UP || ACTOR_PITCH_ANGLES_DOWN
+	local bCheckDistance, flDistSqr = MyTable.flCombatState > 0
+	if bCheckDistance then
+		flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
+		flDistSqr = flDistSqr * flDistSqr
+	end
+	local function fDo( vOrigin, tAngles )
+		local vPos = vOrigin + vHeight
+		local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
+		for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
+			for i, flGlobalAngleYaw in ipairs( tAngles ) do
+				// local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
+				local aAim = aDirection + Angle( 0, flGlobalAngleYaw )
+				aAim[ 1 ] = flGlobalAnglePitch
+				local vAim = aAim:Forward()
+				local tr = util_TraceLine {
+					start = vPos,
+					endpos = vPos + vAim * 999999,
+					mask = MASK_SHOT_HULL,
+					filter = self
+				}
+				local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
+				if util_TraceLine( {
+					start = vPoint,
+					endpos = vTarget,
+					mask = MASK_SHOT_HULL,
+					filter = tWholeFilter
+				} ).Hit ||
+				bCheckDistance // We're shitting ourselves. Badly.
+				&& vPoint:DistToSqr( vTarget ) > flDistSqr then continue end
+				return vPoint
+			end
 		end
 	end
-	/*
 	if self.bHoldFire then
 		local tAllies = self:GetAlliesByClass()
 		if tAllies then
@@ -1000,7 +976,108 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			end
 		else MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy end
 	end
-	*/
+	local aGeneral = Angle( aDirection )
+	aGeneral[ 1 ] = 0
+	local dRight = aGeneral:Right()
+	local dLeft = -dRight
+	local flDistance = self:OBBMaxs().x * 2
+	local tCover = MyTable.tCover
+	local vLeft = tCover[ 1 ] + ( tCover[ 1 ] - tCover[ 2 ] ):GetNormalized() * flDistance
+	local flAdd = self:OBBMaxs().x
+	local trLeft = util_TraceHull {
+		start = vLeft + vHeight,
+		endpos = vLeft + dLeft * flAdd + vHeight,
+		mins = vMins,
+		maxs = vMaxs,
+		filter = self
+	}
+	local tAngles = { 0 }
+	for a = 5.625, 22.5, 5.625 do
+		table.insert( tAngles, -a )
+		table.insert( tAngles, a )
+	end
+	local vLeftTarget
+	if !trLeft.Hit then vLeftTarget = fDo( vLeft, tAngles ) end
+	local flDistance = self:OBBMaxs().x * 2
+	local vRight = tCover[ 1 ] + ( tCover[ 2 ] - tCover[ 1 ] ):GetNormalized() * flDistance
+	local trRight = util_TraceHull {
+		start = vRight + vHeight,
+		endpos = vRight + dRight * flAdd + vHeight,
+		mins = vMins,
+		maxs = vMaxs,
+		filter = self
+	}
+	tAngles = { 0 }
+	for a = 5.625, 22.5, 5.625 do
+		table.insert( tAngles, a )
+		table.insert( tAngles, -a )
+	end
+	local vRightTarget
+	if !trRight.Hit then vRightTarget = fDo( vRight, tAngles ) end
+	tAngles = { 0 }
+	for a = 5.625, 22.5, 5.625 do
+		table.insert( tAngles, a )
+		table.insert( tAngles, -a )
+	end
+	local function SetupSchedule( vOrigin, vTarget )
+		local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
+		sched.vFrom = vOrigin
+		sched.vTo = vTarget
+		sched.Enemy = enemy
+		sched.bSuppressing = true
+		return sched
+	end
+	local flLength = pPath:GetLength()
+	local f = self:BoundingRadius()
+	if flLength > f then
+		for i = f, math.min( f * 8, flLength ), f do
+			local vPosition = pPath:GetPositionOnPath( i )
+			if !util_TraceLine( {
+				start = vPosition + vHeight,
+				endpos = enemy:GetPos(),
+				filter = { self, enemy },
+				mask = MASK_SHOT_HULL
+			} ).Hit then
+				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
+				s.vFrom = vPosition
+				s.Enemy = enemy
+				return
+			end
+		end
+	end
+	if vLeftTarget && vRightTarget then
+		if math_random( 2 ) == 1 then
+			SetupSchedule( vLeft, vLeftTarget )
+		else
+			SetupSchedule( vRight, vRightTarget )
+		end
+		return
+	elseif vLeftTarget then
+		SetupSchedule( vLeft, vLeftTarget )
+		return
+	elseif vRightTarget then
+		SetupSchedule( vRight, vRightTarget )
+		return
+	else
+		// If we're advancing, GO AND KEEP PRESSURING THEM, DAMMIT!
+		// Do note that this is not a charge, but rather merely
+		// trying to find us a firing line, not forcing us a firing line -
+		// which would include being able to go the WHOLE way to them.
+		if MyTable.flCombatState > 0 then
+			local flLength = pPath:GetLength()
+			local vForce, vForceTarget, bForceFar
+			local f = self:BoundingRadius()
+			if flLength > f then
+				for i = f, math.min( f * 8, flLength ), f do
+					vForce = pPath:GetPositionOnPath( i )
+					vForceTarget = fDo( vForce, tAngles )
+					if vForceTarget then SetupSchedule( vForce, vForceTarget ) return end
+				end
+			end
+			sched.bAdvance = true
+		else sched.bRetreat = true /*return -- why did I put this here?*/ end
+		return
+	end
 end )
 
 include "CombatStuff.lua"
