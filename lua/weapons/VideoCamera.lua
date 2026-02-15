@@ -209,5 +209,5 @@ SWEP.flViewModelY = 16
 SWEP.flViewModelZ = -6
 
 SWEP.bPistolSprint = true
-SWEP.vPistolSprint = Vector( 16, -12, -32 )
+SWEP.vPistolSprint = Vector( -18, -4, -24 )
 SWEP.vPistolSprintAngle = Vector( 90, 0, 0 )
