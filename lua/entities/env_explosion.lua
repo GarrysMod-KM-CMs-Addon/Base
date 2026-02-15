@@ -72,27 +72,6 @@ function ENT:Explode()
 		ed:SetFlags( 4 ) // A brighter kaboom
 		util_Effect( "Explosion", ed )
 	end
-	local flSpeed = flDist * self.FIRE_SPEED
-	for _ = 1, math.max( 5, flRange * math.Rand( .03, .06 ) ) do // Fire
-		local dir = VectorRand()
-		local tr = util_TraceLine {
-			start = self:GetPos() + dir * 50,
-			endpos = self:GetPos() + dir * 50 + VectorRand() * math.Rand( 0, flRange ),
-			mask = MASK_SOLID
-		}
-		local p = ents.Create "prop_physics"
-		p:SetPos( tr.HitPos )
-		p:SetModel "models/combine_helicopter/helicopter_bomb01.mdl"
-		p:SetNoDraw( true )
-		p:Spawn()
-		p.GAME_bFireBall = true
-		local f = ents.Create "env_fire_trail"
-		f:SetPos( p:GetPos() )
-		f:SetParent( p )
-		f:Spawn()
-		p:GetPhysicsObject():AddVelocity( VectorRand() * math.Rand( 0, flSpeed ) )
-		AddThinkToEntity( p, function( self ) self:Ignite( 999999 ) if math.random( GetFlameStopChance( self ) * FrameTime() ) == 1 || self:WaterLevel() != 0 then self:Remove() return true end end )
-	end
 	for i = 1, math.max( 5, flRange * .1 ) do
 		local dir = VectorRand()
 		util.Decal( "Scorch", self:GetPos() + dir * 50, self:GetPos() + dir * 50 + VectorRand() * flRange )

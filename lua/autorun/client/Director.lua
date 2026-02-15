@@ -101,8 +101,8 @@ function Director_Music_UpdateInternal( self, ... )
 	local flRealFrameTime = RealFrameTime()
 	for Index, tData in pairs( self.tHandles ) do
 		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
+		if tData[ 4 ] <= flRealFrameTime then tData[ 1 ]:Stop() continue end
 		tData[ 4 ] = f
-		if f <= flRealFrameTime then tData[ 1 ]:Stop() continue end
 		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
 		local pSound = tData[ 1 ]
@@ -141,10 +141,44 @@ function Director_VoiceLineHookToCombat( flDuration )
 	DIRECTOR_MUSIC_IN_VO_HF = true
 end
 
+hook.Add( "PostCleanupMap", "Director", function()
+	table.Empty( DIRECTOR_MUSIC )
+	DIRECTOR_TRANSITION = nil
+	DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_NULL
+end )
+
 local LocalPlayer = LocalPlayer
 local CurTime = CurTime
-hook.Add( "RenderScreenspaceEffects", "Director", function()
+local flLastCall = SysTime()
+__HUD_SHOULD_NOT_DRAW__ = {
+	CHudHistoryResource = true,
+	CHudGeiger = true,
+	CHudDamageIndicator = true,
+	CHudHealth = true,
+	CHudHistoryResource = true
+}
+// So, this is how you get perfect looping in Lua.
+// There are 26 HUD elements which this is called for per frame.
+// Meaning 1560 calls per second if you have 60 FPS.
+// But before you raise your pitchforks and start throwing
+// tomatoes at me, remember who I am. I wrote what is
+// essentially triple A Ubisoft quality into Garry's Mod.
+// I have always been a huge stickler for the performance.
+// I would not do this without reason, and I am not doing
+// this in a messy way, either. In Python, you can use
+// pygame in separate threads, since it yields until
+// the sound finishes playing. But that's simply not
+// possible in Lua. Plus, even on my shitty ass computer,
+// the FPS merely drops from 40 FPS to 30, and from 60 FPS to 40.
+// Point is, I know how to make performant code.
+// As terrifying to performance because of length it looks, it's not.
+// Bottom line: Do NOT "optimize" or "refactor" this. This ISN'T spaghetti code,
+// nor is it hacky. I'm not a casual Garry's Mod addon maker, I'm a professional.
+// I know what I'm doing.
+hook.Add( "HUDShouldDraw", "Director", function( sName )
+	local HOOK_RETURN = __HUD_SHOULD_NOT_DRAW__[ sName ] == nil
 	local ply = LocalPlayer()
+	if !IsValid( ply ) then return HOLD_FIRE end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
 			// You can uncomment this for testing
@@ -206,7 +240,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			end
 			DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		end
-		return
+		return HOOK_RETURN
 	elseif DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
@@ -222,7 +256,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				DIRECTOR_TRANSITION.m_bIntroOfATrack = true
 				DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 				net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-				return
+				return HOOK_RETURN
 			end
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
 			if RealTime() <= DIRECTOR_MUSIC_VO_TIME then
@@ -266,7 +300,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				end
 			end
 		end
-		return
+		return HOOK_RETURN
 	elseif DIRECTOR_TRANSITION then
 		local b
 		if DIRECTOR_TRANSITION.m_bToCombat then
@@ -298,7 +332,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end
-		return
+		return HOOK_RETURN
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
 		local t = pSource.m_pTable
@@ -315,7 +349,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
 			net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-			return
+			return HOOK_RETURN
 		end
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
@@ -362,7 +396,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, FrameTime() )
 			end
 		end
-		return
+		return HOOK_RETURN
 	end
 	if DIRECTOR_MUSIC_LAST_THREAT < DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
@@ -372,7 +406,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 		DIRECTOR_TRANSITION.m_bToCombat = true
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
-		return
+		return HOOK_RETURN
 	elseif DIRECTOR_MUSIC_LAST_THREAT >= DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
 		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT )
@@ -380,7 +414,7 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
-		return
+		return HOOK_RETURN
 	end
 	// Do NOT mistake this for the fade transition!
 	// This is completely different, and used to fade between
@@ -399,10 +433,5 @@ hook.Add( "RenderScreenspaceEffects", "Director", function()
 			end
 		end
 	end
-end )
-
-hook.Add( "PostCleanupMap", "Director", function()
-	table.Empty( DIRECTOR_MUSIC )
-	DIRECTOR_TRANSITION = nil
-	DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_NULL
+	return HOOK_RETURN
 end )

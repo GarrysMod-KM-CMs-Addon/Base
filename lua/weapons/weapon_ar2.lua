@@ -39,6 +39,8 @@ SWEP.flRecoilGrowMin = -.8
 SWEP.flRecoilGrowMax = -1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
+function SWEP:FireAnimationEvent() end
+
 sound.Add {
 	name = "CombineEnergyBallCharge",
 	channel = CHAN_STATIC,
@@ -94,7 +96,7 @@ function SWEP:PrimaryAttack()
 end
 
 if SERVER then
-	// Chomp your balls off and throw them at the enemy!!!
+	// Chop your ballz off 'n' throw them at da enemy!!!
 	function SWEP:Think()
 		if !self:GetOwner():KeyDown( IN_ATTACK2 ) || self.flStartTime && ( CurTime() - self.flStartTime ) > 8 then
 			if self.flStartTime && ( CurTime() - self.flStartTime ) > 1 then

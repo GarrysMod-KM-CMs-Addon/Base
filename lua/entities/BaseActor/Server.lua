@@ -271,8 +271,8 @@ end
 function ENT:HandleKeyValue( Key, Value ) end
 
 ENT.GAME_flSuppression = 0
-ENT.flSuppressionMax = 2
-ENT.flSuppressionRec = 2
+ENT.flSuppressionMax = 4
+ENT.flSuppressionRec = 1
 ENT.flSuppressionHide = .1
 
 function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )

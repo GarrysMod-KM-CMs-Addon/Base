@@ -28,6 +28,7 @@ SWEP.vViewModelAim = Vector( -15, -17 - SWEP.flViewModelY, -3.1 )
 SWEP.flCoverY = -8
 SWEP.Primary_flSpreadX = .05
 SWEP.Primary_flSpreadY = .05
+SWEP.bSpecial = true
 
 sound.Add {
 	name = "RPG_Shot",

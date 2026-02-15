@@ -11,6 +11,7 @@ SWEP.WorldModel = Model "models/weapons/w_357.mdl"
 SWEP.Primary.ClipSize = 6 // Duh
 SWEP.Primary.DefaultClip = 6
 SWEP.Primary.Automatic = false
+SWEP.m_bAllowOneInTheChamber = false
 SWEP.Primary.Ammo = "Pistol"
 SWEP.Primary_flSpreadX = .0084
 SWEP.Primary_flSpreadY = .0084

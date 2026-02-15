@@ -37,6 +37,7 @@ SWEP.flSideWaysRecoilMax = .45
 SWEP.flRecoilGrowMin = -.6
 SWEP.flRecoilGrowMax = -1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
+SWEP.flAimShoot = 2
 
 SWEP.bSemi = true
 SWEP.bPumped = true
@@ -48,7 +49,7 @@ SWEP.flViewModelY = -6.5
 SWEP.flViewModelZ = 2.5
 
 SWEP.vSprint = Vector( -3.358, 6.228, -.94 )
-SWEP.vViewModelAim = Vector( -10 - SWEP.flViewModelX, -8.955 - SWEP.flViewModelY, 4.2 - SWEP.flViewModelZ )
+SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -8.955 - SWEP.flViewModelY, 4.2 - SWEP.flViewModelZ )
 
 function SWEP:SetupDataTables()
 	self:NetworkVar( "Bool", 0, "Reloading" )

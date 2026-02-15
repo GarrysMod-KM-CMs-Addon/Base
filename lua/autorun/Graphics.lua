@@ -160,10 +160,6 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	}
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
 	tDrawColorModify[ "$pp_colour_colour" ] = tDrawColorModify[ "$pp_colour_colour" ] * math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 1, 0 )
-	if flDeath != 0 then
-		DrawBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 8 ), 0, 8 ) )
-		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, .1, .05 ), .1, .05 ), math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 1 ), 0, 1 ), 0 )
-	end
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .33
@@ -203,6 +199,10 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawMaterialOverlay( "effects/water_warp01", MyTable.GP_flWaterBlur * .01 )
 		flBloom = math_Clamp( flBloom + MyTable.GP_flWaterBlur * .2, 0, 1 )
 	end
+	if flDeath != 0 then
+		DrawBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 8 ), 0, 8 ) )
+		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, .1, .05 ), .1, .05 ), math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 1 ), 0, 1 ), 0 )
+	end
 	local f = self:GetNW2Float( "GAME_flSuppressionEffects", 0 )
 	if f > 0 then
 		DrawBlur( math_Clamp( math_Remap( f, 0, 1, 0, 1 ), 0, 1 ) )
@@ -213,6 +213,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) )
 		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ), math_Clamp( 1 - f, 0, 1 ), 0 )
 	end
+	DrawMotionBlur( .75, 1, 0 )
 	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
 	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), 1 * FrameTime() )
 	MyTable.GP_FogR = math_Approach( MyTable.GP_FogR || 255, vTargetColor[ 1 ] * 255, 32 * FrameTime() )
@@ -241,17 +242,23 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	)
 	DrawColorModify( tDrawColorModify )
 	cam.Start3D()
+		local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 		local flDistance = Lerp(
-			math_min( 1, 2 * FrameTime() ),
+			math_min( 1, 5 * FrameTime() ),
 			MyTable.m_flDepthOfField || 0,
-			math.Clamp( self:GetEyeTrace().HitPos:Distance( EyePos() ), 0, 6000 )
+			math.Clamp( util_TraceLine( {
+				start = EyePos(),
+				endpos = EyePos() + EyeVector() * 999999,
+				mask = MASK_VISIBLE_AND_NPCS,
+				filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
+			} ).HitPos:Distance( EyePos() ), 0, 6000 )
 		)
 		MyTable.m_flDepthOfField = flDistance
 		local flSpacing = flDistance
 		flDistance = flDistance * 1.5
 		local vEye, vForward = EyePos(), EyeVector()
 		render.UpdateRefractTexture()
-		for i = 0, 16 do
+		for i = 0, 32 do
 			render.SetMaterial( mDepthOfField )
 			local flSize = ( flDistance + flSpacing * i ) * 8
 			render.DrawSprite( vEye + vForward * ( flDistance + flSpacing * i ), flSize, flSize, color_white )
@@ -412,15 +419,6 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 	fMoreEffects( ply, view )
 	return view
 end )
-
-__HUD_SHOULD_NOT_DRAW__ = {
-	CHudHistoryResource = true,
-	CHudGeiger = true,
-	CHudDamageIndicator = true,
-	CHudHealth = true,
-	CHudHistoryResource = true
-}
-hook.Add( "HUDShouldDraw", "Graphics", function( sName ) return __HUD_SHOULD_NOT_DRAW__[ sName ] == nil end )
 
 surface.CreateFont( "ReinforcementsBar", {
 	font = "Trebuchet24",

@@ -1,6 +1,4 @@
 local math = math
-local math_Remap = math.Remap
-function GetFlameStopChance( self ) return math_Remap( GetVelocity( self ):Length(), 0, 800, 20000, 1000 ) end
 
 concommand.Add( "+drop", function() end )
 concommand.Add( "-drop", function( ply ) ply:DropWeapon() end )

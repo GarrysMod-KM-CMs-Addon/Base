@@ -6,7 +6,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
-	if MyTable.flCombatState < 0 || !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local pEnemy = sched.Enemy
 	if IsValid( pEnemy ) then pEnemy = pEnemy
 	else pEnemy = MyTable.Enemy if !IsValid( pEnemy ) then return true end end

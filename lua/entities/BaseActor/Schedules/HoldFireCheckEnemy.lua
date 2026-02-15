@@ -36,5 +36,3 @@ Actor_RegisterSchedule( "HoldFireCheckEnemy", function( self, sched )
 		self:MoveAlongPath( pEnemyPath, f <= b * 32 && self.flWalkSpeed || self.flRunSpeed, 1 )
 	end
 end )
-
-include "CombatStuff.lua"

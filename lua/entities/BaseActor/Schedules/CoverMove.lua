@@ -34,36 +34,6 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched )
 				if self == ally then continue end
 				if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil self.pCover = nil self:SetSchedule "TakeCover" return end
 			end
-			if !sched.bTriedRangeAttack then
-				local b
-				for ally in pairs( tAllies ) do
-					if self != ally && ally.bWantsCover then
-						b = true
-						break
-					end
-				end
-				if b then
-					local vec = self:GetPos()
-					local v, pEnemy = self:FindExposedEnemy( vec, tEnemies, sched.bDuck )
-					if IsValid( pEnemy ) then
-						local sched = self:SetSchedule "RangeAttack"
-						sched.vFrom = v
-						sched.Enemy = pEnemy
-					else
-						if !sched.pEnemyPath then sched.pEnemyPath = Path "Follow" end
-						self:ComputeFlankPath( sched.pEnemyPath, enemy )
-						local vFrom, vTo, pEnemy = self:FindSuppressEnemy( vec, tEnemies, sched.bDuck )
-						if IsValid( pEnemy ) then
-							local sched = self:SetSchedule "RangeAttack"
-							sched.vFrom = vFrom
-							sched.vTo = vTo
-							sched.Enemy = pEnemy
-							sched.bSuppressing = true
-						end
-					end
-					sched.bTriedRangeAttack = true
-				end
-			end
 		end
 		local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
 		local v = vec + Vector( 0, 0, vMaxs[ 3 ] )

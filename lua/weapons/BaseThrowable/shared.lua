@@ -8,6 +8,9 @@ SWEP.Primary.Automatic = true
 SWEP.bPistolSprint = true
 SWEP.Slot = 4
 
+SWEP.bNoReloads = true
+SWEP.bSpecial = true
+
 SWEP.Crosshair = "Special"
 
 SWEP.__GRENADE__ = true

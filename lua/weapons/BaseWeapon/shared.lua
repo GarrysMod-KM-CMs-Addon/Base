@@ -21,6 +21,8 @@ SWEP.UseHands = true
 
 SWEP.__WEAPON__ = true
 
+SWEP.flReloadTime = 0
+
 if CLIENT then
 	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoilForGap = 0
@@ -30,22 +32,60 @@ if CLIENT then
 		self.flCurrentRecoilForCrosshair = self.flCurrentRecoilForCrosshair + 1
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + flRecoil end
 	end
-	SWEP.flReloadTime = 0
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
 end
 
 function SWEP:PlayReloadSounds() end
 
+function SWEP:GetReloadActivity() return ACT_VM_RELOAD end
+
+function SWEP:GetMuzzleFlash() return "MuzzleFlash" end
+local tMuzzleEvents = { [ 20 ] = true, [ 21 ] = true, [ 22 ] = true, [ 5001 ] = true, [ 6001 ] = true }
+function SWEP:FireAnimationEvent( pos, ang, EEvent )
+	if !tMuzzleEvents[ EEvent ] then return end
+	local pOwner = self:GetOwner()
+	if !IsValid( pOwner ) then return end
+	local f = pOwner.GetShootPos
+	if !f then return end
+	if pOwner:IsPlayer() && Either( CLIENT, CLIENT && pOwner:ShouldDrawLocalPlayer(), true ) && !game.SinglePlayer() then return true end
+	local pEffectData = EffectData()
+	local v = f( pOwner )
+	pEffectData:SetOrigin( v )
+	pEffectData:SetEntity( self )
+	pEffectData:SetStart( v )
+	local a = pOwner:GetAimVector():Angle()
+	pEffectData:SetNormal( a:Forward() )
+	pEffectData:SetAngles( a )
+	pEffectData:SetAttachment( 1 )
+	util.Effect( self:GetMuzzleFlash(), pEffectData )
+	return true
+end
+
+SWEP.m_bAllowOneInTheChamber = true
 function SWEP:Reload()
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
 	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
 	self:SetClip1( 0 )
-	if self:DefaultReload( ACT_VM_RELOAD ) then
-		self:PlayReloadSounds()
+	local bOneInTheChamber = self.m_bAllowOneInTheChamber && f > 0
+	local ACT = self:GetReloadActivity( bOneInTheChamber )
+	if bOneInTheChamber then
+		if !self.m_bOneInTheChamber then
+			self.Primary.ClipSize = self.Primary.ClipSize + 1
+			self.m_bOneInTheChamber = true
+		end
+	else
+		if self.m_bOneInTheChamber then
+			self.Primary.ClipSize = self.Primary.ClipSize - 1
+			self.m_bOneInTheChamber = nil
+		end
+	end
+	if self:DefaultReload( ACT, bOneInTheChamber ) then
+		self:PlayReloadSounds( ACT )
 		if !pReloadOwner:IsPlayer() then return end
 		f = pReloadOwner:GetViewModel()
-		f = f:SequenceDuration( f:SelectWeightedSequence( ACT_VM_RELOAD ) )
+		f = f:SequenceDuration( f:SelectWeightedSequence( ACT ) )
+		self.flReloadTime = f
 		self:CallOnClient( "ReloadTime", f )
 	else self:SetClip1( f ) end
 end
@@ -90,7 +130,15 @@ end
 function SWEP:GetNPCBulletSpread() return 0 end
 function SWEP:GetNPCBurstSettings() return 0, self:Clip1(), self.Primary.Automatic && 0 || math.Rand( .2, .8 ) end
 
-function SWEP:Deploy() self:BaseWeaponDraw( self.flDrawActivity || ACT_VM_DRAW ) end
+function SWEP:GetDrawActivity() return ACT_VM_DRAW end
+function SWEP:Deploy() self:BaseWeaponDraw( self:GetDrawActivity() ) end
+
+function SWEP:Holster()
+	// This is just fucking frustarting! So much so that I'm using an actual swear word!
+	// if CurTime() <= self:GetNextPrimaryFire() || CurTime() <= self:GetNextSecondaryFire() then return end
+	if CurTime() <= self.flReloadTime then return end
+	return true
+end
 
 function SWEP:BaseWeaponDraw( act )
 	local owner = self:GetOwner()
@@ -256,9 +304,11 @@ if CLIENT then
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if flVelocity > 10 then
 					local flBreathe = RealTime() * 8
-					local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
-					vTarget = vTarget - Vector( math_abs( math_sin( flBreathe * 2 ) ), math_cos( flBreathe ) * .4 ) * f
-					vTargetAngle = vTargetAngle - Vector( math_sin( flBreathe ) * .8, math_cos( flBreathe ) * .4, -math_sin( flBreathe * 1.5 ) ) * f
+					local f = flVelocity / CPlayer_GetWalkSpeed( ply )
+					// * MyTable.flAimMultiplier
+					* MyTable.flBobScale * .5
+					vTarget = vTarget + Vector( math_abs( math_sin( flBreathe * 2 ) ), math_cos( flBreathe ) * .4 ) * f
+					vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ) * .8, math_cos( flBreathe ) * .4, math_sin( flBreathe * 1.5 ) ) * f
 				end
 			end
 		end
@@ -473,7 +523,7 @@ if CLIENT then
 					if flVelocity > 10 then
 						local flBreathe = RealTime() * 8
 						local f = flVelocity / CPlayer_GetWalkSpeed( ply )
-						//* MyTable.flAimMultiplier
+						* ( 1 - MyTable.flAimMultiplier )
 						* MyTable.flBobScale * .5
 						vTarget = vTarget + Vector( math_abs( math_sin( flBreathe * 2 ) ), math_cos( flBreathe ) * .4 ) * f
 						vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ) * .8, math_cos( flBreathe ) * .4, math_sin( flBreathe * 1.5 ) ) * f

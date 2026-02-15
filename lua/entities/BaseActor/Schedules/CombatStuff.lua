@@ -28,276 +28,6 @@ ENT.flCoverMoveNotShort = 8
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
 
-function ENT:CalcMyExposedShootPositions( enemy, vPos, bDuck, vStand, vDuck )
-	local enemy, trueenemy = self:SetupEnemy( enemy )
-	local t, bHasShort = {}
-	local vShoot = enemy:GetPos() + enemy:OBBCenter()
-	if vDuck && !util_TraceLine( {
-		start = vPos + vDuck,
-		endpos = vShoot,
-		mask = MASK_SHOT_HULL,
-		filter = { self, enemy, trueenemy }
-	} ).Hit || !util_TraceLine( {
-		start = vPos + vStand,
-		endpos = vShoot,
-		mask = MASK_SHOT_HULL,
-		filter = { self, enemy, trueenemy }
-	} ).Hit then table.insert( t, self:GetPos() ) bHasShort = true end
-	local flBase = math.abs( self:OBBMaxs().x ) + math.abs( self:OBBMins().x )
-	local flStart = CurTime() <= self.flSuppressedTime && self.flCoverMoveStart || self.flCoverMoveStartSuppressed
-	local flShort = flBase * ( flStart + self.flCoverMoveShort )
-	local flNotShort = flBase * ( flStart + self.flCoverMoveNotShort )
-	local dir = ( vShoot - vPos ):Angle():Right()
-	dir[ 1 ] = 0
-	local vMins, vMaxs = self:OBBMins(), self:OBBMaxs()
-	vMins.z = vMins.z + 12
-	vMaxs.z = vMaxs.z + 12
-	local vLeft, vRight, bLeftShort, bRightShort
-	local ndir = -dir
-	for flDist = flBase * flStart, flNotShort, flBase * self.flCoverMoveStep do
-		local vec = vPos + ndir * flDist
-		if util.TraceHull( {
-			start = vPos,
-			endpos = vec,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		} ).Hit then break end
-		if vDuck && !util_TraceLine( {
-			start = vec + vDuck,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		} ).Hit || !util_TraceLine( {
-			start = vec + vStand,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		} ).Hit then vLeft = vec if flDist < flShort then bLeftShort = true end break end
-	end
-	for flDist = flBase * flStart, flNotShort, flBase * self.flCoverMoveStep do
-		local vec = vPos + dir * flDist
-		if util.TraceHull( {
-			start = vPos,
-			endpos = vec,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		} ).Hit then break end
-		if vDuck && !util_TraceLine( {
-			start = vec + vDuck,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		} ).Hit || !util_TraceLine( {
-			start = vec + vStand,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		} ).Hit then vRight = vec if flDist < flShort then bRightShort = true end break end
-	end
-	if bLeftShort && bRightShort then
-		table.insert( t, vLeft )
-		table.insert( t, vRight )
-	elseif bLeftShort then
-		table.insert( t, vLeft )
-	elseif bRightShort then
-		table.insert( t, vRight )
-	else
-		if !bHasShort then
-			table.insert( t, vLeft )
-			table.insert( t, vRight )
-		end
-	end
-	return t
-end
-
-function ENT:FindExposedEnemy( vShoot, tEnemies, bDuck )
-	local tEnemiesDist = {}
-	for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tEnemiesDist, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-	table.SortByMember( tEnemiesDist, 2, true )
-	if table.IsEmpty( tEnemiesDist ) then return end
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	for _, d in pairs( tEnemiesDist ) do
-		local enemy = d[ 1 ]
-		local t = self:CalcMyExposedShootPositions( enemy, vShoot, bDuck, vStand, vDuck )
-		if table.IsEmpty( t ) then continue end
-		return table.Random( t ), enemy
-	end
-end
-
-function ENT:CalcMySuppressionShootPositions( enemy, vPos, bDuck, vStand, vDuck )
-	local enemy, trueenemy = self:SetupEnemy( enemy )
-	local t, bHasShort = {}
-	if bDuck then
-		local tr = util_TraceLine {
-			start = vPos + vStand,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		}
-		if tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( vPos ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-			bHasShort = true
-			table.insert( t, { vPos, tr.HitPos } )
-		end
-	end
-	local vShoot = enemy:GetPos() + enemy:OBBCenter()
-	local flBase = math.abs( self:OBBMaxs().x ) + math.abs( self:OBBMins().x )
-	local flStart = CurTime() <= self.flSuppressedTime && self.flCoverMoveStart || self.flCoverMoveStartSuppressed
-	local flShort = flBase * ( flStart + self.flCoverMoveShort )
-	local flNotShort = flBase * ( flStart + self.flCoverMoveNotShort )
-	local dir = ( vShoot - vPos ):Angle():Right()
-	dir[ 1 ] = 0
-	local vMins, vMaxs = self:OBBMins(), self:OBBMaxs()
-	vMins.z = vMins.z + 12
-	vMaxs.z = vMaxs.z + 12
-	local vLeft, vRight, vLeftTarget, vRightTarget, bLeftShort, bRightShort
-	local ndir = -dir
-	for flDist = flBase * flStart, flNotShort, flBase * self.flCoverMoveStep do
-		local vec = vPos + ndir * flDist
-		if util.TraceHull( {
-			start = vPos,
-			endpos = vec,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		} ).Hit then break end
-		if vDuck then
-			local trStand = util_TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			local trDuck = util_TraceLine {
-				start = vec + vDuck,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			local bStand = trStand.Fraction > self.flSuppressionTraceFraction && trStand.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			local bDuck = trDuck.Fraction > self.flSuppressionTraceFraction && trDuck.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			if bStand && bDuck then
-				vLeft = vec
-				vLeftTarget = math.random( 2 ) == 1 && trStand.HitPos || trDuck.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			elseif bStand then
-				vLeft = vec
-				vLeftTarget = trStand.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			elseif bDuck then
-				vLeft = vec
-				vLeftTarget = trDuck.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			end
-		else
-			local tr = util_TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-				vLeft = vec
-				vLeftTarget = tr.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			end
-		end
-	end
-	for flDist = flBase * flStart, flNotShort, flBase * self.flCoverMoveStep do
-		local vec = vPos + dir * flDist
-		if util.TraceHull( {
-			start = vPos,
-			endpos = vec,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = self
-		} ).Hit then break end
-		if vDuck then
-			local trStand = util_TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			local trDuck = util_TraceLine {
-				start = vec + vDuck,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			local bStand = trStand.Fraction > self.flSuppressionTraceFraction && trStand.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			local bDuck = trDuck.Fraction > self.flSuppressionTraceFraction && trDuck.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			if bStand && bDuck then
-				vLeft = vec
-				vLeftTarget = math.random( 2 ) == 1 && trStand.HitPos || trDuck.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			elseif bStand then
-				vLeft = vec
-				vLeftTarget = trStand.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			elseif bDuck then
-				vLeft = vec
-				vLeftTarget = trDuck.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			end
-		else
-			local tr = util_TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-				vLeft = vec
-				vLeftTarget = tr.HitPos
-				if flDist < flShort then bLeftShort = true end
-				break
-			end
-		end
-	end
-	if !vLeft then bLeftShort = nil end
-	if !bRight then bRightShort = nil end
-	if bLeftShort && bRightShort then
-		table.insert( t, { vLeft, vLeftTarget } )
-		table.insert( t, { vRight, vRightTarget } )
-	elseif bLeftShort then
-		table.insert( t, { vLeft, vLeftTarget } )
-	elseif bRightShort then
-		table.insert( t, { vRight, vRightTarget } )
-	else
-		if !bHasShort then
-			if vLeft then table.insert( t, { vLeft, vLeftTarget } ) end
-			if vRight then table.insert( t, { vRight, vRightTarget } ) end
-		end
-	end
-	return t
-end
-
-function ENT:FindSuppressEnemy( vShoot, tEnemies, bDuck )
-	local tEnemiesDist = {}
-	for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tEnemiesDist, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-	table.SortByMember( tEnemiesDist, 2, true )
-	if table.IsEmpty( tEnemiesDist ) then return end
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	for _, d in pairs( tEnemiesDist ) do
-		local enemy = d[ 1 ]
-		local t = self:CalcMySuppressionShootPositions( enemy, vShoot, bDuck, vStand, vDuck )
-		if table.IsEmpty( t ) then continue end
-		t = table.Random( t )
-		if t[ 1 ] && t[ 2 ] then return t[ 1 ], t[ 2 ], enemy end
-	end
-end
-
 ENT.flHoldFireTime = 16
 
 function ENT:DLG_HoldFire()
@@ -341,7 +71,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 	if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
 	sched.bWantsCover = sched.bMove
 	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-	if !MyTable.vCover then
+	if !MyTable.vCover || !MyTable.tCover then
 		if table.Count( tAllies ) > 1 then
 			local bNoEnemy = true
 			for ent in pairs( MyTable.tEnemies ) do
@@ -370,6 +100,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if bNoEnemy then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
 		end
 	end
+	MyTable.CoverToCover( self, sched, MyTable, enemy, trueenemy )
 	MyTable.bSuppressing = true
 	if sched.bSuppressing then
 		local vStand, vDuck = Vector( 0, 0, MyTable.vHullMaxs.z )
@@ -566,8 +297,9 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 		if !sched.Path then sched.Path = Path "Follow" end
 		MyTable.ComputePath( self, sched.Path, sched.vFrom, MyTable )
 		local flHealth = enemy:Health()
-		local ws, w = 0 // Weapon Strength
+		local ws, w = 0 // Weapon strength
 		for wep in pairs( self.tWeapons ) do
+			if wep.bSpecial then continue end
 			local t = wep.Primary_flDelay || 0
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0

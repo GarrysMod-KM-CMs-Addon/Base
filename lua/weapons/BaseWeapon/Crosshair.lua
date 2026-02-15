@@ -249,7 +249,7 @@ function SWEP:DoDrawCrosshair()
 	local MyTable = CEntity_GetTable( self )
 	local ply = LocalPlayer()
 	local flAimMultiplier = MyTable.flAimMultiplier
-	MyTable.flCrosshairInAccuracy = Lerp( math_min( 15 * flFrameTime ), MyTable.flCrosshairInAccuracy, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .066 + .033, 0, .1 ) )
+	MyTable.flCrosshairInAccuracy = Lerp( math_min( 15 * flFrameTime ), MyTable.flCrosshairInAccuracy, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033 + .033, 0, .1 ) )
 	if MyTable.sAimSound && MyTable.vViewModelAim then
 		if MyTable.bAiming then
 			if flAimMultiplier > .9 then
@@ -309,23 +309,25 @@ function SWEP:DoDrawCrosshair()
 				flX = flX - flWidth - 1
 				surface_DrawRect( flX, flY, flWidth, flHeight )
 			end
-			// TODO: Reloading animation
-			//	surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
-			//	local flX, flY = flW - flWidth, flH - flHeight
-			//	for _ = 1, self:GetMaxClip1() do
-			//		flX = flX - flWidth - 1
-			//		surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
-			//	end
-			surface_SetDrawColor( 255, 255, 255, 255 )
-			local flX, flY = flW - flWidth, flH - flHeight
-			for _ = 1, self:Clip1() do
-				flX = flX - flWidth - 1
-				surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
-			end
-			surface_SetDrawColor( 64, 64, 64, 255 )
-			for _ = self:Clip1() + 1, self:GetMaxClip1() do
-				flX = flX - flWidth - 1
-				surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+			if CurTime() <= MyTable.flReloadTime then
+				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, self:GetMaxClip1() do
+					flX = flX - flWidth - 1
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				end
+			else
+				surface_SetDrawColor( 255, 255, 255, 255 )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, self:Clip1() do
+					flX = flX - flWidth - 1
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				end
+				surface_SetDrawColor( 64, 64, 64, 255 )
+				for _ = self:Clip1() + 1, self:GetMaxClip1() do
+					flX = flX - flWidth - 1
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				end
 			end
 		end
 	end
