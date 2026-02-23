@@ -1,0 +1,11 @@
+"vertexlitgeneric" {
+	"$bumpmap" "models/weapons/v_grenade/top_normal"
+	"$baseTexture" "Models/Weapons/V_grenade/grenadetop"
+	"$normalmapalphaenvmapmask" "1"
+	"$envmap" "env_cubemap"
+	"$envmaptint" "[ .33 .33 .33 ]"
+	"$phong" "1"
+	"$phongexponent" "44"
+	"$phongboost" "5"
+	"$phongfresnelranges" "[ .2 0.4 2 ]"
+}

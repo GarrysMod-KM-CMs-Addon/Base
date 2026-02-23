@@ -1,0 +1,6 @@
+"VertexLitGeneric" {
+	"$baseTexture" "Models/Weapons/W_357/w_357"
+	"$normalmapalphaenvmapmask" "1"
+	"$envmap" "env_cubemap"
+	"$envmaptint" "[ .2 .2 .2 ]"
+}

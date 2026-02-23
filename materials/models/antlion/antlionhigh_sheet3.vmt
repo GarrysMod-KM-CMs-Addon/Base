@@ -1,0 +1,17 @@
+"VertexLitGeneric" {
+	"$surfaceprop"	"alienflesh"
+	"$model" "1"
+	"$baseTexture" "Models/Antlion/Antlionhigh_sheet3"
+	"$bumpmap" "Models/Antlion/Antlionhigh_normal"
+	"$phong" "1"
+	"$phongboost" "1"
+	"$phongexponent" "15"
+	"$phongfresnelranges" "[ .1 .8 1.2 ]"
+	"$normalmapalphaenvmapmask" 1
+	"$envmaptint" "[ .33 .33 .33 ]"
+	"$envmap" "env_cubemap"
+	"$envmapfresnel" "1"
+	"$rimlight" "1"
+	"$rimlightexponent" "15"
+	"$rimlightboost" "1"
+}

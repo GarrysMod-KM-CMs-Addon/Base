@@ -1,0 +1,10 @@
+"vertexlitgeneric" {
+	"$bumpmap" "models/weapons/v_grenade/black seal_normal"
+	"$envmap" "env_cubemap"
+	"$envmaptint" "[ .33 .33 .33 ]"
+	"$baseTexture" "Models/Weapons/V_grenade/blackseal"
+	"$phong" "1"
+	"$phongexponent" "15"
+	"$phongboost" "1"
+	"$phongfresnelranges" "[ .2 0.4 2 ]"
+}
