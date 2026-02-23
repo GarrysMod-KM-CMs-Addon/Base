@@ -181,7 +181,8 @@ DEFINE_BASECLASS "weapon_base"
 local util_SharedRandom = util.SharedRandom
 function SWEP:CalcRecoil( pOwner )
 	local flRecoil = self.flRecoil * math.Clamp( 1 + pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.5 ), 1, 1.5 )
-	if !pOwner:KeyDown( IN_ZOOM ) then flRecoil = flRecoil * 1.5 end
+	local f = pOwner.KeyDown
+	if f && !f( pOwner, IN_ZOOM ) then flRecoil = flRecoil * 1.5 end
 	if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.5 end
 	return flRecoil
 end
