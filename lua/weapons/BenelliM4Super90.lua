@@ -30,8 +30,8 @@ SWEP.vSprint = Vector( -6.228, 1.358, -.2 )
 SWEP.flRecoil = 6.8
 SWEP.flSideWaysRecoilMin = -.45
 SWEP.flSideWaysRecoilMax = .45
-SWEP.flRecoilGrowMin = -.6
-SWEP.flRecoilGrowMax = -1
+SWEP.flRecoilGrowMin = .6
+SWEP.flRecoilGrowMax = 1
 
 SWEP.ViewModelFOV = 54
 SWEP.flViewModelY = -4

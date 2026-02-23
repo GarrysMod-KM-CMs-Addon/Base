@@ -1,0 +1,7 @@
+"Competitive" {
+	"base" "base"
+	"title" "Competitive"
+	"maps" "^Campaign_"
+	"category" "other"
+	"menusystem" "1"
+}

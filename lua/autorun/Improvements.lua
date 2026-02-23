@@ -79,16 +79,12 @@ local Vector = Vector
 local math_deg = math.deg
 local math_acos = math.acos
 
-function CalculateAngularVelocity( dTarget, dForward, vAngleVelocity, flTurnRate, flTurnAcceleration )
-	local flCross = dForward:Cross( dTarget )
-	if flCross:IsZero() then flCross = Vector( 0, 0, 1 ) end
-	flCross:Normalize()
-	local vTarget = flCross * math_min( math_deg( math_acos( dForward:Dot( dTarget ) ) ), flTurnRate )
-	local vFinal = vTarget - vAngleVelocity
-	local flMaxStep = flTurnAcceleration * FrameTime()
-	local flLength = vFinal:Length()
-	if flLength > flMaxStep then vFinal = vFinal * ( flMaxStep / flLength ) end
-	return vFinal
+// TODO: Actually properly implement this - right now it's a simple hack for it to roughly work
+function CalculateAngularVelocity( aTarget, aForward, vAngleVelocity, flTurnRate, flTurnAcceleration, flFrameTime )
+	local function fForAxis( flTarget, flCurrent, flVelocity )
+		return math.AngleDifference( flTarget, flCurrent ) - flVelocity
+	end
+	return Vector( fForAxis( aTarget[ 3 ], aForward[ 3 ], vAngleVelocity[ 1 ] ), fForAxis( aTarget[ 1 ], aForward[ 1 ], vAngleVelocity[ 2 ] ), fForAxis( aTarget[ 2 ], aForward[ 2 ], vAngleVelocity[ 3 ] ) ) * ( flFrameTime || FrameTime() )
 end
 
 function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, flFrameTime )
@@ -99,6 +95,13 @@ function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, fl
 	local flMaxSpeedToStop = ( 2 * flAcceleration * flDistance ) ^ .5
 	flSpeed = math_min( vCurrent:Length() + flAcceleration * ( flFrameTime || FrameTime() ), flMaxSpeedToStop )
 	return vDir * flSpeed - vCurrent
+end
+
+function CalculateAcceleration( vVelocity, vTarget, flAcceleration, flFrameTime )
+	local vDelta = vTarget - vVelocity
+	local flDistance = vDelta:Length()
+	if flDistance == 0 then return Vector() end
+	return vDelta:GetNormalized() * math.min( flDistance, flAcceleration * ( flFrameTime || FrameTime() ) )
 end
 
 local IsValid = IsValid
@@ -229,35 +232,39 @@ function SetHumanPlayer( ply )
 end
 
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
-	if DONT_ADJUST_PLAYERS then return end
-	timer.Simple( 0, function()
-		if !IsValid( ply ) then return end
-		local v = __PLAYER_MODEL__[ ply:GetModel() ]
-		if v then
-			v = v.PlayerSpawnAny
-			if v then return v( ply ) else SetHumanPlayer( ply ) end
-		else SetHumanPlayer( ply ) end
-	end )
+	local sClass = player_manager.GetPlayerClass( ply )
+	if sClass == "player_default" || sClass == "player_sandbox" then
+		timer.Simple( 0, function()
+			if !IsValid( ply ) then return end
+			local v = __PLAYER_MODEL__[ ply:GetModel() ]
+			if v then
+				v = v.PlayerSpawnAny
+				if v then return v( ply ) else SetHumanPlayer( ply ) end
+			else SetHumanPlayer( ply ) end
+		end )
+	end
 end )
 
 hook.Add( "PlayerInitialSpawn", "Improvements", function( ply )
-	if DONT_ADJUST_PLAYERS then return end
-	timer.Simple( 0, function()
-		if !IsValid( ply ) then return end
-		local v = __PLAYER_MODEL__[ ply:GetModel() ]
-		if v then
-			v = v.PlayerSpawnAny
-			if v then return v( ply ) else SetHumanPlayer( ply ) end
-		else SetHumanPlayer( ply ) end
-	end )
+	local sClass = player_manager.GetPlayerClass( ply )
+	if sClass == "player_default" || sClass == "player_sandbox" then
+		timer.Simple( 0, function()
+			if !IsValid( ply ) then return end
+			local v = __PLAYER_MODEL__[ ply:GetModel() ]
+			if v then
+				v = v.PlayerSpawnAny
+				if v then return v( ply ) else SetHumanPlayer( ply ) end
+			else SetHumanPlayer( ply ) end
+		end )
+	end
 end )
 
 hook.Add( "PlayerHandleAnimEvent", "Improvements", function( ply, ... )
 	local v = __PLAYER_MODEL__[ ply:GetModel() ]
 	if v then
 		v = v.PlayerHandleAnimEvent
-		if v then return v( ply, ... ) else ply:SetNPCClass( CLASS_HUMAN ) end
-	else ply:SetNPCClass( CLASS_HUMAN ) end
+		if v then return v( ply, ... ) end
+	end
 end )
 
 hook.Add( "TranslateActivity", "Improvements", function( ply, ... )

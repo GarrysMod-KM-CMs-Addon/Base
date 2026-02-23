@@ -51,8 +51,8 @@ function SWEP:PrimaryAttack()
 		Damage = MyTable.Primary_flDamage,
 		Num = MyTable.Primary_iNum
 	} )
-	MyTable.ShootEffects( self, MyTable )
 	owner:SetAnimation( PLAYER_ATTACK1 ) // CPlayer?
+	MyTable.ShootEffects( self, MyTable )
 	MyTable.DoMuzzleFlash( self, MyTable )
 	local s = MyTable.sSound
 	if s then CEntity_EmitSound( self, s ) end

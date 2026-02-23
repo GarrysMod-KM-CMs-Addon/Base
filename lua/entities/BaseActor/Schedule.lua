@@ -42,7 +42,7 @@ function ENT:SelectScheduleInternal( MyTable, ... )
 	local p = MyTable.GAME_pBehaviour
 	if p then if p:SelectSchedule( self, MyTable, ... ) then return end end
 	local veh = MyTable.GAME_pVehicle
-	if IsValid( veh ) then MyTable.SetSchedule( self, "Vehicle_Base", MyTable )
+	if IsValid( veh ) then MyTable.SetSchedule( self, "VehicleBase", MyTable )
 	else MyTable.SelectSchedule( self, MyTable, ... ) end
 end
 
@@ -57,7 +57,7 @@ function ENT:RunMind()
 	local s = v.m_sName || ""
 	local f = MyTable.__SCHEDULE__[ s ] || __SCHEDULE__[ s ]
 	local b = IsValid( MyTable.GAME_pVehicle )
-	if !f || ( b && !s:match "^Vehicle_" || !b && s:match "^Vehicle_" ) then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, v, s ) return end
+	if !f || ( b && !s:match "^Vehicle" || !b && s:match "^Vehicle" ) then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, v, s ) return end
 	local r = f( self, v, MyTable )
 	if r != nil then MyTable.SelectScheduleInternal( self, MyTable, v, s, r ) end
 end

@@ -1172,7 +1172,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	for _, ply in player_Iterator() do
 		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
 		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
-		if NOT_A_VOICELINE[ Data.SoundName ] || ply.DR_EThreat == DIRECTOR_THREAT_MAGIC then continue end
+		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
 		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
 		if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
 			local f = ply.DR_flVoWait

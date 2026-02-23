@@ -175,8 +175,8 @@ end
 SWEP.flRecoil = 1
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
-SWEP.flRecoilGrowMin = -.5
-SWEP.flRecoilGrowMax = -1
+SWEP.flRecoilGrowMin = .5
+SWEP.flRecoilGrowMax = 1
 DEFINE_BASECLASS "weapon_base"
 local util_SharedRandom = util.SharedRandom
 function SWEP:CalcRecoil( pOwner )
@@ -185,12 +185,25 @@ function SWEP:CalcRecoil( pOwner )
 	if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.5 end
 	return flRecoil
 end
+
+// Originally, Buu had a subtle SetEyeAngles call, which was awesome,
+// but with Buu's Weapon Base 2, it somehow... vanished??? I restored
+// it, and now this is the same violent recoil behaviour again,
+// as seen in Splinter Cell: Blacklist, which doesn't stop and go
+// all the way back down like recoil in simpler games like CS:GO.
+// In other words, I finally have the nigh perfect recoil!
 function SWEP:DoRecoil()
 	local pOwner = self:GetOwner()
-	if IsValid( pOwner ) && pOwner.ViewPunch && pOwner.GetRunSpeed then
-		local flRecoil = self:CalcRecoil( pOwner )
-		self:CallOnClient( "AddRecoil", flRecoil )
-		pOwner:ViewPunch( Angle( util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 ) * ( pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1 ) )
+	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
+	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
+	local aAngle = Angle( -util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 )
+	self:CallOnClient( "AddRecoil", flRecoil )
+	local f = pOwner.ViewPunch
+	if IsValid( pOwner ) && f then f( pOwner, aAngle * 1.5 ) end
+	f = pOwner.SetEyeAngles
+	local f2 = pOwner.EyeAngles
+	if f && f2 && ( game.SinglePlayer() && SERVER || !game.SinglePlayer() && CLIENT && IsFirstTimePredicted() ) then
+		f( pOwner, f2( pOwner ) + aAngle )
 	end
 end
 
@@ -304,11 +317,9 @@ if CLIENT then
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if flVelocity > 10 then
 					local flBreathe = RealTime() * 8
-					local f = flVelocity / CPlayer_GetWalkSpeed( ply )
-					// * MyTable.flAimMultiplier
-					* MyTable.flBobScale * .5
-					vTarget = vTarget + Vector( math_abs( math_sin( flBreathe * 2 ) ), math_cos( flBreathe ) * .4 ) * f
-					vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ) * .8, math_cos( flBreathe ) * .4, math_sin( flBreathe * 1.5 ) ) * f
+					local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flBobScale * .5
+					vTarget = vTarget - Vector( 0, -math_sin( flBreathe * .5 ) * .5, .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
+					vTargetAngle = vTargetAngle - Vector( math_abs( math_cos( flBreathe * .5 ) ), math_sin( flBreathe * .5 ) * .5 ) * f
 				end
 			end
 		end
@@ -522,11 +533,9 @@ if CLIENT then
 					end
 					if flVelocity > 10 then
 						local flBreathe = RealTime() * 8
-						local f = flVelocity / CPlayer_GetWalkSpeed( ply )
-						* ( 1 - MyTable.flAimMultiplier )
-						* MyTable.flBobScale * .5
-						vTarget = vTarget + Vector( math_abs( math_sin( flBreathe * 2 ) ), math_cos( flBreathe ) * .4 ) * f
-						vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ) * .8, math_cos( flBreathe ) * .4, math_sin( flBreathe * 1.5 ) ) * f
+						local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
+						vTarget = vTarget + Vector( 0, -math_sin( flBreathe * .5 ) * .5, .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
+						vTargetAngle = vTargetAngle + Vector( math_abs( math_cos( flBreathe * .5 ) ), math_sin( flBreathe * .5 ) * .5 ) * f
 					end
 				end
 			else

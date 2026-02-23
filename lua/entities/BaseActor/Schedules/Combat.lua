@@ -368,6 +368,7 @@ function ENT:CoverToCover( sched, MyTable, enemy, trueenemy )
 						if tVisited[ tNewCover ] then continue end // Also checks for nil internally... I love Lua (actually, on second thought, I genuinely do)
 						tVisited[ tNewCover ] = true
 						local flCostStart, flCostEnd, flCursorStart, flCursorEnd
+						local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 						pPath:MoveCursorToClosestPosition( vStart )
 						flCursorStart = pPath:GetCursorPosition()
 						flCostStart = pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) * .01 + ( pPath:GetLength() - flCursorStart )

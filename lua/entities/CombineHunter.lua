@@ -97,6 +97,7 @@ end
 
 ENT.flNextShot = 0
 function ENT:RangeAttackPlanted()
+	self:PromoteSequenceInstant "shoot_minigun"
 	self.bSuppressing = true
 	if CurTime() <= self.flNextShot then return end
 	local Attachment = self:GetAttachment( self:LookupAttachment( self.bLastFlechetteFromDown && "top_eye" || "bottom_eye" ) )

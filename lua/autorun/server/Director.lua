@@ -159,33 +159,16 @@ hook.Add( "Tick", "Director", function()
 		end
 		local tSpotted = PlyTable.DR_tSpotted || {}
 		local tNewMusicEntities = {}
-		local flAllSuppression, flAllHealth, flAllThreat, bAtLeastOneWhoIsNotIdle = 0, 0, 0
+		local flAllSuppression, flAllHealth = 0, 0
 		for pEntity in pairs( tMusicEntities ) do
 			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
-			if ETheirThreat > DIRECTOR_THREAT_HEAT then bAtLeastOneWhoIsNotIdle = true end
 			// TODO: Improve this, dammit!
 			if pEntity:NearestPoint( vEye ):DistToSqr( vEye ) > 9437184/*3072*/ then continue end
-			local f = pEntity.Disposition
-			if f && f( pEntity, ply ) == D_LI then
-				flAllThreat = flAllThreat - ( pEntity.GAME_flThreat || 1 )
-			else
-				// We're doin' shit to them, so add it!
-				flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
-				f = pEntity:Health()
-				if f > 0 then flAllHealth = flAllHealth + f end
-				if f > 0 then
-					f = pEntity.GAME_flThreat
-					if f then flAllThreat = flAllThreat + f
-					else
-						f = .25
-						if HasRangeAttack( pEntity ) then f = 1
-						elseif HasMeleeAttack( pEntity ) then f = .25 end
-						flAllThreat = flAllThreat + f
-					end
-				end
-			end
+			// We're doin' shit to them, so add it!
+			// (Or someone else's doin' shit to them)
+			flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
 			if f then if CurTime() > f then EThreat = ETheirThreat end
@@ -202,12 +185,8 @@ hook.Add( "Tick", "Director", function()
 		if f != f then f = 0 end // NaN
 		flIntensity = flIntensity + f
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
-		if EThreat == DIRECTOR_THREAT_HOLD_FIRE || EThreat == DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) else PlyTable.DR_bMagic = nil end
+		if EThreat >= DIRECTOR_THREAT_HOLD_FIRE then Achievement_Miscellaneous( ply, "Combat" ) end
 		if bAlarm || PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
-		if PlyTable.DR_bMagic || bAtLeastOneWhoIsNotIdle && ( flAllThreat * ( bAlarmCoolDown && 2 || 1 ) ) > ( /*ply:Health()*/ ply:GetMaxHealth() * .12 ) then
-			EThreat = DIRECTOR_THREAT_MAGIC
-			PlyTable.DR_bMagic = true
-		end
 		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. tostring( flIntensity ) )

@@ -25,7 +25,7 @@ SWEP.Primary_flDelay = .08
 SWEP.Primary_sTracer = "HelicopterTracer"
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
-SWEP.flRecoil = 4
+SWEP.flRecoil = 2
 
 SWEP.Slot = 2
 SWEP.ViewModelFOV = 62

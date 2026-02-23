@@ -323,9 +323,8 @@ function ENT:Jump( vTarget, MyTable )
 	self.m_bJumping = true
 end
 
-ENT.flNextAvoidDirection = 0
+ENT.flNavigationAvoidTime = 0
 function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
-	pPath:Update( self )
 	self.loco:SetStepHeight( 16 )
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
@@ -333,12 +332,59 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 	end
 	local goal, tNextGoal = pPath:GetCurrentGoal(), pPath:NextSegment()
 	if goal && tNextGoal then
-		self.loco:Approach( goal.pos, 1 )
 		if goal.type == 2 || goal.type == 3 then
 			self:Jump( tNextGoal.pos )
+			pPath:Update( self )
 			return
 		end
 	end
+	if CurTime() <= self.flNavigationAvoidTime then
+		self.loco:Approach( self:GetPos() + self.vNavigationAvoidDirection, 1 )
+		return
+	end
+	if !goal then pPath:Update( self ) return end
+	local aVelocity = goal.forward:Angle()
+	local trHull = util.TraceHull {
+		start = self:GetPos(),
+		endpos = self:GetPos() + aVelocity:Forward() * self:OBBMaxs()[ 1 ],
+		mins = self:OBBMins() + Vector( 0, 0, 12 ),
+		maxs = self:OBBMaxs(),
+		filter = self
+	}
+	if trHull.Hit && !trHull.HitWorld then
+		local trLeft, trRight = util.TraceHull {
+			start = self:GetPos(),
+			endpos = self:GetPos() - aVelocity:Right() * self:OBBMaxs()[ 1 ],
+			mins = self:OBBMins() + Vector( 0, 0, 12 ),
+			maxs = self:OBBMaxs(),
+			filter = self
+		}, util.TraceHull {
+			start = self:GetPos(),
+			endpos = self:GetPos() + aVelocity:Right() * self:OBBMaxs()[ 1 ],
+			mins = self:OBBMins() + Vector( 0, 0, 12 ),
+			maxs = self:OBBMaxs(),
+			filter = self
+		}
+		local bLeft, bRight = trLeft.Hit && !trLeft.HitWorld, trRight.Hit && !trRight.HitWorld
+		if bLeft && bRight then
+			if math.random( 2 ) == 1 then
+				self.vNavigationAvoidDirection = -aVelocity:Right()
+			else
+				self.vNavigationAvoidDirection = aVelocity:Right()
+			end
+			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			return
+		elseif bLeft then
+			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			self.vNavigationAvoidDirection = -aVelocity:Right()
+			return
+		else
+			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			self.vNavigationAvoidDirection = aVelocity:Right()
+			return
+		end
+	end
+	pPath:Update( self )
 end
 
 function ENT:HandleStuck() self.loco:ClearStuck() end

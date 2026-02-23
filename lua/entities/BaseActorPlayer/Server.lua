@@ -32,7 +32,7 @@ function ENT:MoveAlongPathToCover( Path, tFilter )
 		self.loco:SetDesiredSpeed( 0 )
 		self.loco:SetAcceleration( 0 )
 		self.loco:SetDeceleration( 0 )
-		Path:Update( self )
+		self:HandleJumpingAlongPath( Path, self.flTopSpeed, tFilter )
 		return
 	end
 	if self.bCanSlide && QuickSlide_Can( self ) then

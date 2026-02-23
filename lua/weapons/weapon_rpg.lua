@@ -10,6 +10,7 @@ SWEP.WorldModel = Model "models/weapons/w_rocket_launcher.mdl" // NOT w_rpg?! WH
 SWEP.Primary.ClipSize = 1
 SWEP.Primary.DefaultClip = 1
 SWEP.Primary.Automatic = false
+SWEP.m_bAllowOneInTheChamber = false // DUH!
 SWEP.Primary.Ammo = "RPG_Round"
 SWEP.Primary_flDelay = 2
 SWEP.Primary_sProjectile = "rpg_missile"

@@ -26,8 +26,8 @@ SWEP.Crosshair = "Rifle"
 SWEP.flRecoil = 1.6
 SWEP.flSideWaysRecoilMin = -.34
 SWEP.flSideWaysRecoilMax = .34
-SWEP.flRecoilGrowMin = -.66
-SWEP.flRecoilGrowMax = -1
+SWEP.flRecoilGrowMin = .66
+SWEP.flRecoilGrowMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 SWEP.flAimShoot = 2

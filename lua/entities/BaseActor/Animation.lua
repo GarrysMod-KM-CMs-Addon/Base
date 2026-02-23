@@ -62,6 +62,7 @@ function ENT:AnimationSystemTick()
 		else self:SetLayerWeight( lay, math.Clamp( self:GetLayerWeight( lay ) - 4 * FrameTime(), 0, 1 ) ) end
 	end
 	table.Empty( tPromote )
+	table.Empty( tInstant )
 end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable

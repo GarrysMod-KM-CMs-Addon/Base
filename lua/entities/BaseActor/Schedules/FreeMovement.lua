@@ -7,9 +7,8 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
-	local pEnemy = sched.Enemy
-	if IsValid( pEnemy ) then pEnemy = pEnemy
-	else pEnemy = MyTable.Enemy if !IsValid( pEnemy ) then return true end end
+	local pEnemy = MyTable.Enemy
+	if !IsValid( pEnemy ) then return true end
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then
 		if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 		if MyTable.bHoldFire then

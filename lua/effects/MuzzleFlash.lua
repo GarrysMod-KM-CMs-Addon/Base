@@ -1,9 +1,11 @@
 function EFFECT:Init( Data )
 	self:SetRenderMode( RENDERMODE_TRANSALPHA )
 	local pWeapon = Data:GetEntity()
-	if !IsValid( pWeapon ) || pWeapon:GetOwner() == nil then return end
+	if !IsValid( pWeapon ) then return end
+	local pOwner = pWeapon:GetOwner()
+	if !IsValid( pOwner ) then return end
 	local v = self:GetTracerShootPos( Data:GetOrigin(), pWeapon, Data:GetAttachment() )
-	local vVelocity = pWeapon:GetOwner():GetVelocity()
+	local vVelocity = pOwner:GetVelocity()
 	local pEmitter = ParticleEmitter( v )
 	for i = 1, 2 do
 		local pPart = pEmitter:Add( "effects/muzzleflash" .. math.random( 1, 4 ), v )

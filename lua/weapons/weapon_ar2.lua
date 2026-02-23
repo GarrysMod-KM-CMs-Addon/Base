@@ -35,8 +35,8 @@ SWEP.vSprint = Vector( -1.228, .6, -1.2 )
 SWEP.flRecoil = .7
 SWEP.flSideWaysRecoilMin = -.15
 SWEP.flSideWaysRecoilMax = .15
-SWEP.flRecoilGrowMin = -.8
-SWEP.flRecoilGrowMax = -1
+SWEP.flRecoilGrowMin = .8
+SWEP.flRecoilGrowMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 function SWEP:FireAnimationEvent() end

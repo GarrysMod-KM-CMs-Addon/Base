@@ -295,8 +295,12 @@ local CEntity_GetPoseParameter = CEntity.GetPoseParameter
 local CEntity_SetPoseParameter = CEntity.SetPoseParameter
 local CEntity_LookupPoseParameter = CEntity.LookupPoseParameter
 local Angle = Angle
+ENT.m_sPitchPoseParameter = "aim_pitch"
+ENT.m_sYawPoseParameter = "aim_yaw"
 function ENT:HandleTurning( MyTable )
-	local ppAimPitch = CEntity_LookupPoseParameter( self, "aim_pitch" )
+	local sPitch = MyTable.m_sPitchPoseParameter
+	local sYaw = MyTable.m_sYawPoseParameter
+	local ppAimPitch = CEntity_LookupPoseParameter( self, sPitch )
 	local Angles = CEntity_GetAngles( self )
 	local aAim = Angle( Angles )
 	local v = MyTable.vaAimTargetPose
@@ -309,21 +313,21 @@ function ENT:HandleTurning( MyTable )
 	local f = MyTable.flOverrideTurnRateThisTick
 	if f then flTurnRate = f MyTable.flOverrideTurnRateThisTick = nil end
 	if ppAimPitch != -1 then
-		local p = CEntity_GetPoseParameter( self, "aim_pitch" )
+		local p = CEntity_GetPoseParameter( self, sPitch )
 		local des = math_AngleDifference( aDesAim.p, Angles.p + p )
 		local t = MyTable.flBodyTensity
 		local f = flTurnRate / t * FrameTime()
-		CEntity_SetPoseParameter( self, "aim_pitch", p + math_Clamp( des * t, -f, f ) )
-		aAim.p = aAim.p + self:GetPoseParameter "aim_pitch"
+		CEntity_SetPoseParameter( self, sPitch, p + math_Clamp( des * t, -f, f ) )
+		aAim.p = aAim.p + CEntity_GetPoseParameter( self, sPitch )
 	end
-	local ppAimYaw = CEntity_LookupPoseParameter( self, "aim_yaw" )
+	local ppAimYaw = CEntity_LookupPoseParameter( self, sYaw )
 	if ppAimYaw != -1 then
-		local p = CEntity_GetPoseParameter( self, "aim_yaw" )
+		local p = CEntity_GetPoseParameter( self, sYaw )
 		local des = math_AngleDifference( aDesAim.y, Angles.y + p )
 		local t = MyTable.flBodyTensity
 		local f = flTurnRate / t * FrameTime()
-		CEntity_SetPoseParameter( self, "aim_yaw", p + math_Clamp( des * t, -f, f ) )
-		aAim.y = aAim.y + CEntity_GetPoseParameter( self, "aim_yaw" )
+		CEntity_SetPoseParameter( self, sYaw, p + math_Clamp( des * t, -f, f ) )
+		aAim.y = aAim.y + CEntity_GetPoseParameter( self, sYaw )
 	end
 	MyTable.aAim = aAim
 	MyTable.vAim = aAim:Forward()

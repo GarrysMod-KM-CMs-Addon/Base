@@ -1,5 +1,8 @@
 include "autorun/Director.lua"
 
+DIRECTOR_MUSIC_TENSION = 0
+DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
+
 timer.Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
 
 local sound_Add = sound.Add
@@ -22,7 +25,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 		Base = { Execute = function( self )
 			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
 			if !self.tHandles.Main then
-				if math_Rand( 0, 150000 * FrameTime() ) <= 1 then
+				if math_Rand( 0, 200000 * FrameTime() ) <= 1 then
 					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
 					if s then Director_Music_Play( self, "Main", s ) end
 				end
@@ -32,8 +35,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 	[ DIRECTOR_THREAT_HEAT ] = {},
 	[ DIRECTOR_THREAT_ALERT ] = {},
 	[ DIRECTOR_THREAT_HOLD_FIRE ] = {},
-	[ DIRECTOR_THREAT_COMBAT ] = {},
-	[ DIRECTOR_THREAT_MAGIC ] = {}
+	[ DIRECTOR_THREAT_COMBAT ] = {}
 }
 
 function Director_Music_Container()
@@ -98,10 +100,9 @@ local pairs = pairs
 function Director_Music_UpdateInternal( self, ... )
 	local tNewHandles = {}
 	local flVolume = self.m_flVolume
-	local flRealFrameTime = RealFrameTime()
 	for Index, tData in pairs( self.tHandles ) do
 		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
-		if tData[ 4 ] <= flRealFrameTime then tData[ 1 ]:Stop() continue end
+		if tData[ 4 ] <= engine.TickInterval() then tData[ 1 ]:Stop() continue end
 		tData[ 4 ] = f
 		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
@@ -215,33 +216,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 			end
 		end
 	end
-	// This thing is so important that we ignore voiceline pauses, too!
-	if DIRECTOR_THREAT == DIRECTOR_THREAT_MAGIC then
-		local bAllReady = true
-		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
-			local pContainer = DIRECTOR_MUSIC[ ELayer ]
-			if pContainer then
-				if ELayer != DIRECTOR_THREAT_MAGIC then
-					if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then
-						pContainer.m_flVolume = 0
-					else bAllReady = nil end
-				end
-				Director_Music_UpdateInternal( pContainer )
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() * .1 )
-			end
-		end
-		if bAllReady then
-			for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
-				local pContainer = DIRECTOR_MUSIC[ ELayer ]
-				if pContainer then
-					Director_Music_UpdateInternal( pContainer )
-					pContainer.m_flVolume = ELayer == DIRECTOR_THREAT_MAGIC && 1 || 0
-				end
-			end
-			DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
-		end
-		return HOOK_RETURN
-	elseif DIRECTOR_MUSIC_IN_VO then
+	if DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
 			local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable

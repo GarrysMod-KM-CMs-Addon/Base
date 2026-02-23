@@ -277,12 +277,6 @@ function SWEP:DoDrawCrosshair()
 		MyTable.flCrosshairAlpha = 0
 	else
 		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 * ( ( MyTable.flCurrentRecoilForCrosshair * ( ( MyTable.Primary_flDelay / .5 ) * 1000 / math_max( 50, self:GetMaxClip1() ) ) ) - 1 ) * .33 )
-		// Haha, N O
-		//	f = math_max( 0, 255 - 255 * ( ( MyTable.flCurrentRecoilForCrosshair * ( ( MyTable.Primary_flDelay / .5 ) * 1000 / math_max( 50, self:GetMaxClip1() ) ) ) - 1 ) * .33 )
-		//	if MyTable.vViewModelAim then
-		//		f = f * MyTable.flAimMultiplier
-		//	else f = Lerp( 1 - MyTable.flAimMultiplier, f, 255 ) end
-		//	MyTable.flCrosshairAlpha = f
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes
