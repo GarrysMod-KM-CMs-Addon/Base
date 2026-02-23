@@ -1,22 +1,18 @@
-DEFINE_BASECLASS "BaseWeapon"
+DEFINE_BASECLASS "BaseBulletWeapon"
 
 SWEP.Category = "Submachine Guns"
 SWEP.PrintName = "#MP5"
 
 SWEP.Instructions = "Primary to shoot."
 SWEP.Purpose = "Heckler & Koch MP5."
-SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_mp5.mdl"
-SWEP.UseHands = true
-SWEP.WorldModel = Model "models/weapons/w_smg_mp5.mdl"
 SWEP.Primary.ClipSize = 50
 SWEP.Primary.DefaultClip = 50
 SWEP.Primary.Automatic = true
 SWEP.Primary.Ammo = "SMG1"
 SWEP.Primary_flSpreadX = .0092
 SWEP.Primary_flSpreadY = .0092
-SWEP.Primary_flDelay = .075
+SWEP.Primary_flDelay = .06666666666
 SWEP.Primary_flDamage = 30
-// SWEP.ViewModelFOV = 45
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = false
@@ -26,43 +22,42 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
-SWEP.vSprint = Vector( 1.358, -3.228, -.94 )
-SWEP.vViewModelAim = Vector( -8, -5.3, 2.3 )
 SWEP.Crosshair = "SubMachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubMachineGun"
+SWEP.sHoldType = "SMG"
+
+SWEP.flAimShoot = 3
+SWEP.vSprint = Vector( -1.228, 1.358 )
+if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
+	SWEP.ViewModelFOV = 45
+	SWEP.ViewModel = "models/weapons/c_mp5.mdl"
+	SWEP.WorldModel = "models/weapons/FC3W/FC3MP5w.mdl"
+	SWEP.vViewModelAim = Vector( -9.233, -4.825, 2.049 )
+	SWEP.vViewModelAimAngle = Vector( .14, -3.32, -3.004 )
+	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
+	function SWEP:GetReloadActivity( bOneInTheChamber ) return bOneInTheChamber && ACT_VM_RELOAD || ACT_VM_RELOAD_EMPTY end
+else
+	SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_mp5.mdl"
+	SWEP.WorldModel = Model "models/weapons/w_smg_mp5.mdl"
+	SWEP.vViewModelAim = Vector( -8, -5.3, 2.3 )
+end
 
 sound.Add {
-	name = "MP5_Shot",
+	name = "MP5Shot",
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^MP7Shot.wav" // TODO: Sound
+	sound = "^MP5Shot.wav"
 }
-
-function SWEP:Initialize() self:SetHoldType "SMG" end
-
-function SWEP:PrimaryAttack()
-	if !self:CanPrimaryAttack() then return end
-	local owner = self:GetOwner()
-	self:FireBullets {
-		Attacker = owner,
-		Src = owner:GetShootPos(),
-		Dir = self:GetAimVector(),
-		Tracer = 1,
-		Spread = Vector( self.Primary_flSpreadX, self.Primary_flSpreadY ),
-		Damage = self.Primary_flDamage
-	}
-	self:ShootEffects()
-	owner:SetAnimation( PLAYER_ATTACK1 )
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util.Effect( "MuzzleFlash", ed )
-	self:EmitSound "MP5_Shot"
-	self:TakePrimaryAmmo( 1 )
-	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
-end
+SWEP.sSound = "MP5Shot"
+sound.Add {
+	name = "MP5ShotAuto",
+	channel = CHAN_AUTO,
+	level = 150,
+	pitch = { 90, 110 },
+	sound = "^MP5Shot.wav"
+}
+SWEP.sSound = "MP5ShotAuto"
 
 sound.Add {
 	name = "MP5_SwitchSemi",
