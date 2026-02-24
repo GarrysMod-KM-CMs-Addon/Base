@@ -65,7 +65,13 @@ hook.Add( "PopulateToolMenu", "CascadeShadowMappingClient", function()
 	spawnmenu.AddToolMenuOption( "Utilities", "User", "CascadeShadowMappingClient", "#CascadeShadowMapping", "", "", function( pPanel )
 		pPanel:ClearControls()
 		pPanel:ControlHelp "#CascadeShadowMappingInformation"
-		local p = pPanel:NumSlider( "#ShadowDepthResolution", "r_flashlightdepthres", 0, 16384, 0 )
+		// 65536 causes shadows to glitch... not sure about the numbers above,
+		// but the maximum resolution you'd ever want is probably 65535,
+		// because it is both extreme quality and doesn't glitch.
+		// 3072 as minimum is because shadows below that resolution are way too ass.
+		// EDIT: With clever usage of SetShadowFilter, I lowered
+		// the minimum bound to 1024, because the shadows, even at that, now look good!
+		local p = pPanel:NumSlider( "#ShadowDepthResolution", "r_flashlightdepthres", 1024, 65535, 0 )
 		pPanel:ControlHelp "#ShadowDepthResolutionHelp"
 		p.OnValueChanged = function( self, flValue ) RunConsoleCommand( "r_flashlightdepthres", flValue ) end
 	end )
@@ -325,7 +331,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .2 end
 	local bSpecial = pPlayer:WaterLevel() > 0
-	if !bSpecial && flActualBiggerMove > 0 && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) then
+	if !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
 		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), a ) )

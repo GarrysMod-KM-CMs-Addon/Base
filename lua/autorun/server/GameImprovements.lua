@@ -1,5 +1,3 @@
-local math = math
-
 concommand.Add( "+drop", function() end )
 concommand.Add( "-drop", function( ply ) ply:DropWeapon() end )
 
@@ -429,7 +427,7 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 			local R, G, B, A = sValue:match "(%d+)%s+(%d+)%s+(%d+)%s+(%d+)"
 			R, G, B, A = tonumber( R ) || -1, tonumber( G )|| -1, tonumber( B ) || -1, tonumber( A ) || -1
 			SUN_COLOR = Color( R, G, B )
-			SUN_BRIGHTNESS = A * .004
+			SUN_BRIGHTNESS = A * .008
 		end
 	end
 end )
@@ -513,9 +511,7 @@ local function BloodlossStuff( ply, cmd )
 end
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
-
 	ply.m_iOriginalButtons = cmd:GetButtons()
-
 	if cmd:KeyDown( IN_ZOOM ) then
 		if SysTime() <= ( ply.m_flZoomOutTime || 0 ) then
 			cmd:RemoveKey( IN_ZOOM )
@@ -534,7 +530,6 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			cmd:AddKey( IN_ZOOM )
 		end
 	end
-
 	local veh = ply.GAME_pVehicle
 	if IsValid( veh ) then
 		if !ply.GAME_sRestoreGun then
@@ -557,18 +552,14 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		if IsValid( p ) then p:Remove() end
 		return
 	end
-
 	local c = ply:GetModel()
 	local v = __PLAYER_MODEL__[ c ]
 	if v then
 		v = v.StartCommand
 		if v && v( ply, cmd ) then return end
 	end
-
 	BloodlossStuff( ply, cmd )
-
 	ply:SetLadderClimbSpeed( ply:IsSprinting() && ply:GetRunSpeed() || ply:IsWalking() && ply:GetSlowWalkSpeed() || ply:GetWalkSpeed() )
-
 	local bGround = CEntity_IsOnGround( ply )
 	if !bGround && CEntity_WaterLevel( ply ) > 0 then
 		if !ply.GAME_sRestoreGun then
@@ -597,16 +588,13 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		local p = ply:GetWeapon "HandsSwimInternal"
 		if IsValid( p ) then p:Remove() end
 	end
-
 	local s = ply.GAME_sRestoreGun
 	if s then
 		local w = ply:GetWeapon( s )
 		if IsValid( w ) then cmd:SelectWeapon( w ) end
 		ply.GAME_sRestoreGun = nil
 	end
-
 	if ply:GetNW2Bool "CTRL_bSliding" then cmd:RemoveKey( IN_ATTACK ) cmd:RemoveKey( IN_ATTACK2 ) end
-
 	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK )
 	elseif !cmd:KeyDown( IN_SPEED ) then
 		local b = cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 )
@@ -615,12 +603,10 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
 		end
 	end
-
 	if ply.CTRL_bSprintBlockUnTilUnPressed then
 		if !cmd:KeyDown( IN_SPEED ) then ply.CTRL_bSprintBlockUnTilUnPressed = nil end
 		cmd:RemoveKey( IN_SPEED )
 	end
-
 	local v = __PLAYER_MODEL__[ ply:GetModel() ]
 	local bAllDirectionalSprint = Either( v, v && v.bAllDirectionalSprint, ply.CTRL_bAllDirectionalSprint ) || ( ( Either( ply.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, ply.CTRL_bCantSlide ) && GetVelocity( ply ):Length() >= ply:GetRunSpeed() ) || ply:Crouching() )
 	if bAllDirectionalSprint then
@@ -634,7 +620,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			cmd:AddKey( IN_SPEED )
 			local p = ply:GetActiveWeapon()
 			if cmd:GetForwardMove() <= 0 || IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then
-				// ply.CTRL_bSprintBlockUnTilUnPressed = true
+				ply.CTRL_bSprintBlockUnTilUnPressed = true
 				if bGround then ply.CTRL_bHeldSprint = nil end
 				cmd:RemoveKey( IN_SPEED )
 				ply:SetNW2Bool( "CTRL_bSprinting", false )
@@ -1174,11 +1160,15 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
 		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
 		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+		local t = ply.DR_tSpotted
+		if t then t[ dent ] = 0
+		else ply.DR_tSpotted = { [ dent ] = 0 } end
+		local t = ply.DR_tMusicEntities
+		if t then t[ dent ] = true
+		else ply.DR_tMusicEntities = { [ dent ] = true } end
 		if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
 			local f = ply.DR_flVoWait
 			if !f || RealTime() > ( f + DIRECTOR_MUSIC_VO_WAIT * 2 ) then
-				local t = ply.DR_tMusicEntities
-				if t then t[ dent ] = true end
 				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
 				ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
 				ply.DR_flVoDangerousWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
@@ -1187,8 +1177,6 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		end
 		// If it's a voice line, wait until it is over
 		if ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) then
-			local t = ply.DR_tMusicEntities
-			if t then t[ dent ] = true end
 			ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
 			ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
 			ply.DR_flVoWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + DIRECTOR_MUSIC_VO_WAIT

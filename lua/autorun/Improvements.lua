@@ -232,31 +232,19 @@ function SetHumanPlayer( ply )
 end
 
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
-	local sClass = player_manager.GetPlayerClass( ply )
-	if sClass == "player_default" || sClass == "player_sandbox" then
-		timer.Simple( 0, function()
-			if !IsValid( ply ) then return end
-			local v = __PLAYER_MODEL__[ ply:GetModel() ]
-			if v then
-				v = v.PlayerSpawnAny
-				if v then return v( ply ) else SetHumanPlayer( ply ) end
-			else SetHumanPlayer( ply ) end
-		end )
-	end
+	timer.Simple( 0, function()
+		if !IsValid( ply ) then return end
+		local sClass = player_manager.GetPlayerClass( ply )
+		if sClass == "player_default" || sClass == "player_sandbox" then SetHumanPlayer( ply ) end
+	end )
 end )
 
 hook.Add( "PlayerInitialSpawn", "Improvements", function( ply )
-	local sClass = player_manager.GetPlayerClass( ply )
-	if sClass == "player_default" || sClass == "player_sandbox" then
-		timer.Simple( 0, function()
-			if !IsValid( ply ) then return end
-			local v = __PLAYER_MODEL__[ ply:GetModel() ]
-			if v then
-				v = v.PlayerSpawnAny
-				if v then return v( ply ) else SetHumanPlayer( ply ) end
-			else SetHumanPlayer( ply ) end
-		end )
-	end
+	timer.Simple( 0, function()
+		if !IsValid( ply ) then return end
+		local sClass = player_manager.GetPlayerClass( ply )
+		if sClass == "player_default" || sClass == "player_sandbox" then SetHumanPlayer( ply ) end
+	end )
 end )
 
 hook.Add( "PlayerHandleAnimEvent", "Improvements", function( ply, ... )

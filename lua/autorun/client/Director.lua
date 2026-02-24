@@ -25,7 +25,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 		Base = { Execute = function( self )
 			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
 			if !self.tHandles.Main then
-				if math_Rand( 0, 200000 * FrameTime() ) <= 1 then
+				if math_Rand( 0, 1000000 * FrameTime() ) <= 1 then
 					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
 					if s then Director_Music_Play( self, "Main", s ) end
 				end
