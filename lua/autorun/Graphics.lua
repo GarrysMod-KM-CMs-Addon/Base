@@ -209,11 +209,6 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 8 ), 0, 8 ) )
 		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, .1, .05 ), .1, .05 ), math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 1 ), 0, 1 ), 0 )
 	end
-	local f = self:GetNW2Float( "GAME_flSuppressionEffects", 0 )
-	if f > 0 then
-		DrawBlur( math_Clamp( math_Remap( f, 0, 1, 0, 1 ), 0, 1 ) )
-		DrawMotionBlur( math_Clamp( math_Remap( f, 0, 1, .5, .25 ), .25, .5 ), math_Clamp( f, 0, 1 ), 0 )
-	end
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) )

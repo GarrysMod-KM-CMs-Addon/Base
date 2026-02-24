@@ -34,9 +34,8 @@ function ENT:DLG_HoldFire()
 	self.bHoldFire = true
 	local tAllies = self:GetAlliesByClass()
 	if tAllies then
-		for _, ent in ipairs( tAllies ) do
-			if !IsValid( ent ) then continue end
-			ent.bHoldFire = true
+		for ent in pairs( tAllies ) do
+			if IsValid( ent ) then ent.bHoldFire = true end
 		end
 	end
 end

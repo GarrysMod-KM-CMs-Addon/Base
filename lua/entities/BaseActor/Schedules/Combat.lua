@@ -52,8 +52,6 @@ local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 function ENT:DLG_MeleeTaunt() end
 
-include "HoldFireCheckEnemy.lua"
-
 ENT.flMaintainFireTime = 0
 ENT.flMaintainFireTimeMin = 2
 ENT.flMaintainFireTimeMax = 6
@@ -381,7 +379,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			sched.tAdvanceSearchVisited = tVisited
 			sched.flAdvanceSearchBestCandidate = flBestCandidate
 			local iHandled, bAtTheResult, tMyCover = 1, true, tCover
-			local flBestCandidateLarge = flBestCandidate * 4
+			local flBestCandidateLarge = flBestCandidate * .5
 			while !table_IsEmpty( tQueue ) do
 				bAtTheResult = nil
 				if iHandled > 12 then break end
@@ -416,7 +414,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				end
 				if tCover == tMyCover || flCost > flBestCandidate then continue end
 				flBestCandidate = flCost
-				flBestCandidateLarge = flCost * 4
+				flBestCandidateLarge = flCost * 2
 				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
 				local vDirection = vEnd - vStart
 				local flStep, flStart, flEnd
@@ -430,7 +428,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
 				for iCurrent = flStart, flEnd, flStep do
 					local vCover = vStart + vDirection * iCurrent + vOff
-					debugoverlay.Cross(vCover,10,5,Color(255,0,0),true)
 					pPath:MoveCursorToClosestPosition( vCover )
 					local iCursor = pPath:GetCursorPosition()
 					local dDirection = pPath:GetPositionOnPath( iCursor )
@@ -892,21 +889,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		end
 		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
 		return
-	end
-	if MyTable.bHoldFire then
-		local tAllies = self:GetAlliesByClass()
-		if tAllies then
-			local b = true
-			for ent in pairs( tAllies ) do
-				if !IsValid( ent ) || ent == self || !ent.__ACTOR__ || !IsValid( ent.Enemy ) || !ent:IsCurrentSchedule "HoldFireCheckEnemy" then continue end
-				local _, pTrueEnemy = ent:SetupEnemy( ent.Enemy )
-				if pTrueEnemy == trueenemy then b = nil break end
-			end
-			if b then
-				MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy
-				return
-			end
-		else MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy end
 	end
 end )
 

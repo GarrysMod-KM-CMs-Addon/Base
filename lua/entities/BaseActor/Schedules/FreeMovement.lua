@@ -9,24 +9,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
-	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then
-		if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
-		if MyTable.bHoldFire then
-			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			if tAllies then
-				local b = true
-				for ent in pairs( tAllies ) do
-					if !IsValid( ent ) || ent == self || !ent.__ACTOR__ || !IsValid( ent.Enemy ) || !ent:IsCurrentSchedule "HoldFireCheckEnemy" then continue end
-					local _, pTrueEnemy = ent:SetupEnemy( ent.Enemy )
-					if pTrueEnemy == trueenemy then b = nil break end
-				end
-				if b then
-					MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy
-					return
-				end
-			else MyTable.SetSchedule( self, "HoldFireCheckEnemy", MyTable ).pEnemy = enemy end
-		end
-	end
+	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
 	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
 	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
 	local pPath = MyTable.pEnemyPath
