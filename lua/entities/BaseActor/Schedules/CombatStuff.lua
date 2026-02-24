@@ -100,7 +100,6 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if bNoEnemy then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
 		end
 	end
-	MyTable.CoverToCover( self, sched, MyTable, enemy, trueenemy )
 	MyTable.bSuppressing = true
 	if sched.bSuppressing then
 		local vStand, vDuck = Vector( 0, 0, MyTable.vHullMaxs.z )

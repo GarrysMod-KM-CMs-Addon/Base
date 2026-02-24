@@ -3,12 +3,12 @@
 // can turn it off and override it with itself.
 // If it's nil, then changing anything that will
 // differ with the map's sun data will look ugly.
-
+//
 // Credits to Xenthio and the Real CSM addon
 // https://github.com/Xenthio/RealCSM
 // I didn't just copy and paste it, however,
 // I've rewritten it fully, the only things
-// that are identical are materials
+// that are identical are the materials
 
 AddCSLuaFile()
 DEFINE_BASECLASS "base_point"
@@ -77,6 +77,7 @@ function ENT:Think()
 			pTexture:SetQuadraticAttenuation( 0 )
 			pTexture:SetLinearAttenuation( 0 )
 			pTexture:SetConstantAttenuation( 1 )
+			pTexture:SetShadowFilter( math.Remap( math.Clamp( GetConVarNumber "r_flashlightdepthres", 1024, 4096 ), 1024, 4096, 1, 0 ) )
 			pTexture:Update()
 		end
 	end
