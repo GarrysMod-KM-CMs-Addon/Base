@@ -154,7 +154,7 @@ sound.Add {
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "weapons/shotgun/shotgun_fire6.wav"
+	sound = "^SPAS12Shot.wav"
 }
 
 sound.Add {
