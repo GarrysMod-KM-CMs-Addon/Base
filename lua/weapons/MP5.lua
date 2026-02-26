@@ -50,6 +50,7 @@ sound.Add {
 	sound = "^MP5Shot.wav"
 }
 SWEP.sSound = "MP5Shot"
+
 sound.Add {
 	name = "MP5ShotAuto",
 	channel = CHAN_AUTO,
@@ -57,17 +58,17 @@ sound.Add {
 	pitch = { 90, 110 },
 	sound = "^MP5Shot.wav"
 }
-SWEP.sSound = "MP5ShotAuto"
+SWEP.sSoundAuto = "MP5ShotAuto"
 
 sound.Add {
-	name = "MP5_SwitchSemi",
+	name = "MP5SwitchSemi",
 	channel = CHAN_WEAPON,
 	level = 60,
 	pitch = { 90, 110 },
 	sound = "weapons/smg1/switch_single.wav"
 }
 sound.Add {
-	name = "MP5_SwitchAuto",
+	name = "MP5SwitchAuto",
 	channel = CHAN_WEAPON,
 	level = 60,
 	pitch = { 90, 110 },
@@ -77,6 +78,6 @@ function SWEP:SecondaryAttack()
 	if CurTime() <= self:GetNextSecondaryFire() then return end
 	local b = !self.Primary.Automatic
 	self.Primary.Automatic = b
-	self:EmitSound( b && "MP5_SwitchAuto" || "MP5_SwitchSemi" )
+	self:EmitSound( b && "MP5SwitchAuto" || "MP5SwitchSemi" )
 	self:SetNextSecondaryFire( CurTime() + .2 )
 end

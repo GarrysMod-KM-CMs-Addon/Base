@@ -1,9 +1,11 @@
 AddCSLuaFile()
 
-ENT.Base = "base_point"
-ENT.Type = "point"
+ENT.Base = "base_anim"
+ENT.Type = "anim"
 
-ENT.PrintName = "#env_projectedtexture"
+ENT.PrintName = "#LightStream"
+
+scripted_ents.Register( ENT, "LightStream" )
 
 local TRANSMIT_ALWAYS = TRANSMIT_ALWAYS
 function ENT:UpdateTransmitState() return TRANSMIT_ALWAYS end
@@ -33,7 +35,12 @@ end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 if CLIENT then
-	function ENT:Initialize() local MyTable = CEntity_GetTable( self ) MyTable.Update( self, MyTable ) end
+	function ENT:Initialize()
+		local MyTable = CEntity_GetTable( self )
+		MyTable.Update( self, MyTable )
+		self.pixelvis_handle_t = util.GetPixelVisibleHandle()
+		self:DrawShadow( false )
+	end
 	local Vector = Vector
 	function ENT:Think()
 		local d = self:GetShadows() && self:GetDistance() || self:GetTrueDistance()
@@ -57,7 +64,7 @@ if CLIENT then
 		pt:SetFarZ( self:GetDistance() )
 		pt:SetColor( self:GetLightColor():ToColor() )
 		pt:SetBrightness( self:GetBrightness() * 4 )
-		pt:SetQuadraticAttenuation( self:GetDistance() ^ 2 / self:GetTrueDistance() ^ 2 )
+		pt:SetQuadraticAttenuation( ( self:GetDistance() ^ 2 / self:GetTrueDistance() ^ 2 ) ^ 2 )
 		pt:SetHorizontalFOV( self:GetHorFOV() )
 		pt:SetVerticalFOV( self:GetVerFOV() )
 		if self:GetShadows() then
@@ -69,8 +76,48 @@ if CLIENT then
 		pt:Update()
 	end
 	function ENT:OnRemove() if IsValid( self.ProjectedTexture ) then self.ProjectedTexture:Remove() end end
+	local mLight = Material "sprites/light_ignorez"
+	local mBeam = Material "effects/lamp_beam"
+	function ENT:Draw()
+		local pixelvis_handle_t = self.pixelvis_handle_t
+		if !pixelvis_handle_t || GetViewEntity() == LocalPlayer() then return end
+		local vViewNormal = self:GetPos() - EyePos()
+		local flDistance = vViewNormal:Length()
+		vViewNormal:Normalize()
+		local vForward = self:GetForward()
+		local flViewDot = vViewNormal:Dot( vForward * -1 )
+		local c = self:GetLightColor():ToColor()
+		local r, g, b = c.r, c.g, c.b
+		local v = self:GetPos()
+		render.SetMaterial( mBeam )
+		local flTrueDistance = self:GetTrueDistance()
+		local flWidth = flTrueDistance * math.abs( math.sin( ( self:GetVerFOV() + self:GetHorFOV() ) * .5 ) ) * .25
+		local flAlpha = math.Remap( flViewDot, 1, .5, 0, 1 )
+		local flActualAlpha = flAlpha * self:GetBrightness() * .02
+		render.StartBeam( 3 )
+			render.AddBeam( v + vForward * 1, flWidth, 0, Color( r, g, b, 32 * flActualAlpha ) )
+			render.AddBeam( v + vForward * flTrueDistance * .5, flWidth, .5, Color( r, g, b, 96 * flActualAlpha ) )
+			render.AddBeam( v + vForward * flTrueDistance, flWidth, 1, Color( r, g, b, 0 ) )
+		render.EndBeam()
+		render.SetMaterial( mLight )
+		local flVisible = util.PixelVisible( v, 16, pixelvis_handle_t )
+		if !flVisible then return end
+		// Beam flare
+		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
+		local flSize = self:GetBrightness() * self:GetDistance() * .01 * flVisible
+		c.a = flAlpha * 255 * self:GetBrightness() * .05
+		render.DrawSprite( v + vForward, flSize, flSize, c )
+		// Directly exposed flare
+		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
+		local flSize = self:GetBrightness() * self:GetDistance() * .066 * flVisible
+		c.a = flViewDot ^ 25 * 255
+		render.DrawSprite( v + vForward, flSize, flSize, c )
+	end
 else
-	function ENT:Initialize() self:Update() end
+	function ENT:Initialize()
+		self:Update()
+		self:DrawShadow( false )
+	end
 	function ENT:Think()
 		self:Update()
 		self:NextThink( CurTime() + .01 )

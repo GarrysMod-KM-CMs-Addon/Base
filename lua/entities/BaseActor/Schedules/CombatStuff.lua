@@ -161,8 +161,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 				filter = { self, enemy, trueenemy }
 			}
 		end
-		if MyTable.flCombatState > 0 && v:DistToSqr( vEnemy ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) ||
-		util_TraceLine( {
+		if util_TraceLine( {
 			start = v,
 			endpos = vEnemy,
 			mask = MASK_SHOT_HULL,

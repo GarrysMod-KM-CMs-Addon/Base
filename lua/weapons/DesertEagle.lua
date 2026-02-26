@@ -1,4 +1,4 @@
-DEFINE_BASECLASS "BaseWeapon"
+DEFINE_BASECLASS "BaseBulletWeapon"
 
 SWEP.Category = "Pistols"
 SWEP.PrintName = "#DesertEagle"
@@ -24,6 +24,7 @@ SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoil = 5
 SWEP.flAimShoot = 1
+SWEP.sHoldType = "Pistol"
 
 if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 	SWEP.ViewModelFOV = 45
@@ -46,34 +47,21 @@ end
 SWEP.__VIEWMODEL_FULLY_MODELED__ = true
 
 sound.Add {
-	name = "DesertEagle_Shot",
+	name = "DesertEagleShot",
 	channel = CHAN_WEAPON,
+	volume = .5,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^DesertEagleShot.wav"
 }
+SWEP.sSound = "DesertEagleShot"
 
-function SWEP:Initialize() self:SetHoldType "Pistol" end
-
-function SWEP:PrimaryAttack()
-	if !self:CanPrimaryAttack() then return end
-	local owner = self:GetOwner()
-	self:FireBullets {
-		Attacker = owner,
-		Src = owner:GetShootPos(),
-		Dir = self:GetAimVector(),
-		Tracer = 1,
-		Spread = Vector( self.Primary_flSpreadX, self.Primary_flSpreadY ),
-		Damage = self.Primary_flDamage
-	}
-	self:ShootEffects()
-	owner:SetAnimation( PLAYER_ATTACK1 )
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util.Effect( "MuzzleFlash", ed )
-	self:EmitSound "DesertEagle_Shot"
-	self:TakePrimaryAmmo( 1 )
-	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
-end
+sound.Add {
+	name = "DesertEagleShotAuto",
+	channel = CHAN_AUTO,
+	volume = .5,
+	level = 150,
+	pitch = { 90, 110 },
+	sound = "^DesertEagleShot.wav"
+}
+SWEP.sSoundAuto = "DesertEagleShotAuto"

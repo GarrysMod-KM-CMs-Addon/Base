@@ -194,7 +194,7 @@ local math_max = math.max
 local math_min = math.min
 local math_AngleDifference = math.AngleDifference
 local isentity = isentity
-function ENT:CanAttackHelper( VecOrEnt, MyTable )
+function ENT:CanAttackHelper( VecOrEnt, MyTable, bNoStitching )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then return end
 	local pTarget, vTarget
@@ -213,13 +213,12 @@ function ENT:CanAttackHelper( VecOrEnt, MyTable )
 			if ( vPoint - vShoot ):GetNormalized():Dot( vAim ) > flDot then return end
 		end
 	end
-	// Haha, NOT ANYMORE!!!
 	//	if vec then
 	//		local aCurrent, aAim = ( vec - vShoot ):Angle(), vAim:Angle()
 	//		if math_abs( math_AngleDifference( aCurrent.y, aAim.y ) ) > 1 || math_abs( math_AngleDifference( aCurrent.p, aAim.p ) ) > 1 then return end
 	//	end
-	if MyTable.bNoStitching || !IsValid( pTarget ) then return ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > flDot end
-	if ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > math_min( flDot, math.rad( MyTable.flTurnRate ) ) then return true end
+	if bNoStitching || !IsValid( pTarget ) then return ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > flDot end
+	if ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > math_max( math_min( flDot, math.rad( MyTable.flTurnRate ) ), ( IsValid( pWeapon ) && pWeapon.flRecoil ) && math_min( math.cos( pWeapon.flRecoil * 2.5 ) ) || 0 ) then return true end
 end
 
 function ENT:GatherShootingBounds()

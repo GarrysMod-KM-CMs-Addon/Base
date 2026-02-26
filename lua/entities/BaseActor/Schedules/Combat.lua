@@ -357,37 +357,32 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
 			pPath:MoveCursorToClosestPosition( vPos )
 			if !tQueue then
-				//	local vCover = MyTable.vCover
-				//	local flCostStart, flCostEnd, flCursorStart, flCursorEnd
-				//	local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				//	pPath:MoveCursorToClosestPosition( vStart )
-				//	flCursorStart = pPath:GetCursorPosition()
-				//	flCostStart = pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) * .01 + ( pPath:GetLength() - flCursorStart )
-				//	pPath:MoveCursorToClosestPosition( vEnd )
-				//	flCursorEnd = pPath:GetCursorPosition()
-				//	flCostEnd = pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) * .01 + ( pPath:GetLength() - flCursorEnd )
-				//	if flCostStart < flCostEnd then
-				//		flBestCandidate = flCostStart
-				//		pPath:MoveCursorTo( flCursorStart )
-				//	else
-				//		flBestCandidate = flCostEnd
-				//		pPath:MoveCursorTo( flCursorEnd )
-				//	end
-				tQueue = { { tCover, 0, nil } }
+				local flCostStart, flCostEnd, flCursorStart, flCursorEnd
+				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+				pPath:MoveCursorToClosestPosition( vStart )
+				flCursorStart = pPath:GetCursorPosition()
+				local flTrueCostStart = pPath:GetLength() - flCursorStart
+				flCostStart = pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) + flTrueCostStart
+				pPath:MoveCursorToClosestPosition( vEnd )
+				flCursorEnd = pPath:GetCursorPosition()
+				local flTrueCostEnd = pPath:GetLength() - flCursorEnd
+				flCostEnd = pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) + flTrueCostEnd
+				local flNewCost
+				if flCostStart < flCostEnd then flNewCost = flCostStart else flNewCost = flCostEnd end
+				tQueue = { { tCover, flNewCost, math.min( flTrueCostStart, flTrueCostStart ) } }
 			end
 			sched.tAdvanceSearchQueue = tQueue
 			sched.tAdvanceSearchVisited = tVisited
 			sched.flAdvanceSearchBestCandidate = flBestCandidate
 			local iHandled, bAtTheResult, tMyCover = 1, true, tCover
-			local flBestCandidateLarge = flBestCandidate * .5
 			while !table_IsEmpty( tQueue ) do
 				bAtTheResult = nil
 				if iHandled > 12 then break end
 				iHandled = iHandled + 1
 				table.SortByMember( tQueue, 2 )
 				local tSource = table.remove( tQueue )
-				local tCover, flCost = unpack( tSource )
-				if flCost > flBestCandidateLarge then iHandle = iHandled - 1 continue end
+				local tCover, _, flCost = unpack( tSource )
+				if flCost > flBestCandidate then iHandle = iHandled - 1 continue end
 				for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
 					for iIndex in pairs( tIndices ) do
 						local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
@@ -397,24 +392,19 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 						pPath:MoveCursorToClosestPosition( vStart )
 						flCursorStart = pPath:GetCursorPosition()
-						flCostStart = pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) * .01 + ( pPath:GetLength() - flCursorStart )
+						local flTrueCostStart = pPath:GetLength() - flCursorStart
+						flCostStart = pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) + flTrueCostStart
 						pPath:MoveCursorToClosestPosition( vEnd )
 						flCursorEnd = pPath:GetCursorPosition()
-						flCostEnd = pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) * .01 + ( pPath:GetLength() - flCursorEnd )
+						local flTrueCostEnd = pPath:GetLength() - flCursorEnd
+						flCostEnd = pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) + flTrueCostEnd
 						local flNewCost
-						if flCostStart < flCostEnd then
-							flNewCost = flCostStart
-							pPath:MoveCursorTo( flCursorStart )
-						else
-							flNewCost = flCostEnd
-							pPath:MoveCursorTo( flCursorEnd )
-						end
-						table.insert( tQueue, { tNewCover, flNewCost, tSource } )
+						if flCostStart < flCostEnd then flNewCost = flCostStart else flNewCost = flCostEnd end
+						table.insert( tQueue, { tNewCover, flNewCost, math.min( flTrueCostStart, flTrueCostStart ) } )
 					end
 				end
 				if tCover == tMyCover || flCost > flBestCandidate then continue end
 				flBestCandidate = flCost
-				flBestCandidateLarge = flCost * 2
 				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
 				local vDirection = vEnd - vStart
 				local flStep, flStart, flEnd
@@ -764,7 +754,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local tPitchAngles = enemy:GetPos().z > self:GetPos().z && ACTOR_PITCH_ANGLES_UP || ACTOR_PITCH_ANGLES_DOWN
 	local bCheckDistance, flDistSqr = MyTable.flCombatState > 0
 	if bCheckDistance then
-		flDistSqr = vec:DistToSqr( enemy:GetPos() )
+		flDistSqr = math.Remap( vec:Distance( enemy:GetPos() ), 0, 4096, 512, 2048 )
+		flDistSqr = flDistSqr * flDistSqr
 		//	flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
 		//	flDistSqr = flDistSqr * flDistSqr
 	end

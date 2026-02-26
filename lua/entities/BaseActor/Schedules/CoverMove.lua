@@ -8,7 +8,7 @@ function ENT:DLG_TakeCoverRetreat() CEntity_GetTable( self ).DLG_TakeCoverGenera
 
 local util_TraceLine = util.TraceLine
 
-Actor_RegisterSchedule( "TakeCoverMove", function( self, sched )
+Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || self.tEnemies
 	if table.IsEmpty( tEnemies ) then return {} end
 	if !self:CanExpose() then self.vCover = nil self:SetSchedule "TakeCover" return end
@@ -19,10 +19,20 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched )
 	if c != -1 && c <= 0 then self:WeaponReload() end
 	if self.vCover then
 		if sched.bActed == nil then
-			if sched.bTakeCoverAdvance then self:DLG_TakeCoverAdvance()
-			elseif sched.bTakeCoverRetreat then self:DLG_TakeCoverRetreat()
-			elseif sched.bAdvancing then self:DLG_Advancing()
-			elseif sched.bRetreating then self:DLG_Retreating() end
+			local flCombatState = MyTable.flCombatState
+			if flCombatState < 0 then
+				if flCombatState > -.25 then
+					self:DLG_TakeCoverRetreat()
+				else
+					self:DLG_Retreating()
+				end
+			else
+				if flCombatState < .25 then
+					self:DLG_TakeCoverAdvance()
+				else
+					self:DLG_Advancing()
+				end
+			end
 			sched.bActed = true
 		end
 		local vec = self.vCover
