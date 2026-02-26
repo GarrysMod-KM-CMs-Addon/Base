@@ -162,7 +162,7 @@ end )
 hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 	if !ply:Alive() then if IsValid( ply.GAME_pFlashlight ) then ply:EmitSound "FlashlightOff" ply.GAME_pFlashlight:Remove() end return end
 	if IsValid( ply.GAME_pFlashlight ) then ply:EmitSound "FlashlightOff" ply.GAME_pFlashlight:Remove() else
-		local pt = ents.Create "env_projectedtexture"
+		local pt = ents.Create "LightStream"
 		pt:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 )
 		pt:SetAngles( ply:EyeAngles() )
 		pt:SetOwner( ply )
@@ -427,7 +427,7 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 			local R, G, B, A = sValue:match "(%d+)%s+(%d+)%s+(%d+)%s+(%d+)"
 			R, G, B, A = tonumber( R ) || -1, tonumber( G )|| -1, tonumber( B ) || -1, tonumber( A ) || -1
 			SUN_COLOR = Color( R, G, B )
-			SUN_BRIGHTNESS = A * .008
+			SUN_BRIGHTNESS = A * .012
 		end
 	end
 end )

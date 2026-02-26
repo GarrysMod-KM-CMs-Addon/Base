@@ -62,7 +62,11 @@ hook.Add( "Tick", "Director", function()
 			if v then return v( ply, PlyTable ) end
 		end
 		local pFlashlight = PlyTable.GAME_pFlashlight
-		if IsValid( pFlashlight ) then pFlashlight:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 ) end
+		if IsValid( pFlashlight ) then
+			local aAim = ply:EyeAngles() + ply:GetViewPunchAngles()
+			pFlashlight:SetPos( ply:EyePos() )
+			pFlashlight:SetLocalAngles( ply:GetViewPunchAngles() )
+		end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
 		if v then
 			v = v.Think

@@ -97,12 +97,12 @@ DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self
 end }
 local math_max = math.max
 local pairs = pairs
-function Director_Music_UpdateInternal( self, ... )
+function Director_Music_UpdateInternal( self, flInterval, ... )
 	local tNewHandles = {}
 	local flVolume = self.m_flVolume
 	for Index, tData in pairs( self.tHandles ) do
 		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
-		if tData[ 4 ] <= engine.TickInterval() then tData[ 1 ]:Stop() continue end
+		if tData[ 4 ] <= flInterval then tData[ 1 ]:Stop() continue end
 		tData[ 4 ] = f
 		tData[ 5 ] = SysTime()
 		tNewHandles[ Index ] = tData
@@ -158,7 +158,8 @@ __HUD_SHOULD_NOT_DRAW__ = {
 	CHudHealth = true,
 	CHudHistoryResource = true
 }
-// So, this is how you get perfect looping in Lua.
+
+// So, this is how you get nigh perfect looping in Lua.
 // There are 26 HUD elements which this is called for per frame.
 // Meaning 1560 calls per second if you have 60 FPS.
 // But before you raise your pitchforks and start throwing
@@ -176,10 +177,10 @@ __HUD_SHOULD_NOT_DRAW__ = {
 // Bottom line: Do NOT "optimize" or "refactor" this. This ISN'T spaghetti code,
 // nor is it hacky. I'm not a casual Garry's Mod addon maker, I'm a professional.
 // I know what I'm doing.
-hook.Add( "HUDShouldDraw", "Director", function( sName )
-	local HOOK_RETURN = __HUD_SHOULD_NOT_DRAW__[ sName ] == nil
+
+function DIRECTOR_CLIENT_TICK( flInterval )
 	local ply = LocalPlayer()
-	if !IsValid( ply ) then return HOLD_FIRE end // NO!
+	if !IsValid( ply ) then return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
 			// You can uncomment this for testing
@@ -231,14 +232,14 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				DIRECTOR_TRANSITION.m_bIntroOfATrack = true
 				DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 				net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-				return HOOK_RETURN
+				return
 			end
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
 			if RealTime() <= DIRECTOR_MUSIC_VO_TIME then
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer )
+						Director_Music_UpdateInternal( pContainer, flInterval )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
 						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
@@ -252,7 +253,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer )
+						Director_Music_UpdateInternal( pContainer, flInterval )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
 						else pContainer.m_flVolume = 0 end
@@ -269,13 +270,13 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer )
+						Director_Music_UpdateInternal( pContainer, flInterval )
 						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 					end
 				end
 			end
 		end
-		return HOOK_RETURN
+		return
 	elseif DIRECTOR_TRANSITION then
 		local b
 		if DIRECTOR_TRANSITION.m_bToCombat then
@@ -290,7 +291,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 			end
 			if flInitialVolumeA && flInitialVolumeB then break end
 		end
-		local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_TRANSITION, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
+		local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_TRANSITION, flInterval, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
 		DIRECTOR_MUSIC_LAST_THREAT = ELayerTo
 		flVolumeA = flVolumeA || 0
 		flVolumeB = flVolumeB || 1
@@ -304,10 +305,10 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				else
 					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 				end
-				Director_Music_UpdateInternal( pContainer )
+				Director_Music_UpdateInternal( pContainer, flInterval )
 			end
 		end
-		return HOOK_RETURN
+		return
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
 		local t = pSource.m_pTable
@@ -324,7 +325,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 			DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
 			net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-			return HOOK_RETURN
+			return
 		end
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
@@ -332,7 +333,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				if ELayer == DIRECTOR_THREAT then
 					pContainer.m_flVolume = 1
 				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
-				Director_Music_UpdateInternal( pContainer )
+				Director_Music_UpdateInternal( pContainer, flInterval )
 			end
 		end
 		DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
@@ -360,7 +361,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				//		if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
 				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, FrameTime() )
 				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
-				Director_Music_UpdateInternal( pContainer )
+				Director_Music_UpdateInternal( pContainer, flInterval )
 			end
 		end
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
@@ -371,7 +372,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, FrameTime() )
 			end
 		end
-		return HOOK_RETURN
+		return
 	end
 	if DIRECTOR_MUSIC_LAST_THREAT < DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
@@ -381,7 +382,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 		DIRECTOR_TRANSITION.m_bToCombat = true
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
-		return HOOK_RETURN
+		return
 	elseif DIRECTOR_MUSIC_LAST_THREAT >= DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
 		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT )
@@ -389,7 +390,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
-		return HOOK_RETURN
+		return
 	end
 	// Do NOT mistake this for the fade transition!
 	// This is completely different, and used to fade between
@@ -397,16 +398,73 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		local pContainer = DIRECTOR_MUSIC[ ELayer ]
 		if pContainer then
-			Director_Music_UpdateInternal( pContainer )
+			Director_Music_UpdateInternal( pContainer , flInterval )
 			if ELayer == DIRECTOR_THREAT then
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * RealFrameTime() )
 			else
 				if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then pContainer.m_flVolume = 0 end
-				Director_Music_UpdateInternal( pContainer )
+				Director_Music_UpdateInternal( pContainer, flInterval )
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, RealFrameTime() * .1 )
 				if pContainer.m_flVolume <= 0 && CurTime() > ( pContainer.m_flEndTime || 0 ) then DIRECTOR_MUSIC[ ELayer ] = nil end
 			end
 		end
 	end
-	return HOOK_RETURN
+end
+
+local flLastHUDShouldDrawCall, flHUDShouldDrawTime = SysTime(), 0
+hook.Add( "HUDShouldDraw", "Director", function( sName )
+	local t = SysTime() - flLastHUDShouldDrawCall
+	flHUDShouldDrawTime = math.Approach( flHUDShouldDrawTime, t, .1 )
+	flLastHUDShouldDrawCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flHUDShouldDrawTime )
+	return __HUD_SHOULD_NOT_DRAW__[ sName ] == nil
+end )
+local flLastHUDPaintCall, flHUDPaintTime = SysTime(), 0
+hook.Add( "HUDPaint", "Director", function()
+	local t = SysTime() - flLastHUDPaintCall
+	flHUDPaintTime = math.Approach( flHUDPaintTime, t, .1 )
+	flLastHUDPaintCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flHUDPaintTime )
+end )
+local flLastPreDrawHUDCall, flPreDrawHUDTime = SysTime(), 0
+hook.Add( "PreDrawHUD", "Director", function()
+	local t = SysTime() - flLastPreDrawHUDCall
+	flPreDrawHUDTime = math.Approach( flPreDrawHUDTime, t, .1 )
+	flLastPreDrawHUDCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flPreDrawHUDTime )
+end )
+local flLastPostDrawHUDCall, flPostDrawHUDTime = SysTime(), 0
+hook.Add( "PostDrawHUD", "Director", function()
+	local t = SysTime() - flLastPostDrawHUDCall
+	flPostDrawHUDTime = math.Approach( flPostDrawHUDTime, t, .1 )
+	flLastPostDrawHUDCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flPostDrawHUDTime )
+end )
+local flLastDrawOverlayCall, flDrawOverlayTime = SysTime(), 0
+hook.Add( "DrawOverlay", "Director", function()
+	local t = SysTime() - flLastDrawOverlayCall
+	flDrawOverlayTime = math.Approach( flDrawOverlayTime, t, .1 )
+	flLastDrawOverlayCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flDrawOverlayTime )
+end )
+local flLastPreDrawEffectsCall, flPreDrawEffectsTime = SysTime(), 0
+hook.Add( "PreDrawEffects", "Director", function()
+	local t = SysTime() - flLastPreDrawEffectsCall
+	flPreDrawEffectsTime = math.Approach( flPreDrawEffectsTime, t, .1 )
+	flLastPreDrawEffectsCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flPreDrawEffectsTime )
+end )
+local flLastPostDrawEffectsCall, flPostDrawEffectsTime = SysTime(), 0
+hook.Add( "PostDrawEffects", "Director", function()
+	local t = SysTime() - flLastPostDrawEffectsCall
+	flPostDrawEffectsTime = math.Approach( flPostDrawEffectsTime, t, .1 )
+	flLastPostDrawEffectsCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flPostDrawEffectsTime )
+end )
+local flLastRenderScreenspaceEffectsCall, flRenderScreenspaceEffectsTime = SysTime(), 0
+hook.Add( "RenderScreenspaceEffects", "Director", function()
+	local t = SysTime() - flLastRenderScreenspaceEffectsCall
+	flRenderScreenspaceEffectsTime = math.Approach( flRenderScreenspaceEffectsTime, t, .1 )
+	flLastRenderScreenspaceEffectsCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flRenderScreenspaceEffectsTime )
 end )

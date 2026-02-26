@@ -71,7 +71,9 @@ hook.Add( "PopulateToolMenu", "CascadeShadowMappingClient", function()
 		// 3072 as minimum is because shadows below that resolution are way too ass.
 		// EDIT: With clever usage of SetShadowFilter, I lowered
 		// the minimum bound to 1024, because the shadows, even at that, now look good!
-		local p = pPanel:NumSlider( "#ShadowDepthResolution", "r_flashlightdepthres", 1024, 65535, 0 )
+		// EDIT2: 2400 guarantees that shadows leak so subtly they look like
+		// noise or materials, if any. We're not going lower than that!
+		local p = pPanel:NumSlider( "#ShadowDepthResolution", "r_flashlightdepthres", 2400, 65535, 0 )
 		pPanel:ControlHelp "#ShadowDepthResolutionHelp"
 		p.OnValueChanged = function( self, flValue ) RunConsoleCommand( "r_flashlightdepthres", flValue ) end
 	end )
@@ -205,14 +207,15 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawMaterialOverlay( "effects/water_warp01", MyTable.GP_flWaterBlur * .01 )
 		flBloom = math_Clamp( flBloom + MyTable.GP_flWaterBlur * .2, 0, 1 )
 	end
+	local f = self:GetNW2Float( "GAME_flInjuryVisionMultiplier", 1 )
 	if flDeath != 0 then
-		DrawBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 8 ), 0, 8 ) )
-		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, .1, .05 ), .1, .05 ), math_Clamp( math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 0, 1 ), 0, 1 ), 0 )
+		DrawBlur( math_Clamp( math_Remap( flDeath, 1, 0, 0, 8 ), 0, 8 ) * f )
+		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, 0, .1, .05 ), .1, .05 ) / f, math_Clamp( math_Remap( flDeath, 1, 0, 0, 1 ), 0, 1 ) * f, 0 )
 	end
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
-		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) )
-		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ), math_Clamp( 1 - f, 0, 1 ), 0 )
+		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f )
+		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f, math_Clamp( 1 - f, 0, 1 ) * f, 0 )
 	end
 	DrawMotionBlur( .75, 1, 0 )
 	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
