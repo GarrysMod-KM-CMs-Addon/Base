@@ -184,12 +184,20 @@ local util_TraceLine = util.TraceLine
 // This is very crude and might break things, but whatever, it's worth enough
 MODEL_SIZE_GENERAL_MULTIPLIER = 1.228
 
+local cCorrectScale = CreateConVar(
+	"bCorrectScale",
+	1,
+	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
+	"If 1, everything is scaled to give a more realistic scale. The multiplier is MODEL_SIZE_GENERAL_MULTIPLIER (as of registering the convar, it is" .. tostring( MODEL_SIZE_GENERAL_MULTIPLIER ) .. ", but may have changed).",
+	0, 1
+)
+
 hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
 	if IsValid( ent ) then
 		timer.Simple( .01, function()
 			if !IsValid( ent ) then return end
 			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
-			if ent:GetClass() == "prop_door_rotating" then return end
+			if !cCorrectScale:GetBool() || ent:GetClass() == "prop_door_rotating" then return end
 			local f = ent:GetModelScale()
 			if !f then return end
 			ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
