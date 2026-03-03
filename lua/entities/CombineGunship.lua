@@ -86,8 +86,7 @@ function ENT:FireWeapon()
 	local ed = EffectData()
 	ed:SetEntity( self )
 	ed:SetAttachment( l )
-	ed:SetFlags( 7 )
-	util.Effect( "MuzzleFlash", ed )
+	util.Effect( "GunshipMuzzleFlash", ed )
 	self.flNextShot = CurTime() + self.Primary_flDelay
 end
 
