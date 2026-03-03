@@ -207,11 +207,6 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawMaterialOverlay( "effects/water_warp01", MyTable.GP_flWaterBlur * .01 )
 		flBloom = math_Clamp( flBloom + MyTable.GP_flWaterBlur * .2, 0, 1 )
 	end
-	local f = self:GetNW2Float( "GAME_flInjuryVisionMultiplier", 1 )
-	if flDeath != 0 then
-		DrawBlur( math_Clamp( math_Remap( flDeath, 1, 0, 0, 8 ), 0, 8 ) * f )
-		DrawMotionBlur( math_Clamp( math_Remap( flDeath, 1, 0, .1, .05 ), .1, .05 ) / f, math_Clamp( math_Remap( flDeath, 1, 0, 0, 1 ), 0, 1 ) * f, 0 )
-	end
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f )
@@ -442,9 +437,36 @@ surface.CreateFont( "ReinforcementsBar", {
 	outline = false
 } )
 local flProgress = 0
+local MARKER_SIZE = 22.5
+local MARKER_SIZETH = 1 / MARKER_SIZE * 2
 hook.Add( "HUDPaint", "Graphics", function()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
+	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
+	local vCenter = Vector( flCenterX, flCenterY, 0 )
+	local i = 1
+	while true do
+		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. tostring( i ) )
+		if v == vector_origin then break end
+		i = i + 1
+		//	local ToScreen = v:ToScreen()
+		//	local x, y = ToScreen.x, ToScreen.y
+		//	local f = math.deg( math.atan2(
+		//		flCenterY - y,
+		//		x - flCenterX
+		//	) )
+		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
+		for i = 0, 2, .5 do
+			local vScale = Vector( 192 + i, 192 + i, 0 )
+			local flSegmentDistance = 360 / ( 2 * math.pi * math.max( vScale.x, vScale.y ) / 2 ) * .25
+			surface.SetDrawColor( 255, 0, 0, 128 )
+			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
+				local s = MARKER_SIZE - math.abs( a - f )
+				s = ( s * MARKER_SIZETH ) ^ 4
+				surface.DrawLine( vCenter.x + math.cos( math.rad( a ) ) * ( vScale.x + s ), vCenter.y - math.sin( math.rad( a ) ) * ( vScale.y + s ), vCenter.x + math.cos( math.rad( a + flSegmentDistance ) ) * vScale.x, vCenter.y - math.sin( math.rad( a + flSegmentDistance ) ) * vScale.y )
+			end
+		end
+	end
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
 	if f <= 0 then flProgress = 0 return end
 	flProgress = Lerp( math.min( 1, RealFrameTime() ), flProgress, f )

@@ -181,9 +181,24 @@ end )
 
 local util_TraceLine = util.TraceLine
 
+// This is very crude and might break things, but whatever, it's worth enough
+MODEL_SIZE_GENERAL_MULTIPLIER = 1.228
+
 hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
-	if IsValid( ent ) && ent:IsWeapon() then
-		timer.Simple( .01, function() if IsValid( ent ) then ent.GAME_bWeaponPickedUpOnce = true end end )
+	if IsValid( ent ) then
+		timer.Simple( .01, function()
+			if !IsValid( ent ) then return end
+			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
+			if ent:GetClass() == "prop_door_rotating" then return end
+			local f = ent:GetModelScale()
+			if !f then return end
+			ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
+			local vMins, vMaxs = ent:GetCollisionBounds()
+			vMins = vMins * MODEL_SIZE_GENERAL_MULTIPLIER
+			vMaxs = vMaxs * MODEL_SIZE_GENERAL_MULTIPLIER
+			ent:SetCollisionBounds( vMins, vMaxs )
+			ent:Activate()
+		end )
 	end
 end )
 
@@ -265,8 +280,8 @@ hook.Add( "PlayerCanHearPlayersVoice", "GameImprovements", function( pListener, 
 end )
 
 hook.Add( "PlayerCanSeePlayersChat", "GameImprovements", function( _/*sText*/, _/*bTeamOnly*/, pListener, pSpeaker )
-	if !IsValid( pSpeaker ) then return end
-	return pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) > ( pListener.GAME_flSpeakDistanceSqr || 13249600/*3640*/ )
+	if !IsValid( pSpeaker ) then return true end
+	return pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) <= ( pListener.GAME_flSpeakDistanceSqr || 13249600/*3640*/ )
 end )
 
 hook.Add( "GetFallDamage", "GameImprovements", function( ply, flSpeed )
@@ -713,11 +728,12 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			ply.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
 			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
+			local bPredictedCantShoot
 			if CurTime() <= ( ply.GAME_flPeekUpMinimumTime || 0 ) then
-				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
+				bPredictedCantShoot = true
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
-			else ply:SetNW2Bool "CTRL_bPredictedCantShoot" end
+			end
 			local d = ply.GAME_vPeekTarget - ply:GetPos()
 			d[ 3 ] = 0
 			d:Normalize()
@@ -777,7 +793,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				cmd:RemoveKey( IN_ATTACK2 )
 				cmd:SetForwardMove( ply:GetRunSpeed() * d:Dot( ply:GetForward() ) )
 				cmd:SetSideMove( ply:GetRunSpeed() * d:Dot( ply:GetRight() ) )
-			else ply:SetNW2Bool "CTRL_bPredictedCantShoot" end
+			else ply:SetNW2Bool( "CTRL_bPredictedCantShoot", bPredictedCantShoot ) end
 		else//if s == "FROM" then
 			ply.GAME_flPeekTime = nil
 			ply:SetNW2Bool "CTRL_bPredictedCantShoot"

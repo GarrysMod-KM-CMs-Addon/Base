@@ -21,6 +21,8 @@ TRAVERSES_AIR = 4
 
 UNIVERSAL_FOV = 80
 
+physenv.SetGravity( Vector( 0, 0, -514.83 ) )
+
 local cDisableLevelOfDetail = CreateConVar(
 	"bDisableLevelOfDetail",
 	0,
@@ -92,9 +94,7 @@ function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, fl
 	local flDistance = vDelta:Length()
 	if flDistance == 0 then return Vector() end
 	local vDir = vDelta:GetNormalized()
-	local flMaxSpeedToStop = ( 2 * flAcceleration * flDistance ) ^ .5
-	flSpeed = math_min( vCurrent:Length() + flAcceleration * ( flFrameTime || FrameTime() ), flMaxSpeedToStop )
-	return vDir * flSpeed - vCurrent
+	return vCurrent + vDir * math.Approach( vCurrent:Length(), math_min( flSpeed, ( flAcceleration * flDistance ) ^ .5 ), flAcceleration * ( flFrameTime || FrameTime() ) )
 end
 
 function CalculateAcceleration( vVelocity, vTarget, flAcceleration, flFrameTime )

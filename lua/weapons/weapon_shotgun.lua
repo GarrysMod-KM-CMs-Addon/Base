@@ -44,7 +44,7 @@ SWEP.bPumped = true
 SWEP.bWantsToPump = false
 SWEP.flPumpTime = 0
 
-SWEP.flViewModelX = -6.5
+SWEP.flViewModelX = -4.5
 SWEP.flViewModelY = -6.5
 SWEP.flViewModelZ = 2.5
 

@@ -209,18 +209,25 @@ local IsValid = IsValid
 
 function ENT:DoPhysicsStuff( phys, MyTable ) end
 
+// Does the physics object take the lead, or the locomotion?
+// Do note that if the physics object takes the lead, the
+// locomotion will not work, but if the locomotion takes
+// the lead, the physics will, albeit only somewhat, work.
 ENT.bPhysics = false
+local sv_gravity = GetConVar "sv_gravity"
 function ENT:Think()
 	local MyTable = CEntity_GetTable( self )
 	local phys = CEntity_GetPhysicsObject( self )
 	if IsValid( phys ) then
 		MyTable.DoPhysicsStuff( self, phys, MyTable )
 		if MyTable.bPhysics then
+			MyTable.loco:SetGravity( 0 )
 			phys:Wake()
 			local loco = MyTable.loco
 			loco:SetStepHeight( 0 )
 			loco:SetJumpHeight( 0 )
 		else
+			MyTable.loco:SetGravity( sv_gravity:GetFloat() )
 			if IsValid( CEntity_GetParent( self ) ) then CEntity_PhysicsDestroy( self ) else
 				if CEntity_WaterLevel( self ) == 0 then
 					phys:SetPos( CEntity_GetPos( self ) )
@@ -230,7 +237,7 @@ function ENT:Think()
 				end
 			end
 		end
-	end
+	else MyTable.loco:SetGravity( sv_gravity:GetFloat() ) end
 	if IsValid( MyTable.GAME_pVehicle ) then
 		self:SetActiveWeapon( NULL )
 		if self:GetCollisionGroup() != COLLISION_GROUP_WORLD then self:SetCollisionGroup( COLLISION_GROUP_WORLD ) end
@@ -279,7 +286,7 @@ function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage
 	MyTable.flCombatStateSuppressionShort = MyTable.flCombatStateSuppressionShort + flDamage
-	MyTable.flCombatStateSuppressionLong = MyTable.flCombatStateSuppressionLong + flDamage
+	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage
 end
 
 local ProtectedCall = ProtectedCall
@@ -349,7 +356,7 @@ function ENT:RunBehaviour( MyTable )
 			local f = CEntity_Health( self )
 			MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
 			MyTable.flCombatStateSuppressionShort = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionShort, 0, f * MyTable.flCombatStateSuppressionShortMax ), 0, f * MyTable.flCombatStateSuppressionShortRec * FrameTime() )
-			MyTable.flCombatStateSuppressionLong = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionLong, 0, f * MyTable.flCombatStateSuppressionLongMax ), 0, f * MyTable.flCombatStateSuppressionLongRec * FrameTime() )
+			MyTable.flCombatStateSuppression = math_Approach( math_Clamp( MyTable.flCombatStateSuppression, 0, f * MyTable.flCombatStateSuppressionMax ), 0, f * MyTable.flCombatStateSuppressionRec * FrameTime() )
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )
 			MyTable.CalcCombatState( self, MyTable )

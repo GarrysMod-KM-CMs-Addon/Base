@@ -97,6 +97,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	MyTable.bSuppressing = bCanShoot
 	local vPoint = sched.vPoint
 	if vPoint then
+		sched.bStanding = nil
 		sched.flNextMoveTime = CurTime() + math.Rand( 4, 6 )
 		MyTable.vActualTarget = vPoint
 		sched.pIterator = nil
@@ -114,14 +115,15 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 		if !pIterator then
 			local vEnemy = pEnemy:GetPos()
 			pIterator = MyTable.SearchNodes( self, nil, function( vNew, flCurrentDistance, flAdditionalDistance )
-				return flCurrentDistance + flAdditionalDistance + vNew:Distance( vEnemy )
+				return flCurrentDistance + flAdditionalDistance * .5 + vNew:Distance( vEnemy )
 			end )
 			sched.pIterator = pIterator
 		end
 		local flDesiredCursor = sched.flDesiredCursor
 		if !flDesiredCursor then
 			pPath:MoveCursorToClosestPosition( self:GetPos() )
-			flDesiredCursor = math.Clamp( pPath:GetCursorPosition() + self:BoundingRadius() * 14 * MyTable.flCombatState, 0, pPath:GetLength() * .5 )
+			local flBoundingRadius = self:BoundingRadius()
+			flDesiredCursor = math.Clamp( pPath:GetCursorPosition() + flBoundingRadius * math.Remap( pPath:GetLength() - pPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState, 0, pPath:GetLength() - flBoundingRadius * 16 )
 			sched.flDesiredCursor = flDesiredCursor
 		end
 		if LevelOfDetail( sched, "flNextSearch" ) then
@@ -152,6 +154,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 						if b then
 							sched.flDesiredCursor = nil
 							sched.vPoint = vPoint
+							self:DLG_Advancing()
 							return
 						end
 					end
@@ -186,6 +189,10 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	if CurTime() > ( sched.flNextCrouchTime || 0 ) then
 		sched.flNextCrouchTime = CurTime() + math.Rand( 1, 8 )
 		sched.flCrouch = math.Rand( 0, 1 )
+	end
+	if !sched.bStanding then
+		self:DLG_FiringAtAnExposedTarget( pEnemy )
+		sched.bStanding = true
 	end
 	MyTable.Stand( self, sched.flCrouch )
 end )

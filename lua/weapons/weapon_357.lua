@@ -23,7 +23,6 @@ SWEP.Secondary.Ammo = ""
 SWEP.Spawnable = true
 SWEP.Slot = 1
 SWEP.vViewModelAim = Vector( 0, -4.62, .67 )
-SWEP.ViewModelFOV = 54
 SWEP.Crosshair = "Revolver"
 SWEP.bPistolSprint = true
 SWEP.flRecoil = 10

@@ -137,6 +137,6 @@ function SWEP:Reload()
 	self:DefaultReload( self.m_bSilenced && ACT_VM_RELOAD_SILENCED || ACT_VM_RELOAD )
 end
 
-function SWEP:GetMuzzleFlash() return self.m_bSilenced && "MuzzleFlashSilenced" || "MuzzleFlash" end
+function SWEP:GetMuzzleFlash() return self.m_bSilenced && "MuzzleNewSilenced" || "MuzzleNew" end
 
 list.Add( "NPCUsableWeapons", { class = "M16A4", title = "#M16A4", category = SWEP.Category } )

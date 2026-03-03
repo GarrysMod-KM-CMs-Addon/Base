@@ -37,21 +37,23 @@ local math_Rand = math.Rand
 function SWEP:PrimaryAttack()
 	local MyTable = CEntity_GetTable( self )
 	if !MyTable.CanPrimaryAttack( self, MyTable ) then return end
-	local pOwner = CEntity_GetOwner( self )
-	local pProjectile = ents_Create( MyTable.Primary_sProjectile )
-	if IsValid( pOwner ) then
-		pProjectile:SetOwner( pOwner )
-		pProjectile:SetPos( pOwner:GetShootPos() )
-		pOwner:SetAnimation( PLAYER_ATTACK1 )
-	else
-		pProjectile:SetOwner( self )
-		pProjectile:SetPos( self:GetPos() + self:OBBCenter() )
+	if SERVER then
+		local pOwner = CEntity_GetOwner( self )
+		local pProjectile = ents_Create( MyTable.Primary_sProjectile )
+		if IsValid( pOwner ) then
+			pProjectile:SetOwner( pOwner )
+			pProjectile:SetPos( pOwner:GetShootPos() )
+			pOwner:SetAnimation( PLAYER_ATTACK1 )
+		else
+			pProjectile:SetOwner( self )
+			pProjectile:SetPos( self:GetPos() + self:OBBCenter() )
+		end
+		local flX = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
+		local flY = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
+		local aAim = MyTable.GetAimVector( self, MyTable ):Angle()
+		pProjectile:SetAngles( ( aAim:Forward() + flX * MyTable.Primary_flSpreadX * aAim:Right() + flY * MyTable.Primary_flSpreadY * aAim:Up() ):Angle() )
+		pProjectile:Spawn()
 	end
-	local flX = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
-	local flY = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
-	local aAim = MyTable.GetAimVector( self, MyTable ):Angle()
-	pProjectile:SetAngles( ( aAim:Forward() + flX * MyTable.Primary_flSpreadX * aAim:Right() + flY * MyTable.Primary_flSpreadY * aAim:Up() ):Angle() )
-	pProjectile:Spawn()
 	MyTable.ShootEffects( self, MyTable )
 	local s = MyTable.sSound
 	if s then CEntity_EmitSound( self, s ) end

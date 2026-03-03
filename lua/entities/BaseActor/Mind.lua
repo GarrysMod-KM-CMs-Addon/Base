@@ -13,9 +13,7 @@ function ENT:SelectSchedule( MyTable )
 	end
 end
 
-local sv_gravity = GetConVar "sv_gravity"
 function ENT:Behaviour( MyTable )
 	MyTable.RunMind( self, MyTable )
 	MyTable.AnimationSystemTick( self, MyTable )
-	MyTable.loco:SetGravity( sv_gravity:GetFloat() )
 end

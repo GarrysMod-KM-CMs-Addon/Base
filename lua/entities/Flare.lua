@@ -84,7 +84,7 @@ local AcceptInput = {
 	launch = function( self, Value )
 		local p = self:GetPhysicsObject()
 		if IsValid( p ) then p:AddVelocity( self:GetForward() * ( tonumber( Value ) || math.Rand( 3072, 4096 ) ) )
-		else ErrorNoHaltWithStack "Flare with No Physics Object! What The Hell?!" end
+		else ErrorNoHaltWithStack "Flare with no physics object! What the Hell?!" end
 	end
 }
 function ENT:AcceptInput( Key, _, _, Value )

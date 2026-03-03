@@ -18,8 +18,13 @@ SWEP.Secondary.Ammo = ""
 SWEP.Spawnable = true
 SWEP.Slot = 1
 SWEP.HANDLE = { FlareGun = true }
-SWEP.vViewModelAim = Vector( -12, -5.51, 3.145 )
+SWEP.flViewModelX = 2
+SWEP.flViewModelY = -2
+SWEP.flViewModelZ = .5
+SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -5.51 - SWEP.flViewModelY, 3.145 - SWEP.flViewModelZ )
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
+SWEP.Crosshair = "Pistol"
+SWEP.bPistolSprint = true
 
 sound.Add {
 	name = "FlareShot",
@@ -42,7 +47,11 @@ function SWEP:PrimaryAttack()
 		f:SetOwner( owner )
 		f:Spawn()
 		f:Fire "Start"
-		f:Fire "Launch"
+		timer.Simple( .01, function()
+			if IsValid( f ) then
+				f:Fire "Launch"
+			end
+		end )
 	end
 	self:ShootEffects()
 	owner:SetAnimation( PLAYER_ATTACK1 )

@@ -1,4 +1,5 @@
 include "Air/Combat/Engage.lua"
+include "Air/Combat/MoveToLoS.lua"
 
 Actor_RegisterSchedule( "VehicleBase", function( self, sched, MyTable )
 	local pEnemy = MyTable.Enemy

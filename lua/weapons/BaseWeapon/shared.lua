@@ -39,7 +39,7 @@ function SWEP:PlayReloadSounds() end
 
 function SWEP:GetReloadActivity() return ACT_VM_RELOAD end
 
-function SWEP:GetMuzzleFlash() return "MuzzleFlash" end
+function SWEP:GetMuzzleFlash() return "MuzzleNew" end
 local tMuzzleEvents = { [ 20 ] = true, [ 21 ] = true, [ 22 ] = true, [ 5001 ] = true, [ 6001 ] = true }
 function SWEP:FireAnimationEvent( pos, ang, EEvent )
 	if !tMuzzleEvents[ EEvent ] then return end
@@ -180,7 +180,8 @@ SWEP.flRecoilGrowMax = 1
 DEFINE_BASECLASS "weapon_base"
 local util_SharedRandom = util.SharedRandom
 function SWEP:CalcRecoil( pOwner )
-	local flRecoil = self.flRecoil * math.Clamp( 1 + pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.5 ), 1, 1.5 )
+	local flRecoil = self.flRecoil
+	if pOwner.GetRunSpeed then flRecoil = flRecoil * math.Clamp( 1 + pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.5 ), 1, 1.5 ) end
 	local f = pOwner.KeyDown
 	if f && !f( pOwner, IN_ZOOM ) then flRecoil = flRecoil * 1.5 end
 	if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.5 end
@@ -191,10 +192,11 @@ end
 // but with Buu's Weapon Base 2, it somehow... vanished??? I restored
 // it, and now this is the same violent recoil behaviour again,
 // as seen in Splinter Cell: Blacklist, which doesn't stop and go
-// all the way back down like recoil in simpler games like CS:GO.
+// all the way back down like recoil in simpler games such as CS:GO.
 // In other words, I finally have the nigh perfect recoil!
 function SWEP:DoRecoil()
 	local pOwner = self:GetOwner()
+	if !IsValid( pOwner ) then return end
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
 	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
 	local aAngle = Angle( -util_SharedRandom( "BaseWeapon_ViewPunch", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeapon_ViewPunch", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 )
@@ -215,7 +217,7 @@ function SWEP:ShootEffects()
 	self:DoRecoil()
 	local pOwner = self:GetOwner()
 	if !IsValid( pOwner ) then return end
-	if !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) ) || !self.flAimShoot then self:SendWeaponAnim( ACT_VM_PRIMARYATTACK ) end
+	if !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then self:SendWeaponAnim( ACT_VM_PRIMARYATTACK ) end
 	pOwner:SetAnimation( PLAYER_ATTACK1 )
 end
 
@@ -248,7 +250,7 @@ if CLIENT then
 	local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
 	local flLandTime, flJumpTime = 0, 0
 	SWEP.flSwayStabilizer = .415
-	SWEP.ViewModelFOV = 62
+	SWEP.ViewModelFOV = 45
 	SWEP.flViewModelX = 0
 	SWEP.flViewModelY = 0
 	SWEP.flViewModelZ = 0

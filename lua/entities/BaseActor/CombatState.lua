@@ -7,16 +7,10 @@ ENT.flCombatStateSmall = 1
 // If an ally this close to us is falling back, we will also do
 ENT.flAllyRetreatShareDistance = 4096
 
-// Short-term suppression does not get shared between allies
-ENT.flCombatStateSuppressionShort = 0
-ENT.flCombatStateSuppressionShortMax = 16
-ENT.flCombatStateSuppressionShortRec = 4
-ENT.flCombatStateSuppressionShortEffect = 8
-
-ENT.flCombatStateSuppressionLong = 0
-ENT.flCombatStateSuppressionLongMax = 512
-ENT.flCombatStateSuppressionLongRec = 2
-ENT.flCombatStateSuppressionLongEffect = 256
+ENT.flCombatStateSuppression = 0
+ENT.flCombatStateSuppressionMax = 512
+ENT.flCombatStateSuppressionRec = 2
+ENT.flCombatStateSuppressionEffect = 256
 
 local math = math
 local math_Clamp = math.Clamp
@@ -36,7 +30,7 @@ function ENT:CalcCombatState( MyTable )
 	local flDistSqr = MyTable.flAllyRetreatShareDistance
 	flDistSqr = flDistSqr * flDistSqr
 	local vMe = CEntity_GetPos( self )
-	local flSupLong, flSupShort = MyTable.flCombatStateSuppressionLong, MyTable.flCombatStateSuppressionShort
+	local flSupLong = MyTable.flCombatStateSuppression
 	// If some of us are already retreating, join them
 	local t, i = MyTable.GetAlliesByClass( self ), 1
 	if t then
@@ -44,19 +38,13 @@ function ENT:CalcCombatState( MyTable )
 			if !IsValid( ally ) then continue end
 			if CVector_DistToSqr( vMe, CEntity_GetPos( ally ) ) > flDistSqr then continue end
 			local tAlly = CEntity_GetTable( ally )
-			local n = tAlly.flCombatStateSuppressionLong || 0
+			local n = tAlly.flCombatStateSuppression || 0
 			if n > flSupLong then flSupLong = n end
 			i = i + ( ally.GAME_flThreat || 1 )
-			// local n = tAlly.flCombatStateSuppressionShort || 0
-			// if n > flSupShort then flSupShort = n end
 		end
 	end
 	h = h * i
-	MyTable.flCombatStateSuppressionLong = flSupLong
-	// MyTable.flCombatStateSuppressionShort = flSupShort
-	local f = math_Clamp( math_Remap( flSupLong, 0, h * MyTable.flCombatStateSuppressionLongEffect, 1, -1 ), -1, 1 )
-	local fs = math_Clamp( math_Remap( flSupShort, 0, h * MyTable.flCombatStateSuppressionShortEffect, 1, -1 ), -1, 1 )
-	MyTable.flCombatState = f
-	MyTable.flCombatStateSmall = fs
+	MyTable.flCombatStateSuppression = flSupLong
+	MyTable.flCombatState = math_Clamp( math_Remap( flSupLong, 0, h * MyTable.flCombatStateSuppressionEffect, 1, -1 ), -1, 1 )
 	return f, fs
 end

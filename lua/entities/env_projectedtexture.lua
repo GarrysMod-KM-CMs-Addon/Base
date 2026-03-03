@@ -56,7 +56,7 @@ if CLIENT then
 		pt:SetNearZ( math_max( tonumber( self:GetMinDistance() ), 10 ) )
 		pt:SetFarZ( self:GetDistance() )
 		pt:SetColor( self:GetLightColor():ToColor() )
-		pt:SetBrightness( self:GetBrightness() * 4 )
+		pt:SetBrightness( self:GetBrightness() )
 		pt:SetQuadraticAttenuation( self:GetDistance() ^ 2 / self:GetTrueDistance() ^ 2 )
 		pt:SetHorizontalFOV( self:GetHorFOV() )
 		pt:SetVerticalFOV( self:GetVerFOV() )

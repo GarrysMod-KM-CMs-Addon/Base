@@ -64,7 +64,7 @@ hook.Add( "Tick", "Director", function()
 		local pFlashlight = PlyTable.GAME_pFlashlight
 		if IsValid( pFlashlight ) then
 			local aAim = ply:EyeAngles() + ply:GetViewPunchAngles()
-			pFlashlight:SetPos( ply:EyePos() )
+			pFlashlight:SetPos( ply:EyePos() + aAim:Forward() * 32 )
 			pFlashlight:SetLocalAngles( ply:GetViewPunchAngles() )
 		end
 		local v = __PLAYER_MODEL__[ ply:GetModel() ]
@@ -139,8 +139,10 @@ hook.Add( "Tick", "Director", function()
 			ply:SetNW2Float( "GAME_flBlood", 1 )
 			ply:SetNW2Float( "GAME_flBleeding", 0 )
 		end
-		ply:SetViewOffset( ply:GetViewOffset() )
-		ply:SetViewOffsetDucked( ply:GetViewOffsetDucked() )
+		// TODO: Allow others to change the view offsets
+		local f = ply:GetModelScale()
+		ply:SetViewOffset( Vector( 0, 0, 56 ) * f )
+		ply:SetViewOffsetDucked( Vector( 0, 0, 40 ) * f )
 		ply:SetCanZoom( false )
 		local h = ply:Health() / ply:GetMaxHealth()
 		ply:SetDSP( h <= .165 && 16 || h <= .33 && 15 || h <= .66 && 14 || 1 )
@@ -164,12 +166,26 @@ hook.Add( "Tick", "Director", function()
 		local tSpotted = PlyTable.DR_tSpotted || {}
 		local tNewMusicEntities = {}
 		local flAllSuppression, flAllHealth = 0, 0
+		local tThreatDirections = {}
 		for pEntity in pairs( tMusicEntities ) do
 			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
+			if ply:Visible( pEntity ) then
+				local f = pEntity.GetEnemy
+				if f then
+					f = f( pEntity )
+					if IsValid( f ) && f == ply then
+						table.insert( tThreatDirections, pEntity:GetPos() + pEntity:OBBCenter() )
+					end
+				end
+			end
 			// TODO: Improve this, dammit!
-			if pEntity:NearestPoint( vEye ):DistToSqr( vEye ) > 9437184/*3072*/ then continue end
+			if pEntity:NearestPoint( vEye ):DistToSqr( vEye ) > 9437184/*3072*/ then
+				tNewMusicEntities[ pEntity ] = true
+				tSpotted[ pEntity ] = nil
+				continue
+			end
 			// We're doin' shit to them, so add it!
 			// (Or someone else's doin' shit to them)
 			flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
@@ -178,6 +194,15 @@ hook.Add( "Tick", "Director", function()
 			if f then if CurTime() > f then EThreat = ETheirThreat end
 			else tSpotted[ pEntity ] = CurTime() + DIRECTOR_MUSIC_VO_WAIT end
 		end
+		local i = 1
+		while true do
+			local s = "GAME_v3DThreat" .. tostring( i )
+			local v = ply:GetNW2Vector( s )
+			if v == vector_origin then break end
+			ply:SetNW2Vector( s )
+			i = i + 1
+		end
+		for i, v in ipairs( tThreatDirections ) do ply:SetNW2Vector( "GAME_v3DThreat" .. tostring( i ), v ) end
 		local tNewSpotted = {}
 		for pEntity, flTime in pairs( tSpotted ) do
 			if !IsValid( pEntity ) then continue end

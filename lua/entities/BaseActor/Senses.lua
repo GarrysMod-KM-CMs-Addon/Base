@@ -57,16 +57,16 @@ function ENT:CanSee( vec, MyTable )
 		ent = vec
 		vec = CEntity_GetPos( vec ) + CEntity_OBBCenter( vec )
 	end
-	if MyTable.bVisNot360 then
-		local des, aim = ( vec - MyTable.GetShootPos( self ) ):Angle(), MyTable.aAim || CEntity_GetAngles( self )
-		if math_abs( math_AngleDifference( des.y, aim.y ) ) > MyTable.flVisionYaw then return end
-		if math_abs( math_AngleDifference( des.p, aim.p ) ) > MyTable.flVisionPitch then return end
-	end
 	local t = { self }
 	if IsValid( ent ) then table_insert( t, ent ) end
 	if IsValid( veh ) then table_insert( t, veh ) end
 	veh = self.GAME_pVehicle
 	if IsValid( veh ) then table_insert( t, veh ) end
+	if MyTable.bVisNot360 then
+		local des, aim = ( vec - MyTable.GetShootPos( self ) ):Angle(), MyTable.aAim || CEntity_GetAngles( self )
+		if math_abs( math_AngleDifference( des.y, aim.y ) ) > MyTable.flVisionYaw then return end
+		if !IsValid( veh ) && math_abs( math_AngleDifference( des.p, aim.p ) ) > MyTable.flVisionPitch then return end
+	end
 	return !util_TraceLine( {
 		start = MyTable.GetShootPos( self ),
 		endpos = vec,
@@ -284,7 +284,10 @@ function ENT:Look( MyTable )
 							fReportPositionAsClear( self, CEntity_GetPos( ent ), MyTable )
 							iNumEnemies = iNumEnemies - 1
 						end
-					else tVisionStrength[ ent ] = math.Clamp( f + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 ) end
+					else
+						// Slower so they have some time to reappear before the combat is cancelled
+						tVisionStrength[ ent ] = math.Clamp( f + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * .1 * flFrameTime, 0, 1 )
+					end
 				end
 			elseif ent.__FLARE_ACTIVE__ then
 				if ent.Classify then

@@ -15,7 +15,6 @@ SWEP.Primary_flSpreadX = .0083
 SWEP.Primary_flSpreadY = .0083
 SWEP.Primary_flDelay = .06315789473
 SWEP.Primary_flDamage = 20
-SWEP.ViewModelFOV = 45
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = false
