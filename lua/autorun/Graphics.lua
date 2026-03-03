@@ -439,12 +439,20 @@ surface.CreateFont( "ReinforcementsBar", {
 local flProgress = 0
 local MARKER_SIZE = 22.5
 local MARKER_SIZETH = 1 / MARKER_SIZE * 2
+local surface_SetDrawColor = surface.SetDrawColor
+local surface_DrawLine = surface.DrawLine
+local math_abs = math.abs
+local PRECOMPUTED = 360 / ( 2 * math.pi ) * .8
+local math_max = math.max
+local math_cos = math.cos
+local math_sin = math.sin
+local math_rad = math.rad
 hook.Add( "HUDPaint", "Graphics", function()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
-	local vCenter = Vector( flCenterX, flCenterY, 0 )
 	local i = 1
+	surface_SetDrawColor( 255, 0, 0, 128 )
 	while true do
 		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. tostring( i ) )
 		if v == vector_origin then break end
@@ -457,13 +465,17 @@ hook.Add( "HUDPaint", "Graphics", function()
 		//	) )
 		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
 		for i = 0, 2, .5 do
-			local vScale = Vector( 192 + i, 192 + i, 0 )
-			local flSegmentDistance = 360 / ( 2 * math.pi * math.max( vScale.x, vScale.y ) / 2 ) * .25
-			surface.SetDrawColor( 255, 0, 0, 128 )
+			local flScale = 192 + i
+			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
-				local s = MARKER_SIZE - math.abs( a - f )
+				local s = MARKER_SIZE - math_abs( a - f )
 				s = ( s * MARKER_SIZETH ) ^ 4
-				surface.DrawLine( vCenter.x + math.cos( math.rad( a ) ) * ( vScale.x + s ), vCenter.y - math.sin( math.rad( a ) ) * ( vScale.y + s ), vCenter.x + math.cos( math.rad( a + flSegmentDistance ) ) * vScale.x, vCenter.y - math.sin( math.rad( a + flSegmentDistance ) ) * vScale.y )
+				surface_DrawLine(
+					flCenterX + math_cos( math_rad( a ) ) * ( flScale + s ),
+					flCenterY - math_sin( math_rad( a ) ) * ( flScale + s ),
+					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flScale,
+					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flScale
+				)
 			end
 		end
 	end
