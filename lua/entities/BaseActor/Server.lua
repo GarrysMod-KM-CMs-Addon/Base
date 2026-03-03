@@ -285,7 +285,6 @@ ENT.flSuppressionHide = .1
 function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage
-	MyTable.flCombatStateSuppressionShort = MyTable.flCombatStateSuppressionShort + flDamage
 	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage
 end
 
@@ -355,7 +354,6 @@ function ENT:RunBehaviour( MyTable )
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
 			local f = CEntity_Health( self )
 			MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
-			MyTable.flCombatStateSuppressionShort = math_Approach( math_Clamp( MyTable.flCombatStateSuppressionShort, 0, f * MyTable.flCombatStateSuppressionShortMax ), 0, f * MyTable.flCombatStateSuppressionShortRec * FrameTime() )
 			MyTable.flCombatStateSuppression = math_Approach( math_Clamp( MyTable.flCombatStateSuppression, 0, f * MyTable.flCombatStateSuppressionMax ), 0, f * MyTable.flCombatStateSuppressionRec * FrameTime() )
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )
