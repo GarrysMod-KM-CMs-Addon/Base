@@ -30,14 +30,12 @@ if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 	SWEP.ViewModelFOV = 45
 	SWEP.ViewModel = "models/weapons/c_d50.mdl"
 	SWEP.WorldModel = "models/weapons/FC3W/FC3d50w.mdl"
-	SWEP.vPistolSprint = Vector( -5, 0, -15 )
 	SWEP.flViewModelZ = -.5
 	SWEP.vViewModelAim = Vector( -7.204, -3.52, .31 - SWEP.flViewModelZ )
 	SWEP.vViewModelAimAngle = Vector( .2, -0.35, -2.452 )
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_pist_deagle.mdl"
 	SWEP.WorldModel = Model "models/weapons/w_pist_deagle.mdl"
-	SWEP.vPistolSprint = Vector( -7, 0, -10 )
 	SWEP.flViewModelX = -8
 	SWEP.flViewModelY = -2
 	SWEP.flViewModelZ = 1

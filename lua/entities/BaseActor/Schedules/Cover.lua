@@ -14,13 +14,18 @@ local util_TraceHull = util.TraceHull
 
 Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
-	if table.IsEmpty( tEnemies ) then return {} end
+	if table.IsEmpty( tEnemies ) then return true end
 	local enemy = sched.Enemy
-	if !IsValid( enemy ) then enemy = MyTable.Enemy if !IsValid( enemy ) then return {} end end
+	if !IsValid( enemy ) then enemy = MyTable.Enemy if !IsValid( enemy ) then return true end end
 	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
 	MyTable.bWantsCover = true
+	local tCover = MyTable.tCover
 	local vec = MyTable.vCover
-	if !vec || !MyTable.tCover then
+	if tCover then
+		local pEntity = tCover[ 6 ]
+		if pEntity != nil && !IsValid( pEntity ) then MyTable.tCover = nil MyTable.vCover = nil vec = nil tCover = nil end
+	end
+	if !vec || !tCover then
 		local tNearestEnemies = {}
 		for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
 		table.SortByMember( tNearestEnemies, 2, true )
@@ -49,9 +54,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 					MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
 					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 					if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then MyTable.WeaponReload( self, MyTable ) end
-					if MyTable.CanAttackHelper( self, ent, MyTable ) then
-						MyTable.RangeAttack( self )
-					end
+					if MyTable.CanAttackHelper( self, ent, MyTable ) then MyTable.RangeAttack( self ) end
 					break
 				end
 			end
@@ -90,7 +93,10 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 				end
 				table.Empty( tCovers )
 				for _, t in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
-				for _, t in ipairs( __COVERS_DYNAMIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
+				for pEntity, tTable in pairs( __COVERS_DYNAMIC__[ pArea:GetID() ] || {} ) do
+					if !IsValid( pEntity ) then continue end
+					for _, t in pairs( tTable ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
+				end
 				table.SortByMember( tCovers, 2, true )
 				for _, t in ipairs( tCovers ) do
 					local tCover = t[ 1 ]
@@ -199,16 +205,10 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		d[ 3 ] = 0
 		d:Normalize()
 		if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
-		if !util_TraceLine( {
-			start = v,
-			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-			mask = MASK_SHOT_HULL,
-			filter = self
-		} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
-		local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] * .9 )
 		if util_TraceLine( {
 			start = v,
 			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
+			mask = MASK_SHOT_HULL,
 			filter = self
 		} ).Hit then
 			local f = MyTable.flPathTolerance
@@ -251,7 +251,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		end
 	end
 	if IsValid( pEnemy ) then
-		MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 )
+		MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1, Either( pEntity == nil, nil, { self, pEntity } ) )
 	else
 		local goal = sched.Path:GetCurrentGoal()
 		if goal then
@@ -259,6 +259,6 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 			MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable )
 		end
-		MyTable.MoveAlongPathToCover( self, sched.Path )
+		MyTable.MoveAlongPathToCover( self, sched.Path, Either( pEntity == nil, nil, { self, pEntity } ) )
 	end
 end )

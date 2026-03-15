@@ -10,11 +10,12 @@ Actor_RegisterSchedule( "PickUpGun", function( self, sched, MyTable )
 	end
 	local pWeapon = sched.pWeapon
 	if !IsValid( pWeapon ) then return false end
-	if IsValid( pWeapon:GetOwner() ) then return false end
+	if IsValid( pWeapon:GetOwner() ) || IsValid( pWeapon:GetParent() ) then return false end
 	local v = self:GetShootPos()
 	local f = self.GAME_flReach
-	if v:DistToSqr( pWeapon:NearestPoint( v ) ) <= ( f * f ) then
-		self:SetActiveWeapon( pWeapon )
+	f = f * f
+	if v:DistToSqr( pWeapon:NearestPoint( v ) ) <= f || self:GetPos():DistToSqr( pWeapon:NearestPoint( self:GetPos() ) ) <= f then
+		MyTable.SetActiveWeapon( self, pWeapon, MyTable )
 		return true
 	end
 	if !sched.pPath then sched.pPath = Path "Follow" end

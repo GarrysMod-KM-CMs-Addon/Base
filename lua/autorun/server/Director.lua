@@ -56,21 +56,11 @@ local VectorZ28 = Vector( 0, 0, 28 )
 hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
 		local PlyTable = CEntity_GetTable( ply )
-		local v = __PLAYER_MODEL__[ ply:GetModel() ]
-		if v then
-			v = v.Tick
-			if v then return v( ply, PlyTable ) end
-		end
 		local pFlashlight = PlyTable.GAME_pFlashlight
 		if IsValid( pFlashlight ) then
 			local aAim = ply:EyeAngles() + ply:GetViewPunchAngles()
 			pFlashlight:SetPos( ply:EyePos() + aAim:Forward() * 32 )
 			pFlashlight:SetLocalAngles( ply:GetViewPunchAngles() )
-		end
-		local v = __PLAYER_MODEL__[ ply:GetModel() ]
-		if v then
-			v = v.Think
-			if v then v( ply, PlyTable ) end
 		end
 		local flReinforcements, bAlarm, bAlarmCoolDown
 		local b = !cVisibleHostileReinforcementCountDown:GetBool()
@@ -90,6 +80,9 @@ hook.Add( "Tick", "Director", function()
 		end
 		ply:SetNW2Float( "ALARM_flHostileReinforcements", flReinforcements || 0 )
 		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 30 )
+		if CurTime() > ( PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME || 0 ) then
+			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", math.Clamp( Lerp( math.min( 1, 5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
+		end
 		if ply:Alive() then
 			local o = ply:GetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", -1 ) )
 			if o == 0 then
@@ -167,11 +160,12 @@ hook.Add( "Tick", "Director", function()
 		local tNewMusicEntities = {}
 		local flAllSuppression, flAllHealth = 0, 0
 		local tThreatDirections = {}
+		local pVehicle = PlyTable.GAME_pVehicle
 		for pEntity in pairs( tMusicEntities ) do
 			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
-			if ply:Visible( pEntity ) then
+			if pEntity:Visible( ply ) || IsValid( pVehicle ) && pEntity:Visible( pVehicle ) then
 				local f = pEntity.GetEnemy
 				if f then
 					f = f( pEntity )

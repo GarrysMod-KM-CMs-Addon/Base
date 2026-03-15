@@ -25,10 +25,12 @@ function Alarm_IsClouded( vOrigin, vPos, pAlarm )
 	return tr.Fraction <= .33 && tr.HitPos:DistToSqr( vPos ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE )
 end
 
-// Cover: ( Vector vStart, Vector vEnd, Boolean bRightSide, Table tConnections )
+// Cover: ( Vector vStart, Vector vEnd, Boolean bLeftSide, Table tConnections )
 // CNavArea:GetID() -> SequentialTable[ Cover ]
 __COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json" ) || "[]", true )
-__COVERS_DYNAMIC__ = __COVERS_DYNAMIC__ || {} // CNavArea:GetID() -> { Any -> Cover }
+// Cover -> { Entity -> { Any -> CNavArea:GetID() } }
+__COVER_DYNAMIC_CONNECTIONS__ = {}
+__COVERS_DYNAMIC__ = __COVERS_DYNAMIC__ || {} // CNavArea:GetID() -> { Entity -> { Any -> Cover } }
 
 local FLAGS = FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE + FCVAR_CHEAT
 

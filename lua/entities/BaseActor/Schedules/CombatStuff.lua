@@ -15,6 +15,9 @@ end
 
 // Small suppressed, does NOT want someone else to help yet
 function ENT:DLG_Suppressed() end
+// Large suppressed, DOES want someone else to help now
+// No functionality here for now, but it'll be here, so do BaseClass.DLG_Pinned( self, MyTable )
+function ENT:DLG_Pinned( MyTable ) end
 
 // See the code, I have no easy way of explaining this one
 ENT.flSuppressionTraceFraction = .8

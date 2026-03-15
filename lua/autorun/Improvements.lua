@@ -1,3 +1,23 @@
+if CLIENT then
+	// A.k.a HACKY_HACK_HACK_GUN_IN_CROTCH_ALERT_RIFLE
+	// I'm not kidding, that's the actual name I used while developing it
+	function MANUAL_WEAPON_ATTACHMENT_RIFLE( self )
+		local pOwner = self:GetOwner()
+		if IsValid( pOwner ) then
+			local i = pOwner:LookupBone "ValveBiped.Bip01_R_Hand"
+			if !i then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) return end
+			local mMatrix = pOwner:GetBoneMatrix( i )
+			if !mMatrix then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) return end
+			local vPos, aAngles = mMatrix:GetTranslation(), mMatrix:GetAngles()
+			aAngles:RotateAroundAxis( aAngles:Right(), -90 )
+			vPos = vPos + aAngles:Right() * 3
+			self:SetRenderOrigin( vPos )
+			self:SetRenderAngles( aAngles )
+		else self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) end
+		self:DrawModel()
+	end
+end
+
 COVER_PEEK_NONE = 0
 COVER_BLINDFIRE_UP = 1
 COVER_BLINDFIRE_LEFT = 2
@@ -168,6 +188,26 @@ local __PLAYER_MODEL__ = __PLAYER_MODEL__
 
 local hook_Run = hook.Run
 local CEntity = FindMetaTable "Entity"
+
+CEntity_OBBMinsInternal = CEntity_OBBMinsInternal || CEntity.OBBMins
+CEntity_OBBMaxsInternal = CEntity_OBBMaxsInternal || CEntity.OBBMaxs
+
+local CEntity_OBBMinsInternal = CEntity_OBBMinsInternal
+local CEntity_OBBMaxsInternal = CEntity_OBBMaxsInternal
+
+local CEntity_GetTable = CEntity.GetTable
+
+function CEntity:OBBMins()
+	local v = CEntity_GetTable( self ).GAME_BoundMins
+	if v then return v end
+	return CEntity_OBBMinsInternal( self )
+end
+function CEntity:OBBMaxs()
+	local v = CEntity_GetTable( self ).GAME_BoundMaxs
+	if v then return v end
+	return CEntity_OBBMaxsInternal( self )
+end
+
 local CEntity_LookupSequence = CEntity.LookupSequence
 local CEntity_GetTable = CEntity.GetTable
 local CEntity_GetNW2Bool = CEntity.GetNW2Bool
@@ -300,7 +340,7 @@ function GetVelocity( ent )
 	local v = EntTable.__VELOCITY__
 	if v then return v end
 	v = EntTable.GAME_pVehicle
-	if IsValid( v ) then return GetVelocity( v ) end
+	if IsValid( v ) && v != ent then return GetVelocity( v ) end
 	if EntTable.__GetVelocity__ then return EntTable.__GetVelocity__( ent, EntTable ) end
 	if ent:IsPlayer() || ent:IsNPC() then return CEntity_GetVelocity( ent ) else
 		if SERVER && ent:IsNextBot() then
@@ -327,7 +367,7 @@ local CurTime = CurTime
 function SetVelocity( ent, vVelocity )
 	local EntTable = CEntity_GetTable( ent )
 	v = EntTable.GAME_pVehicle
-	if IsValid( v ) then SetVelocity( v, vVelocity ) end
+	if IsValid( v ) && v != ent then SetVelocity( v, vVelocity ) end
 	if EntTable.__SetVelocity__ then EntTable.__SetVelocity__( ent, vVelocity, EntTable ) end
 	if ent:IsPlayer() then
 		CEntity_SetVelocity( ent, vVelocity - CEntity_GetVelocity( ent ) )

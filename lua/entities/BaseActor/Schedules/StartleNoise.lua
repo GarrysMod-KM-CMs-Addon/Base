@@ -3,6 +3,7 @@ function ENT:GetStartleSoundTime( sName, flLevel )
 	return flLevel * 16 / self:GetStartleSoundLevel( sName ) / self.flBoldness / math.max( 1, t && t[ 1 ] || 1 )
 end
 
+// Startled BY NOISE. Do NOT confuse with DLG_Startle for combat!
 function ENT:DLG_Startled() end
 
 Actor_RegisterSchedule( "StartleNoise", function( self, sched )

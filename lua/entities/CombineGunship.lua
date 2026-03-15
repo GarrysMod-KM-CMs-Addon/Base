@@ -57,10 +57,16 @@ function ENT:DoesWeaponHit( v, pClear )
 	local d = ( v - at.Pos ):Angle()
 	local a = LerpAngle( 1, at.Ang, d )
 	if math.AngleDifference( a[ 1 ], d[ 1 ] ) > 1 || math.AngleDifference( a[ 2 ], d[ 2 ] ) > 1 then return end
+	local tFilter = { self }
+	if IsValid( pClear ) then
+		table.insert( tFilter, pClear )
+		local pVehicle = pClear.GAME_pVehicle
+		if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	end
 	if util.TraceLine( {
 		start = at.Pos,
 		endpos = v,
-		filter = IsValid( pClear ) && { self, pClear } || { self },
+		filter = tFilter,
 		mask = MASK_SHOT_HULL
 	} ).Hit then return end
 	return true
@@ -113,6 +119,8 @@ ENT.flRoundsPerMinuteLimit = 2500
 ENT.flTurnSpeed = 180
 ENT.flTurnAcceleration = 240
 ENT.flAcceleration = 2048
+
+ENT.HAS_RANGE_ATTACK = true
 
 function ENT:Initialize()
 	self:SetModel "models/gunship.mdl"

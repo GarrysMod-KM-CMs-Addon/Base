@@ -12,9 +12,9 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
 	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
 	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
-	local pPath = MyTable.pEnemyPath
-	if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputeFlankPath( self, pPath, pEnemy, MyTable ) end
+	local pEnemyPath = MyTable.pEnemyPath
+	if !pEnemyPath then pEnemyPath = Path "Follow" sched.pEnemyPath = pEnemyPath end
+	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy, MyTable ) end
 	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
 	local v = pEnemy:GetPos() + pEnemy:OBBCenter()
 	local bCanShoot, bCanShootDirectly
@@ -31,7 +31,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	} ).Hit then
 		if LevelOfDetail( sched, "flNextSuppressionSearch" ) then
 			local aDirection
-			local tGoal = pPath:NextSegment()
+			local tGoal = pEnemyPath:NextSegment()
 			if tGoal then aDirection = ( tGoal.pos - self:GetShootPos() ):Angle()
 			else aDirection = ( pEnemy:GetPos() - self:GetShootPos() ):Angle() end
 			local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
@@ -82,10 +82,13 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 			if MyTable.CanAttackHelper( self, vTarget, MyTable ) || MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
-			local pGoal = sched.pEnemyPath:GetCurrentGoal()
-			if pGoal then
-				MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
-				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			local pPath = sched.pPath
+			if pPath then
+				local pGoal = pPath:GetCurrentGoal()
+				if pGoal then
+					MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+				end
 			end
 		end
 	else
@@ -121,17 +124,17 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 		end
 		local flDesiredCursor = sched.flDesiredCursor
 		if !flDesiredCursor then
-			pPath:MoveCursorToClosestPosition( self:GetPos() )
+			pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
 			local flBoundingRadius = self:BoundingRadius()
-			flDesiredCursor = math.Clamp( pPath:GetCursorPosition() + flBoundingRadius * math.Remap( pPath:GetLength() - pPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState, 0, pPath:GetLength() - flBoundingRadius * 16 )
+			flDesiredCursor = math.Clamp( pEnemyPath:GetCursorPosition() + flBoundingRadius * math.Remap( pEnemyPath:GetLength() - pEnemyPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState, 0, pEnemyPath:GetLength() - flBoundingRadius * 16 )
 			sched.flDesiredCursor = flDesiredCursor
 		end
 		if LevelOfDetail( sched, "flNextSearch" ) then
 			for _ = 0, 4 do
 				local vPoint = pIterator()
 				if vPoint == nil then sched.pIterator = nil return end
-				pPath:MoveCursorToClosestPosition( vPoint )
-				if pPath:GetCursorPosition() >= flDesiredCursor &&
+				pEnemyPath:MoveCursorToClosestPosition( vPoint )
+				if pEnemyPath:GetCursorPosition() >= flDesiredCursor &&
 				!util_TraceLine( {
 					start = vPoint + Vector( 0, 0, 12 ),
 					endpos = vPoint + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] ),
@@ -154,7 +157,10 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 						if b then
 							sched.flDesiredCursor = nil
 							sched.vPoint = vPoint
-							self:DLG_Advancing()
+							if !sched.bHolyMotherOfJesusJustShutUpAlready then
+								if math.random( 2 ) == 1 then MyTable.DLG_FiringAtAnExposedTarget( self ) else MyTable.DLG_Advancing( self ) end
+							end
+							sched.bHolyMotherOfJesusJustShutUpAlready = nil
 							return
 						end
 					end
@@ -191,7 +197,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 		sched.flCrouch = math.Rand( 0, 1 )
 	end
 	if !sched.bStanding then
-		self:DLG_FiringAtAnExposedTarget( pEnemy )
+		sched.bHolyMotherOfJesusJustShutUpAlready = nil
 		sched.bStanding = true
 	end
 	MyTable.Stand( self, sched.flCrouch )

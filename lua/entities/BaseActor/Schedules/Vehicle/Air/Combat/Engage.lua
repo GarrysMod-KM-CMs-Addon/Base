@@ -1,3 +1,5 @@
+include "MoveToLoS.lua"
+
 Actor_RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
@@ -25,15 +27,14 @@ Actor_RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
 	local tr = util.TraceLine {
 		start = vShoot,
 		endpos = vEnemy,
-		filter = IsValid( pTrueEnemy ) && { self, pVehicle, pEnemy, pTrueEnemy } || { self, pVehicle, pEnemy },
+		filter = self:TraceFilter( pEnemy ),
 		mask = MASK_SHOT_HULL
 	}
-	if tr.Hit then
-		debugoverlay.Line( vShoot, vEnemy, .1, Color( 255, 0, 0 ), true )
+	if tr.Hit && CurTime() > ( sched.flNextCheck || 0 ) then
 		local vCenter = pVehicle:GetPos() + pVehicle:OBBCenter()
 		local flBoundingRadius = pVehicle:BoundingRadius()
 		for flBias = 0, 1, math.Rand( .1, .2 ) do
-			for i = 1, 3 do
+			for i = 1, 5 do
 				for flDistance = 0, math.Rand( 0, math.min( flBoundingRadius * 32, vCenter:Distance( vEnemy ) * 2 ) ), math.Rand( flBoundingRadius * .5, flBoundingRadius * 4 ) do
 					local d = LerpVector( 1 - flBias, VectorRand():GetNormalized(), dToEnemy ):GetNormalized()
 					local trJustToBeSafe = util.TraceLine {
@@ -43,7 +44,6 @@ Actor_RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
 						mask = MASK_SOLID
 					}
 					if trJustToBeSafe.Hit then
-						debugoverlay.Line( tr.StartPos, tr.HitPos, .1, Color( 255, 0, 0 ), true )
 						continue
 					end
 					local tr = util.TraceLine {
@@ -58,18 +58,16 @@ Actor_RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
 						filter = IsValid( pTrueEnemy ) && { self, pVehicle, pEnemy, pTrueEnemy } || { self, pVehicle, pEnemy },
 						mask = MASK_SOLID
 					}
-					if trToTarget.Hit then
-						debugoverlay.Line( tr.StartPos, tr.HitPos, .1, Color( 0, 255, 0 ), true )
-						debugoverlay.Line( trToTarget.StartPos, trToTarget.HitPos, .1, Color( 255, 0, 0 ), true )
-						continue
-					end
-					debugoverlay.Line( tr.StartPos, tr.HitPos, 1, Color( 0, 255, 0 ), true )
-					debugoverlay.Line( trToTarget.StartPos, trToTarget.HitPos, 1, Color( 0, 255, 0 ), true )
+					if trToTarget.Hit then continue end
 					MyTable.SetSchedule( self, "VehicleAirMoveToLoS", MyTable ).vPoint = tr.HitPos
 				end
 			end
 		end
-	else
-		debugoverlay.Line( vShoot, vEnemy, .1, Color( 0, 255, 0 ), true )
+		sched.flNextCheck = CurTime() + math.Rand( 4, 8 )
+		return
+	end
+	if MyTable.UpdatePursuitSenses( self, pEnemy, pTrueEnemy, MyTable ) then
+		// TODO: Pursuit
+		return
 	end
 end )

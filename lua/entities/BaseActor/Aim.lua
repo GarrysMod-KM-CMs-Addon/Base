@@ -21,6 +21,7 @@ function ENT:SetEyeAngles( a, MyTable )
 	local sYaw = MyTable.m_sYawPoseParameter
 	local ppAimPitch = CEntity_LookupPoseParameter( self, sPitch )
 	local Angles = CEntity_GetAngles( self )
+	if !MyTable.bPhysics then a[ 1 ] = math.Clamp( a[ 1 ], -89, 89 ) end
 	local aAim = Angle( Angles )
 	local aDesAim = a
 	if ppAimPitch != -1 then

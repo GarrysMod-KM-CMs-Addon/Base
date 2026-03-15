@@ -1,10 +1,10 @@
-function EFFECT:Init( Data )
+function EFFECT:Init( pData )
 	self:SetRenderMode( RENDERMODE_TRANSALPHA )
-	local pWeapon = Data:GetEntity()
+	local pWeapon = pData:GetEntity()
 	if !IsValid( pWeapon ) then return end
 	local pOwner = pWeapon:GetOwner()
 	if !IsValid( pOwner ) then return end
-	local v = self:GetTracerShootPos( Data:GetOrigin(), pWeapon, Data:GetAttachment() )
+	local v = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
 	local vVelocity = pOwner:GetVelocity()
 	local pEmitter = ParticleEmitter( v )
 	for i = 1, 3 do

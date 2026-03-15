@@ -41,6 +41,8 @@ function SWEP:PrimaryAttack()
 	local MyTable = CEntity_GetTable( self )
 	if !MyTable.CanPrimaryAttack( self, MyTable ) then return end
 	local owner = CEntity_GetOwner( self )
+	if MyTable.bNoMuzzleFlash then MyTable.GAME_bNoMuzzleFlash = true
+	else MyTable.DoMuzzleFlash( self, MyTable ) end
 	CEntity_FireBullets( self, {
 		Attacker = owner,
 		Src = owner:GetShootPos(),
@@ -53,7 +55,6 @@ function SWEP:PrimaryAttack()
 	} )
 	owner:SetAnimation( PLAYER_ATTACK1 ) // CPlayer?
 	MyTable.ShootEffects( self, MyTable )
-	MyTable.DoMuzzleFlash( self, MyTable )
 	local s = MyTable.sSound
 	if s then CEntity_EmitSound( self, s ) end
 	s = MyTable.sSoundAuto

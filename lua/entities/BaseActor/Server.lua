@@ -12,6 +12,7 @@ include "Search.lua"
 include "Behaviour.lua"
 include "Animation.lua"
 include "Mind.lua"
+include "Pursuit.lua"
 
 local CEntity = FindMetaTable "Entity"
 
@@ -40,6 +41,15 @@ function ENT:BehaveUpdate( flInterval )
 		ErrorNoHalt( self, "Error: ", sMessage, "\n" )
 		MyTable.RunBehaviour( self, MyTable )
 	end
+end
+
+function ENT:TraceFilter( pEnemy )
+	local tFilter = { self, pEnemy }
+	local pVehicle = self.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	local pVehicle = pEnemy.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	return tFilter
 end
 
 ENT.vHullMins = HULL_HUMAN_MINS
@@ -277,14 +287,10 @@ end
 
 function ENT:HandleKeyValue( Key, Value ) end
 
-ENT.GAME_flSuppression = 0
-ENT.flSuppressionMax = 4
-ENT.flSuppressionRec = 1
-ENT.flSuppressionHide = .1
-
 function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage
+	MyTable.flSuppressionRecoverTime = CurTime() + .5
 	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage
 end
 
@@ -346,6 +352,8 @@ function ENT:HandleTurning( MyTable )
 	for _ = 1, 8 do loco:FaceTowards( v ) end
 end
 
+ENT.flSuppressionRecoverTime = 0
+
 function ENT:RunBehaviour( MyTable )
 	MyTable.m_coBehaveThread = coroutine_create( function( MyTable )
 		while true do
@@ -353,7 +361,9 @@ function ENT:RunBehaviour( MyTable )
 			local f = MyTable.fCallMeInRunBehaviour
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
 			local f = CEntity_Health( self )
-			MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
+			if CurTime() > MyTable.flSuppressionRecoverTime then
+				MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
+			end
 			MyTable.flCombatStateSuppression = math_Approach( math_Clamp( MyTable.flCombatStateSuppression, 0, f * MyTable.flCombatStateSuppressionMax ), 0, f * MyTable.flCombatStateSuppressionRec * FrameTime() )
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )

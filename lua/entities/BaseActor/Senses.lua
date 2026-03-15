@@ -162,7 +162,7 @@ function ENT:OnOtherKilled( ent )
 	end
 end
 
-ENT.flMaxVisionRange = 8192
+ENT.flMaxVisionRange = 131072
 
 local math_Remap = math.Remap
 
@@ -198,6 +198,8 @@ function ENT:ShouldPickUpGun( pWeapon, vEyePos, TheirTable, MyTable )
 	pSchedule = MyTable.SetSchedule( self, "PickUpGun", MyTable )
 	pSchedule.pWeapon = pWeapon
 end
+
+function ENT:DLG_Spot(/* pEnemy, MyTable */) end
 
 // If we are in combat with multiple enemies, and we see that there is
 // no enemy at a position, can we remove that bullseye?
@@ -237,7 +239,8 @@ function ENT:Look( MyTable )
 	local bCombatForgetHostiles = MyTable.bCombatForgetHostiles
 	local bCombatForgetLastHostile = MyTable.bCombatForgetLastHostile
 	local fReportPositionAsClear = MyTable.ReportPositionAsClear
-	local bNotClear = IsValid( MyTable.Enemy )
+	local bClear = !IsValid( MyTable.Enemy ) && table.IsEmpty( MyTable.tEnemies ) && table.IsEmpty( MyTable.tBullseyes )
+	local bNotClear = !bClear
 	local bMelee, bRange
 	local tWeapons = {}
 	for _, ent in ipairs(
@@ -329,6 +332,11 @@ function ENT:Look( MyTable )
 					MyTable.bHoldFire = nil
 					MyTable.flLastEnemy = CurTime()
 					if MyTable.WillAttackFirst( self, ent ) then
+						if bClear then
+							bClear = nil
+							bNotClear = true
+							MyTable.DLG_Spot( self, ent, MyTable )
+						end
 						tEnemies[ ent ] = true
 						tVisibleEnemies[ EntityUniqueIdentifier( ent ) ] = true
 						MyTable.SetupBullseye( self, ent, nil, nil, MyTable )
@@ -408,6 +416,9 @@ function ENT:NoiseReflex( MyTable, Disposition, Other, Data )
 	pSchedule.bSoundWasNotHarmless = self.tSoundHarmful[ Data.SoundName ]
 end
 
+// NOTE: pEntity can be an ally!
+function ENT:DLG_Startle(/* pEntity, MyTable */) end
+
 local math_max = math.max
 function ENT:OnHeardSomething( Other, Data )
 	local MyTable = CEntity_GetTable( self )
@@ -421,6 +432,7 @@ function ENT:OnHeardSomething( Other, Data )
 			MyTable.bHoldFire = nil
 			MyTable.flLastEnemy = math_max( MyTable.flLastEnemy, OtherTable.flLastEnemy )
 		end
+		if IsValid( OtherTable.Enemy ) && !IsValid( MyTable.Enemy ) then MyTable.DLG_Startled( self, Other, MyTable ) end
 		for k, d in pairs( OtherTable.tBullseyes ) do
 			local beye = d[ 1 ]
 			if IsValid( beye ) then
@@ -440,7 +452,15 @@ function ENT:OnHeardSomething( Other, Data )
 		end
 	elseif d == D_HT || d == D_FR then
 		if !MyTable.WillAttackFirst( self, Other ) then return end
-		MyTable.flLastEnemy = CurTime()
-		MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
+		if !IsValid( MyTable.Enemy ) && table.IsEmpty( MyTable.tEnemies ) && table.IsEmpty( MyTable.tBullseyes ) then
+			MyTable.DLG_Startle( self, Other, MyTable )
+			MyTable.flLastEnemy = CurTime()
+			MyTable.Enemy = MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
+		else
+			MyTable.flLastEnemy = CurTime()
+			MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
+			// Important
+			MyTable.bHoldFire = nil
+		end
 	end
 end

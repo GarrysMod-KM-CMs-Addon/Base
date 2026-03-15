@@ -14,9 +14,9 @@ ENT.flRoundsPerMinuteSpeed = 1200
 ENT.flRoundsPerMinuteIdle = 800
 ENT.flRoundsPerMinuteLimit = 3000
 
-ENT.flTopSpeed = 1400
+ENT.flTopSpeed = 2560
 ENT.flTurnSpeedBase = 200 // When not moving
-ENT.flTurnSpeedSpin = .25 // This is added as we go to full throttle, a multiplier of our current speed
+ENT.flTurnSpeedSpin = .1 // This is added as we go to full throttle, a multiplier of our current speed
 
 ENT.flTurnSpeed = 0
 
@@ -178,8 +178,8 @@ function ENT:Think()
 		self.flTurnSpeed = self.flTurnSpeedBase + self.flTurnSpeedSpin * s
 		local v = self:GetRight() * flSpeed - p:GetVelocity()
 		v = v:GetNormalized() * math.min( v:Length(), s )
-		// Stupid ass костыль which really needs to go.
-		// That, and this hack itself can probably even be done better🤣
+		// Stupid ass костыль to prevent flying that REALLY needs to go xD
+		// That, and even the hack itself could probably be done better lmao
 		local l = v:Length()
 		v[ 3 ] = 0
 		v:Normalize()
@@ -190,6 +190,7 @@ function ENT:Think()
 	return BaseClass.Think( self )
 end
 function ENT:PlayerControls( ply, cmd )
+	self.bFanIdling = nil
 	if cmd:KeyDown( IN_ATTACK ) then self:FireWeapon() end
 	if self:HasWeapon() then
 		self:AimWeapon( util.TraceLine( {
@@ -208,7 +209,7 @@ function ENT:PlayerControls( ply, cmd )
 	elseif cmd:KeyDown( IN_BACK ) then
 		self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, -self.flRoundsPerMinuteLimit, self.flRoundsPerMinuteSpeed * FrameTime() )
 	else
-		self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() )
+		if cmd:KeyDown( IN_JUMP ) then self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 	end
 end
 
@@ -220,12 +221,13 @@ function ENT:GetShootPos()
 end
 
 function ENT:Move( vDirection, flSpeed )
+	self.bFanIdling = nil
 	flSpeed = flSpeed * math.abs( self:GetRight():Dot( vDirection ) )
 	local f = math.max( self.flRoundsPerMinuteIdle, math.Remap( flSpeed, 0, self.flTopSpeed, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteLimit ) )
 	if vDirection:Dot( self:GetRight() ) > 0 then f = -f end
 	self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, f, self.flRoundsPerMinuteSpeed * FrameTime() )
 end
-function ENT:Stay() self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() ) end
+function ENT:Stay() self.bFanIdling = nil self.flRoundsPerMinute = math.Approach( self.flRoundsPerMinute, self.flRoundsPerMinuteIdle, self.flRoundsPerMinuteSpeed * FrameTime() ) end
 function ENT:Turn( vDirection )
 	local p = self:GetPhysicsObject()
 	if IsValid( p ) then

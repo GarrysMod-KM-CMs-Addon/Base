@@ -42,9 +42,10 @@ net.Receive( "DynamicLight", function()
 	local iTick = engine_TickCount()
 	if iTick == iLightsLastStoredTick then
 		iLightsThisTick = iLightsThisTick + 1
+		iLightsTickIndexLast = iLightsTickIndexLast + iLightsThisTick
 	else
 		iLightsLastStoredTick = iTick
-		iLightsTickIndexLast = iLightsTickIndexLast + iLightsThisTick
+		iLightsTickIndexLast = iLightsTickIndexLast
 		iLightsThisTick = 0
 	end
 	local pLight = DynamicLight( 8192 + iLightsTickIndexLast )
@@ -107,8 +108,6 @@ function UTIL_IsUnderSkybox()
 	} ).HitSky
 end
 
-local BLEED_LOWER_THRESHOLD = .25
-
 function DrawBlur( flIntensity ) DrawBokehDOF( flIntensity, 0, 0 ) end
 
 local MAX_WATER_BLUR = 3
@@ -167,7 +166,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		[ "$pp_colour_mulb" ] = 0
 	}
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
-	tDrawColorModify[ "$pp_colour_colour" ] = tDrawColorModify[ "$pp_colour_colour" ] * math_Remap( flDeath, 1, BLEED_LOWER_THRESHOLD, 1, 0 )
+	local f = ( 1 - flDeath ) * 2
+	DrawSharpen( f, f )
+	tDrawColorModify[ "$pp_colour_colour" ] = tDrawColorModify[ "$pp_colour_colour" ] * math_Remap( flDeath, 1, 0, 1, 0 )
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .33
@@ -437,7 +438,7 @@ surface.CreateFont( "ReinforcementsBar", {
 	outline = false
 } )
 local flProgress = 0
-local MARKER_SIZE = 22.5
+local MARKER_SIZE = 18
 local MARKER_SIZETH = 1 / MARKER_SIZE * 2
 local surface_SetDrawColor = surface.SetDrawColor
 local surface_DrawLine = surface.DrawLine
@@ -465,7 +466,7 @@ hook.Add( "HUDPaint", "Graphics", function()
 		//	) )
 		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
 		for i = 0, 2, .5 do
-			local flScale = 192 + i
+			local flScale = 256 + i
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
 				local s = MARKER_SIZE - math_abs( a - f )

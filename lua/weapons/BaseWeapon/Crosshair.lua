@@ -10,7 +10,7 @@ function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	if v then flSpreadX = v end
 	local v = MyTable.Primary_flSpreadY
 	if v then flSpreadY = v end
-	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) + ( MyTable.flCurrentRecoilForGap / MyTable.flRecoil ) * .033
+	local flInaccuracy = MyTable.flCrosshairInAccuracy * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 )
 	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
 		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX ) + flInaccuracy
 		return v, v
@@ -241,6 +241,8 @@ local surface_DrawTexturedRect = surface.DrawTexturedRect
 local math_min = math.min
 local cThirdPerson = GetConVar "bThirdPerson"
 local flLastDoDrawCrosshairCall = 0
+SWEP.flCrosshairInAccuracyGapPart = 0
+SWEP.flCrosshairInAccuracyRecoilPart = 0
 function SWEP:DoDrawCrosshair()
 	if developer:GetBool() then return end
 	local f = SysTime()
@@ -249,7 +251,11 @@ function SWEP:DoDrawCrosshair()
 	local MyTable = CEntity_GetTable( self )
 	local ply = LocalPlayer()
 	local flAimMultiplier = MyTable.flAimMultiplier
-	MyTable.flCrosshairInAccuracy = Lerp( math_min( 15 * flFrameTime ), MyTable.flCrosshairInAccuracy, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033 + .033, 0, .1 ) )
+	local flGapPart = Lerp( math_min( 1, 20 * flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033 + .033, 0, .1 ) )
+	MyTable.flCrosshairInAccuracyGapPart = flGapPart
+	local flRecoilPart = Lerp( math_min( 1, MyTable.flRecoil / MyTable.Primary_flDelay * 2 * flFrameTime ), MyTable.flCrosshairInAccuracyRecoilPart, MyTable.flCurrentRecoilForGap / MyTable.flRecoil * .033 )
+	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
+	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart
 	if MyTable.sAimSound && MyTable.vViewModelAim then
 		if MyTable.bAiming then
 			if flAimMultiplier > .9 then
@@ -276,7 +282,7 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 * ( ( MyTable.flCurrentRecoilForCrosshair * ( ( MyTable.Primary_flDelay / .5 ) * 1000 / math_max( 50, self:GetMaxClip1() ) ) ) - 1 ) * .33 )
+		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 * ( flRecoilPart * MyTable.flRecoil / .033 / MyTable.Primary_flDelay / math_max( 6, self:GetMaxClip1() ) ) )
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes

@@ -38,16 +38,12 @@ if IsMounted "left4dead2" then
 	SWEP.flViewModelX = -2
 	SWEP.flViewModelY = -4
 	SWEP.flViewModelZ = .5
-	SWEP.vSprint = Vector( -2.358 - SWEP.flViewModelX, .228 - SWEP.flViewModelY, -1.94 - SWEP.flViewModelZ )
-	SWEP.vSprintAngle = Vector( -10.554, 34.167, -20 )
 	SWEP.vViewModelAim = Vector( -8 - SWEP.flViewModelX, -6.8 - SWEP.flViewModelY, 2.1 - SWEP.flViewModelZ )
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_rif_ak47.mdl"
 	SWEP.flViewModelX = -10
 	SWEP.flViewModelY = -3
 	SWEP.flViewModelZ = 1.5
-	SWEP.vSprint = Vector( 1.358 - SWEP.flViewModelX, .228 - SWEP.flViewModelY, .94 - SWEP.flViewModelZ )
-	SWEP.vSprintAngle = Vector( -10.554, 34.167, -20 )
 	SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -6.61 - SWEP.flViewModelY, 3.4 - SWEP.flViewModelZ )
 end
 

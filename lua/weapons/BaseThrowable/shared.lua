@@ -37,13 +37,13 @@ function SWEP:Equip( pOwner )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.m_pLastOwner = pOwner
 	local pOwnerTable = CEntity_GetTable( pOwner )
-	local tGrenades = pOwnerTable.GAME_tGrenades || {}
+	local tGrenades = pOwnerTable.GAME_tItemCounts || {}
 	local sClass = CEntity_GetClass( self )
 	local f = math_max( ( tGrenades[ sClass ] || 0 ) + 1, 0 )
 	tGrenades[ sClass ] = f
 	CWeapon_SetClip1( self, f ) // Fool the ammo drawing systems of BaseWeapon into thinking we have this much ammo
 	self:CallOnClient( "SetPrimaryClipSize", f )
-	pOwner.GAME_tGrenades = tGrenades
+	pOwner.GAME_tItemCounts = tGrenades
 end
 
 local IsValid = IsValid
@@ -52,11 +52,11 @@ function SWEP:EquipAmmo( pOwner )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.m_pLastOwner = pOwner
 	local pOwnerTable = CEntity_GetTable( pOwner )
-	local tGrenades = pOwnerTable.GAME_tGrenades || {}
+	local tGrenades = pOwnerTable.GAME_tItemCounts || {}
 	local sClass = CEntity_GetClass( self )
 	local f = math_max( ( tGrenades[ sClass ] || 0 ) + 1, 0 )
 	tGrenades[ sClass ] = f
-	pOwner.GAME_tGrenades = tGrenades
+	pOwner.GAME_tItemCounts = tGrenades
 	local p = pOwner:GetWeapon( sClass )
 	if IsValid( p ) then
 		p.bPinPulled = MyTable.bPinPulled
@@ -95,7 +95,7 @@ if SERVER then
 		end
 		local pOwner = CEntity_GetOwner( self )
 		if !IsValid( pOwner ) then return end
-		local f = math_max( ( ( CEntity_GetTable( pOwner ).GAME_tGrenades || {} )[ CEntity_GetClass( self ) ] || 0 ), 0 )
+		local f = math_max( ( ( CEntity_GetTable( pOwner ).GAME_tItemCounts || {} )[ CEntity_GetClass( self ) ] || 0 ), 0 )
 		CWeapon_SetClip1( self, f )
 		self:CallOnClient( "SetPrimaryClipSize", f )
 	end
@@ -109,11 +109,11 @@ function SWEP:OnDrop()
 	local pOwner = CEntity_GetTable( self ).m_pLastOwner
 	if !IsValid( pOwner ) then return end
 	local pOwnerTable = CEntity_GetTable( pOwner )
-	local tGrenades = pOwnerTable.GAME_tGrenades || {}
+	local tGrenades = pOwnerTable.GAME_tItemCounts || {}
 	local sClass = CEntity_GetClass( self )
 	local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 	tGrenades[ sClass ] = f
-	pOwner.GAME_tGrenades = tGrenades
+	pOwner.GAME_tItemCounts = tGrenades
 	CWeapon_SetClip1( self, 0 )
 	self:CallOnClient( "SetPrimaryClipSize", 0 )
 	// Aren't completely out of grenades of this type yet
@@ -125,7 +125,7 @@ function SWEP:OnDrop()
 			// Compensate for Equip giving one grenade when picked up
 			local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 			tGrenades[ sClass ] = f
-			pOwner.GAME_tGrenades = tGrenades
+			pOwner.GAME_tItemCounts = tGrenades
 		end )
 	end
 end
@@ -176,11 +176,11 @@ function SWEP:Think()
 		local pOwner = CEntity_GetOwner( self )
 		if !IsValid( pOwner ) then return end
 		local pOwnerTable = CEntity_GetTable( pOwner )
-		local tGrenades = pOwnerTable.GAME_tGrenades || {}
+		local tGrenades = pOwnerTable.GAME_tItemCounts || {}
 		local sClass = CEntity_GetClass( self )
 		local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 		tGrenades[ sClass ] = f
-		pOwner.GAME_tGrenades = tGrenades
+		pOwner.GAME_tItemCounts = tGrenades
 		CWeapon_SetClip1( self, f )
 		self:CallOnClient( "SetPrimaryClipSize", f )
 		pOwner:DropWeapon( self )
@@ -199,7 +199,7 @@ function SWEP:Think()
 				// Compensate for Equip giving one grenade when picked up
 				local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 				tGrenades[ sClass ] = f
-				pOwner.GAME_tGrenades = tGrenades
+				pOwner.GAME_tItemCounts = tGrenades
 			else
 				pPhys:AddVelocity( vDirection * flForce )
 			end

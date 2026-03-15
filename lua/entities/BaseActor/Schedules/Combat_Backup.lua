@@ -1,3 +1,7 @@
+// A way older version of Combat.lua... here to copy reusable code (such as suppressing)
+// I think I should just delete it already, but I'll throw it with this comment
+// on GitHub so that history knows what this is before deleting it.
+
 local table_IsEmpty = table.IsEmpty
 local HasRangeAttack, HasMeleeAttack = HasRangeAttack, HasMeleeAttack
 local util_TraceLine = util.TraceLine

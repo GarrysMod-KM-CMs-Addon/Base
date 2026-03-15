@@ -91,6 +91,15 @@ function EntityUniqueIdentifier( ent )
 	return ent.__UNIQUE_IDENTIFIER__
 end
 
+function SimpleRelatedFilter( pEntity )
+	local tFilter = { pEntity }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	return tFilter
+end
+
+local util_TraceLine = util.TraceLine
+
 // local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
 local util_ScreenShake, util_DistanceToLine = util.ScreenShake, util.DistanceToLine
 RANGE_ATTACK_SUPPRESSION_BOUND_SIZE = 512
@@ -99,18 +108,30 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 	local ang = ( vEnd - vStart ):Angle()
 	for _, ent in ipairs( ents.FindAlongRay( vStart, vEnd, Vector( -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ), Vector( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) ) ) do
 		if ent == Owner || Owner.Disposition && Owner:Disposition( ent ) == D_LI || ent.Disposition && ent:Disposition( Owner ) == D_LI then continue end
+		local p = ent:GetPos() + ent:OBBCenter()
+		local _, v = util_DistanceToLine( vStart, vEnd, p )
+		if util_TraceLine( {
+			start = v,
+			endpos = p,
+			mask = MASK_SHOT_HULL,
+			filter = SimpleRelatedFilter( ent )
+		} ).Hit then continue end
 		if ent.GAME_tSuppressionAmount then
 			ent.GAME_tSuppressionAmount[ Owner ] = ( ent.GAME_tSuppressionAmount[ Owner ] || 0 ) + flDamage
 		else ent.GAME_tSuppressionAmount = { [ Owner ] = flDamage } end
 		local f = ent.GAME_OnRangeAttacked
 		if f == nil then if ent.GAME_flSuppression then ent.GAME_flSuppression = ent.GAME_flSuppression + flDamage end else f( ent, Owner, vStart, vEnd, flDamage ) end
 		if ent.__ACTOR__ then
-			if ent == Owner || Owner.Disposition && Owner:Disposition( ent ) == D_LI || ent.Disposition && ent:Disposition( Owner ) == D_LI then continue end
 			local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
-			if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then ent:SetupBullseye( Owner, vStart, ang ) end
+			if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
+				if !IsValid( ent.Enemy ) && table.IsEmpty( ent.tEnemies ) && table.IsEmpty( ent.tBullseyes ) then
+					ent:DLG_Startle( Owner )
+					ent.Enemy = ent:SetupBullseye( Owner, vStart, ang )
+				else ent:SetupBullseye( Owner, vStart, ang ) end
+			end
 		end
 	end
-	// Too cheaty - makes silencers almost completely useless
+	// Too cheaty - makes silencers almost completely useless!
 	//	local ang = ( vEnd - vStart ):Angle()
 	//	for ent in pairs( __ACTOR_LIST__ ) do
 	//		if ent == Owner || Owner.Disposition && tIgnoreRangeAttackDisp[ Owner:Disposition( ent ) ] || ent.Disposition && tIgnoreRangeAttackDisp[ ent:Disposition( Owner ) ] then continue end
@@ -178,8 +199,6 @@ hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 	end
 	return false
 end )
-
-local util_TraceLine = util.TraceLine
 
 // This is very crude and might break things, but whatever, it's worth enough
 MODEL_SIZE_GENERAL_MULTIPLIER = 1.228
@@ -278,7 +297,7 @@ hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, 
 		b = !ply.GAME_bSecondHurtViewPunch
 		ply.GAME_bSecondHurtViewPunch = b
 		local f = ply:GetMaxHealth()
-		ply:ViewPunch( Angle( 0, 0, flDamage * ( flHealth > f && .8 || math.Remap( flHealth, 0, f, 4, .4 ) ) * ( b && 1 || -1 ) ) )
+		ply:ViewPunch( Angle( 0, 0, flDamage * ( flHealth > f && .08 || math.Remap( flHealth, 0, f, .4, .04 ) ) * ( b && 1 || -1 ) ) )
 	end
 end )
 
@@ -329,6 +348,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if bTracer then col = TRACER_COLOR[ Data.TracerName || "Bullet" ] || TRACER_COLOR.Bullet end
 	if Data.HullSize == 0 then Data.HullSize = TRACER_SIZE[ Data.TracerName || "Bullet" ] || TRACER_SIZE.Bullet end
 	local pOwner = GetOwner( ent )
+	local bMuzzleFlash = true
+	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
@@ -336,7 +357,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		local dDamage = DamageInfo()
 		dDamage:SetAttacker( pOwner )
 		// Not setting the inflictor prevents WALK and STEP movetype knockback
-		// dDamage:SetInflictor( ent )
+		//	dDamage:SetInflictor( ent )
 		dDamage:SetDamage( dmg:GetDamage() )
 		dDamage:SetDamageType( DMG_BULLET )
 		dDamage:SetDamagePosition( tr.HitPos )
@@ -347,23 +368,33 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		if !bTracer || !b then return { damage = false, effects = b } end
 		t = pTarget.OnBulletImpact
 		if t then t( pTarget, dDamage ) end
-		local pt = ents.Create "env_projectedtexture"
-		pt:SetPos( tr.StartPos )
-		pt:SetAngles( ( tr.HitPos - tr.StartPos ):GetNormalized():Angle() )
-		pt:SetKeyValue( "lightfov", "110" )
-		pt:SetKeyValue( "lightcolor", table.concat( col, " " ) )
-		pt:SetKeyValue( "farz", "256" )
-		pt:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
-		pt:SetOwner( GetOwner( ent ) )
-		pt:Spawn()
-		timer.Simple( .1, function() if IsValid( pt ) then pt:Remove() end end )
-		net.Start "DynamicLight"
-			net.WriteFloat( col[ 4 ] * .006 ) // Brightness
-			net.WriteFloat( 32 ) // Size
-			net.WriteFloat( 4 ) // Existence length
-			net.WriteVector( tr.HitPos ) // Position
-			net.WriteUInt( col[ 1 ], 8 ) net.WriteUInt( col[ 2 ], 8 ) net.WriteUInt( col[ 3 ], 8 ) // R, G, B
-		net.Broadcast()
+		if bMuzzleFlash then
+			net.Start "DynamicLight"
+				net.WriteFloat( col[ 4 ] * .006 ) // Brightness
+				net.WriteFloat( 128 ) // Size
+				net.WriteFloat( 2 ) // Existence length
+				net.WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
+				net.WriteUInt( col[ 1 ], 8 ) net.WriteUInt( col[ 2 ], 8 ) net.WriteUInt( col[ 3 ], 8 ) // R, G, B
+			net.Broadcast()
+		end
+		// local pt = ents.Create "env_projectedtexture"
+		// pt:SetPos( tr.StartPos )
+		// pt:SetAngles( ( tr.HitPos - tr.StartPos ):GetNormalized():Angle() )
+		// pt:SetKeyValue( "lightfov", "110" )
+		// pt:SetKeyValue( "lightcolor", table.concat( col, " " ) )
+		// pt:SetKeyValue( "farz", "256" )
+		// pt:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
+		// pt:SetOwner( GetOwner( ent ) )
+		// pt:Spawn()
+		// timer.Simple( .1, function() if IsValid( pt ) then pt:Remove() end end )
+		// As cool as this looks sometimes, bullets don't do this in real life!
+		//	net.Start "DynamicLight"
+		//		net.WriteFloat( col[ 4 ] * .006 ) // Brightness
+		//		net.WriteFloat( 32 ) // Size
+		//		net.WriteFloat( 4 ) // Existence length
+		//		net.WriteVector( tr.HitPos ) // Position
+		//		net.WriteUInt( col[ 1 ], 8 ) net.WriteUInt( col[ 2 ], 8 ) net.WriteUInt( col[ 3 ], 8 ) // R, G, B
+		//	net.Broadcast()
 		return { damage = false, effects = true }
 	end
 	return true
@@ -422,9 +453,7 @@ local cEvents = CreateConVar(
 )
 local cEventProbability = CreateConVar(
 	"flEventProbability",
-	250000, // 1 // Forcing this to 0 so that people who
-	// simply play the game to build and have fun
-	// don't have their stuff destroyed by destructive events
+	250000,
 	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_CHEAT,
 	"The probability of random events if bEvents is on",
 	0, 1
@@ -454,6 +483,48 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 		end
 	end
 end )
+
+local table_IsEmpty = table.IsEmpty
+local table_SortByMember = table.SortByMember
+local unpack = unpack
+local table_remove = table.remove
+local table_insert = table.insert
+function CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, pEntity, sIdentifier )
+	if table.IsEmpty( __COVERS_STATIC__ ) then return end
+	local pCenterArea = navmesh.GetNearestNavArea( vCenter )
+	if !pCenterArea then return end
+	local pArea = pCenterArea
+	local tQueue, tVisited = { { pArea, 0 } }, {}
+	while !table_IsEmpty( tQueue ) do
+		table_SortByMember( tQueue, 2, true )
+		local pArea, flDistance = unpack( table_remove( tQueue ) )
+		for _, t in ipairs( pArea:GetAdjacentAreaDistances() ) do
+			local pNew = t.area
+			local id = pNew:GetID()
+			if tVisited[ id ] then continue end
+			tVisited[ id ] = true
+			table_insert( tQueue, { pNew, flDistance + t.dist } )
+		end
+		local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
+		if tCovers then
+			local tCoversThisArea, bDone = {}
+			for i, t in ipairs( tCovers ) do table_insert( tCoversThisArea, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], vCenter ), i } ) end
+			if !table_IsEmpty( tCoversThisArea ) then
+				table_SortByMember( tCoversThisArea, 2, true )
+				local t = tCoversThisArea[ 1 ][ 1 ]
+				tCover[ 4 ] = { [ pArea:GetID() ] = { [ tCoversThisArea[ 1 ][ 3 ] ] = true } }
+				local tForCover = __COVER_DYNAMIC_CONNECTIONS__[ t ]
+				if tForCover then
+					local tForEntity = tForCover[ pEntity ]
+					if tForEntity then tForEntity[ sIdentifier ] = pCenterArea:GetID()
+					else tForCover[ pEntity ] = { [ sIdentifier ] = pCenterArea:GetID() } end
+				else __COVER_DYNAMIC_CONNECTIONS__[ t ] = { [ pEntity ] = { [ sIdentifier ] = pCenterArea:GetID() } } end
+				break
+			end
+		end
+	end
+end
+
 hook.Add( "Think", "GameImprovements", function()
 	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 	file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
@@ -492,8 +563,175 @@ hook.Add( "Think", "GameImprovements", function()
 		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 		if ent.GAME_Think then ent:GAME_Think() end
 		if !ent.GAME_bPhysCollideHook then ent:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end ) ent.GAME_bPhysCollideHook = true end
-		// TODO: Custom fire system?
+		// TODO: Custom fire system
 		CEntity_Extinguish( ent )
+		if !( ent:IsWorld() || ent:IsPlayer() || ent:IsNPC() || ent:IsNextBot() ) then
+			local pPhys = ent:GetPhysicsObject()
+			if IsValid( pPhys ) && ( ent:GetModel() || "" ):sub( 1, 1 ) != "*" then
+				local vMins, vMaxs = ent:GetCollisionBounds()
+				local vPos = ent:GetPos()
+				local vForward, vRight, vUp = ent:GetForward(), ent:GetRight(), ent:GetUp()
+				local aAngles = ent:GetAngles()
+				if GetVelocity( ent ):LengthSqr() <= 256 && math.abs( math.AngleDifference( aAngles[ 1 ], 0 ) ) <= 45 && math.abs( math.AngleDifference( aAngles[ 3 ], 0 ) ) <= 45 then
+					if SysTime() > ( ent.GAME_flNextCreateCovers || 0 ) then
+						ent.GAME_flNextCreateCovers = SysTime() + math.Rand( 2, 4 )
+						if !ent.GAME_tRightCoverParticipatingAreas then
+							local vStart = vPos + vForward * vMins[ 1 ] + vRight * vMaxs[ 2 ] + vUp * vMins[ 3 ]
+							local vEnd = vPos + vForward * vMaxs[ 1 ] + vRight * vMaxs[ 2 ] + vUp * vMins[ 3 ]
+							local vCenter = ( vStart + vEnd ) * .5
+							local vDirection = ( vEnd - vStart ):GetNormalized()
+							local vRight = vDirection:Angle():Right()
+							local tParticipatingAreas = {}
+							for flCurrent = 0, vStart:Distance( vEnd ), 12 do
+								local vCurrent = vStart + vDirection * flCurrent
+								local pArea = navmesh.GetNearestNavArea( vCurrent )
+								if !pArea then continue end
+								tParticipatingAreas[ pArea:GetID() ] = true
+							end
+							local tCover = { vStart, vEnd, true, nil, nil, ent }
+							ent.GAME_tRightCover = tCover
+							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pRight" )
+							ent.GAME_tRightCoverParticipatingAreas = tParticipatingAreas
+							for ID in pairs( tParticipatingAreas ) do
+								local tCovers = __COVERS_DYNAMIC__[ ID ]
+								if tCovers then
+									local tMyCovers = tCovers[ ent ]
+									if tMyCovers then
+										tMyCovers.pRight = tCover
+									else
+										tCovers[ ent ] = { pRight = tCover }
+									end
+								else __COVERS_DYNAMIC__[ ID ] = { [ ent ] = { pRight = tCover } } end
+							end
+						end
+						if !ent.GAME_tLeftCoverParticipatingAreas then
+							local vStart = vPos + vForward * vMins[ 1 ] + vRight * vMins[ 2 ] + vUp * vMins[ 3 ]
+							local vEnd = vPos + vForward * vMaxs[ 1 ] + vRight * vMins[ 2 ] + vUp * vMins[ 3 ]
+							local vCenter = ( vStart + vEnd ) * .5
+							local vDirection = ( vEnd - vStart ):GetNormalized()
+							local vRight = vDirection:Angle():Right()
+							local tParticipatingAreas = {}
+							for flCurrent = 0, vStart:Distance( vEnd ), 12 do
+								local vCurrent = vStart + vDirection * flCurrent
+								local pArea = navmesh.GetNearestNavArea( vCurrent )
+								if !pArea then continue end
+								tParticipatingAreas[ pArea:GetID() ] = true
+							end
+							local tCover = { vStart, vEnd, nil, nil, nil, ent }
+							ent.GAME_tLeftCover = tCover
+							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pLeft" )
+							ent.GAME_tLeftCoverParticipatingAreas = tParticipatingAreas
+							for ID in pairs( tParticipatingAreas ) do
+								local tCovers = __COVERS_DYNAMIC__[ ID ]
+								if tCovers then
+									local tMyCovers = tCovers[ ent ]
+									if tMyCovers then
+										tMyCovers.pLeft = tCover
+									else
+										tCovers[ ent ] = { pLeft = tCover }
+									end
+								else __COVERS_DYNAMIC__[ ID ] = { [ ent ] = { pLeft = tCover } } end
+							end
+						end
+						if !ent.GAME_tForwardCoverParticipatingAreas then
+							local vStart = vPos + vForward * vMaxs[ 1 ] + vRight * vMins[ 2 ] + vUp * vMins[ 3 ]
+							local vEnd = vPos + vForward * vMaxs[ 1 ] + vRight * vMaxs[ 2 ] + vUp * vMins[ 3 ]
+							local vCenter = ( vStart + vEnd ) * .5
+							local vDirection = ( vEnd - vStart ):GetNormalized()
+							local vRight = vDirection:Angle():Right()
+							local tParticipatingAreas = {}
+							for flCurrent = 0, vStart:Distance( vEnd ), 12 do
+								local vCurrent = vStart + vDirection * flCurrent
+								local pArea = navmesh.GetNearestNavArea( vCurrent )
+								if !pArea then continue end
+								tParticipatingAreas[ pArea:GetID() ] = true
+							end
+							local tCover = { vStart, vEnd, nil, nil, nil, ent }
+							ent.GAME_tForwardCover = tCover
+							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pForward" )
+							ent.GAME_tForwardCoverParticipatingAreas = tParticipatingAreas
+							for ID in pairs( tParticipatingAreas ) do
+								local tCovers = __COVERS_DYNAMIC__[ ID ]
+								if tCovers then
+									local tMyCovers = tCovers[ ent ]
+									if tMyCovers then
+										tMyCovers.pForward = tCover
+									else
+										tCovers[ ent ] = { pForward = tCover }
+									end
+								else __COVERS_DYNAMIC__[ ID ] = { [ ent ] = { pForward = tCover } } end
+							end
+						end
+						if !ent.GAME_tBackwardCoverParticipatingAreas then
+							local vStart = vPos + vForward * vMins[ 1 ] + vRight * vMins[ 2 ] + vUp * vMins[ 3 ]
+							local vEnd = vPos + vForward * vMins[ 1 ] + vRight * vMaxs[ 2 ] + vUp * vMins[ 3 ]
+							local vCenter = ( vStart + vEnd ) * .5
+							local vDirection = ( vEnd - vStart ):GetNormalized()
+							local vRight = vDirection:Angle():Right()
+							local tParticipatingAreas = {}
+							for flCurrent = 0, vStart:Distance( vEnd ), 12 do
+								local vCurrent = vStart + vDirection * flCurrent
+								local pArea = navmesh.GetNearestNavArea( vCurrent )
+								if !pArea then continue end
+								tParticipatingAreas[ pArea:GetID() ] = true
+							end
+							local tCover = { vStart, vEnd, true, nil, nil, ent }
+							ent.GAME_tBackwardCover = tCover
+							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pBackward" )
+							ent.GAME_BackwardCoverParticipatingAreas = tParticipatingAreas
+							for ID in pairs( tParticipatingAreas ) do
+								local tCovers = __COVERS_DYNAMIC__[ ID ]
+								if tCovers then
+									local tMyCovers = tCovers[ ent ]
+									if tMyCovers then
+										tMyCovers.pBackward = tCover
+									else
+										tCovers[ ent ] = { pBackward = tCover }
+									end
+								else __COVERS_DYNAMIC__[ ID ] = { [ ent ] = { pBackward = tCover } } end
+							end
+						end
+					end
+				else
+					for ID in pairs( ent.GAME_tRightCoverParticipatingAreas || {} ) do
+						local tCovers = __COVERS_DYNAMIC__[ ID ]
+						if tCovers then
+							tCovers[ ent ] = nil
+						end
+					end
+					ent.GAME_tRightCoverParticipatingAreas = nil
+					local tCover = ent.GAME_tRightCover
+					if tCover then tCover[ 6 ] = NULL end
+					for ID in pairs( ent.GAME_tLeftCoverParticipatingAreas || {} ) do
+						local tCovers = __COVERS_DYNAMIC__[ ID ]
+						if tCovers then
+							tCovers[ ent ] = nil
+						end
+					end
+					ent.GAME_tLeftCoverParticipatingAreas = nil
+					local tCover = ent.GAME_tLeftCover
+					if tCover then tCover[ 6 ] = NULL end
+					for ID in pairs( ent.GAME_tForwardCoverParticipatingAreas || {} ) do
+						local tCovers = __COVERS_DYNAMIC__[ ID ]
+						if tCovers then
+							tCovers[ ent ] = nil
+						end
+					end
+					ent.GAME_tForwardCoverParticipatingAreas = nil
+					local tCover = ent.GAME_tForwardCover
+					if tCover then tCover[ 6 ] = NULL end
+					for ID in pairs( ent.GAME_tBackwardCoverParticipatingAreas || {} ) do
+						local tCovers = __COVERS_DYNAMIC__[ ID ]
+						if tCovers then
+							tCovers[ ent ] = nil
+						end
+					end
+					ent.GAME_tBackwardCoverParticipatingAreas = nil
+					local tCover = ent.GAME_tBackwardCover
+					if tCover then tCover[ 6 ] = NULL end
+				end
+			end
+		end
 		if PersistAll:GetBool() && ent:MapCreationID() == -1 && !ent:IsPlayer() && ( !ent:IsWeapon() || ent:IsWeapon() && ( !IsValid( ent:GetOwner() ) || IsValid( ent:GetOwner() ) && !ent:GetOwner():IsPlayer() ) ) then ent:SetPersistent( true ) end
 		local tSuppressionAmount = {}
 		if ent.GAME_tSuppressionAmount then
@@ -1181,26 +1419,40 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
 		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
 		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+		// The more gunfire is going on, the less the break between the shots and adrenaline will be,
+		// and if there's too much shit going on, start the music without waiting for a break! (Internally break becomes 0)
+		local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+		ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
 		local t = ply.DR_tSpotted
 		if t then t[ dent ] = 0
 		else ply.DR_tSpotted = { [ dent ] = 0 } end
 		local t = ply.DR_tMusicEntities
 		if t then t[ dent ] = true
 		else ply.DR_tMusicEntities = { [ dent ] = true } end
-		if RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) then
-			local f = ply.DR_flVoWait
-			if !f || RealTime() > ( f + DIRECTOR_MUSIC_VO_WAIT * 2 ) then
+		if ( f >= 0 || RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
+			local flVoVait = ply.DR_flVoWait
+			if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
 				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
 				ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
-				ply.DR_flVoDangerousWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
+				local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
+				ply.DR_flIAmAlreadyInCombatForSomeTime = t
+				ply.DR_flIAmAlreadyInDangerForSomeTime = t
+				if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
+				else ply.DR_flVoDangerousWait = t end
 			end
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .001, 0, DIRECTOR_MUSIC_VO_WAIT )
+			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end
-		// If it's a voice line, wait until it is over
-		if ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) then
+		if ( f >= 0 || RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
 			ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
 			ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
-			ply.DR_flVoWait = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + DIRECTOR_MUSIC_VO_WAIT
+			local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+			ply.DR_flIAmAlreadyInDangerForSomeTime = t
+			if f <= 0 then ply.DR_flVoWait = RealTime()
+			else ply.DR_flVoWait = t end
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .001, math.Clamp( SoundDuration( Data.SoundName ), .2, 8 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end
 	end

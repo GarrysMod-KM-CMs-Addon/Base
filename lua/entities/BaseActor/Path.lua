@@ -344,12 +344,13 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 	end
 	if !goal then pPath:Update( self ) return end
 	local aVelocity = goal.forward:Angle()
+	tFilter = tFilter || { self }
 	local trHull = util.TraceHull {
 		start = self:GetPos(),
 		endpos = self:GetPos() + aVelocity:Forward() * self:OBBMaxs()[ 1 ],
 		mins = self:OBBMins() + Vector( 0, 0, 12 ),
 		maxs = self:OBBMaxs(),
-		filter = self
+		filter = tFilter
 	}
 	if trHull.Hit && !trHull.HitWorld then
 		local trLeft, trRight = util.TraceHull {
@@ -372,14 +373,14 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 			else
 				self.vNavigationAvoidDirection = aVelocity:Right()
 			end
-			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
 			return
 		elseif bLeft then
-			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
 			self.vNavigationAvoidDirection = -aVelocity:Right()
 			return
 		else
-			self.flNavigationAvoidTime = CurTime() + math.Rand( .66, 1.33 )
+			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
 			self.vNavigationAvoidDirection = aVelocity:Right()
 			return
 		end

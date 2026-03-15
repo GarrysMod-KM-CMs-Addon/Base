@@ -130,4 +130,23 @@ function TOOL:Think()
 			end
 		end
 	end
+	local tCovers = __COVERS_DYNAMIC__[ pArea:GetID() ]
+	if tCovers then
+		for pEntity, tTable in pairs( tCovers ) do
+			if !IsValid( pEntity ) then continue end
+			for _, tCover in pairs( tTable ) do
+				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+				local vDirection = ( vEnd - vStart ):GetNormalized()
+				debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
+				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+				local vCenter = ( vStart + vEnd ) * .5
+				local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
+				if tCover[ 3 ] then
+					debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 255, 255, 0 ), true )
+				else
+					debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 255, 255, 0 ), true )
+				end
+			end
+		end
+	end
 end

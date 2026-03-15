@@ -24,8 +24,6 @@ Actor_RegisterSchedule( "VehicleAirMoveToLoS", function( self, sched, MyTable )
 	}
 	// If we can't see them from there, tell engage to find us a new point...
 	if tr.Hit then MyTable.SetSchedule( self, "VehicleAirEngage", MyTable ) return end
-	debugoverlay.Line( vCenter, vPoint, .1, Color( 0, 255, 0 ), true )
-	debugoverlay.Line( vPoint, vEnemy, .1, Color( 0, 255, 0 ), true )
 	pVehicle:Move( CalculateVelocity( vPoint, vCenter, pVehicle:GetPhysicsObject():GetVelocity(), pVehicle.flTopSpeed, pVehicle.flAcceleration ) )
 	if vCenter:DistToSqr( vPoint ) <= ( pVehicle:BoundingRadius() * pVehicle:BoundingRadius() ) then
 		MyTable.SetSchedule( self, "VehicleAirEngage", MyTable )

@@ -29,7 +29,7 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 				local id = new:GetID()
 				if tVisited[ id ] then continue end
 				tVisited[ id ] = true
-				if bDisAllowWater && area:IsUnderwater() then continue end
+				if bDisAllowWater && new:IsUnderwater() then continue end
 				local d = area:ComputeAdjacentConnectionHeightChange( new )
 				if bCantClimb && d > flJumpHeight || d <= flNegDeathDrop then continue end
 				table_insert( tQueue, { new, fWeighter( area, new, dist, t.dist ) } )

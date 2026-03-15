@@ -6,8 +6,12 @@ DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
 timer.Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
 
 local sound_Add = sound.Add
+local util_PrecacheSound = util.PrecacheSound
+local Sound = Sound
 local CHAN_STATIC = CHAN_STATIC
 function Director_Music( sName, sPath )
+	util_PrecacheSound( sPath )
+	Sound( sPath )
 	sound_Add {
 		name = sName,
 		channel = CHAN_STATIC,
@@ -25,7 +29,8 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 		Base = { Execute = function( self )
 			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
 			if !self.tHandles.Main then
-				if math_Rand( 0, 1000000 * FrameTime() ) <= 1 then
+				// TODO: FrameTime() isn't reliable, and we are called a LOT more
+				if math_Rand( 0, 1250000 * FrameTime() ) <= 1 then
 					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
 					if s then Director_Music_Play( self, "Main", s ) end
 				end
@@ -84,34 +89,43 @@ DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT.Default_Instant = { Execute = function( sel
 	end
 	return false, 0, 1
 end }
-DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self, flVolumeA, flVolumeB, bCorrect )
+DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self, flInterval, flVolumeA, flVolumeB, bCorrect )
 	if !bCorrect then return true end
 	if flVolumeA > 0 then
-		flVolumeA = flVolumeA < .1 && math.Approach( flVolumeA, 0, FrameTime() ) || Lerp( .1 * FrameTime(), flVolumeA, 0 )
+		flVolumeA = flVolumeA < .1 && math.Approach( flVolumeA, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 0 )
 		return false, flVolumeA, flVolumeB
 	end
 	if self.m_ELayerTo == DIRECTOR_THREAT_NULL then return true end
 	if flVolumeB == 1 then return true end
-	flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, FrameTime() ) || Lerp( .1 * FrameTime(), flVolumeB, 1 )
+	flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 1 )
 	return false, 0, flVolumeB
 end }
 local math_max = math.max
 local pairs = pairs
 function Director_Music_UpdateInternal( self, flInterval, ... )
-	local tNewHandles = {}
+	// This function repeats itself intentionally, because in continuous music playback,
+	// even one tick is a lot of time, so we call this again to allow people to still write
+	// code that passes playing to the next tick (like when changing the index),
+	// since we also technically simulate the next tick
+	local t = self.m_pTable
+	t.Execute( self, flInterval, ... )
+	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
-	for Index, tData in pairs( self.tHandles ) do
-		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] )
-		if tData[ 4 ] <= flInterval then tData[ 1 ]:Stop() continue end
-		tData[ 4 ] = f
-		tData[ 5 ] = SysTime()
-		tNewHandles[ Index ] = tData
-		local pSound = tData[ 1 ]
-		pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
-		pSound:ChangePitch( tData[ 3 ] )
+	for i = 1, 3 do
+		for Index, tData in pairs( tHandles ) do
+			local flPitch = tData[ 3 ] / 100
+			local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * flPitch
+			if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
+			tData[ 4 ] = f
+			tData[ 5 ] = SysTime()
+			local pSound = tData[ 1 ]
+			pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
+			// Sadly, pitch zero pauses the sound, so we can't use that to bypass SOUND_PATCH_ABSOLUTE_MINIMUM either...
+			pSound:ChangePitch( tData[ 3 ] )
+		end
+		t.Execute( self, flInterval, ... )
 	end
-	self.tHandles = tNewHandles
-	return self.m_pTable.Execute( self, ... )
+	return t.Execute( self, flInterval, ... )
 end
 
 DIRECTOR_MUSIC_INTENSITY = 0 // Intensity right now
@@ -124,11 +138,16 @@ DIRECTOR_MUSIC = DIRECTOR_MUSIC || {}
 
 local RealTime = RealTime
 
+DIRECTOR_MUSIC_VO_TIME = 0
+
 function Director_VoiceLineHook(
 		flDuration ) // sName - This is actually a String of the sound's name ( Data.SoundName )
 	flDuration = SoundDuration( flDuration )
 	if !flDuration then return end
-	DIRECTOR_MUSIC_VO_TIME = RealTime() + math.min( flDuration, 8 ) + DIRECTOR_MUSIC_VO_WAIT
+	if RealTime() <= DIRECTOR_MUSIC_VO_TIME && DIRECTOR_MUSIC_IN_VO_HF then return end
+	local f = LocalPlayer():GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+	if f <= 0 then DIRECTOR_MUSIC_VO_TIME = RealTime()
+	else DIRECTOR_MUSIC_VO_TIME = RealTime() + math.min( flDuration, 8 ) + f end
 	DIRECTOR_MUSIC_IN_VO = true
 	DIRECTOR_MUSIC_IN_VO_HF = nil
 end
@@ -137,7 +156,9 @@ function Director_VoiceLineHookToCombat( flDuration )
 	if DIRECTOR_TRANSITION && DIRECTOR_TRANSITION.m_bIntroOfATrack then return end
 	flDuration = SoundDuration( flDuration )
 	if !flDuration then return end
-	DIRECTOR_MUSIC_VO_TIME = RealTime() + math.min( flDuration, 8 )
+	local f = LocalPlayer():GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+	if f <= 0 then DIRECTOR_MUSIC_VO_TIME = RealTime()
+	else DIRECTOR_MUSIC_VO_TIME = RealTime() + math.min( flDuration, 8 ) end
 	DIRECTOR_MUSIC_IN_VO = true
 	DIRECTOR_MUSIC_IN_VO_HF = true
 end
@@ -175,15 +196,15 @@ __HUD_SHOULD_NOT_DRAW__ = {
 // Point is, I know how to make performant code.
 // As terrifying to performance because of length it looks, it's not.
 // Bottom line: Do NOT "optimize" or "refactor" this. This ISN'T spaghetti code,
-// nor is it hacky. I'm not a casual Garry's Mod addon maker, I'm a professional.
-// I know what I'm doing.
+// nor is it hacky. I'm not a casual Garry's Mod addon maker, this addon is a PROFESSIONAL passion project xD
+// My point is, I know what I'm doing.
 
 function DIRECTOR_CLIENT_TICK( flInterval )
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
-			// You can uncomment this for testing
+			// Feel free to uncomment this for testing
 			//	if ELayer == DIRECTOR_THREAT_COMBAT then
 			//		local t = DIRECTOR_MUSIC_TABLE[ ELayer ].TRACK
 			//		if t then
@@ -460,6 +481,27 @@ hook.Add( "PostDrawEffects", "Director", function()
 	flPostDrawEffectsTime = math.Approach( flPostDrawEffectsTime, t, .1 )
 	flLastPostDrawEffectsCall = SysTime()
 	DIRECTOR_CLIENT_TICK( flPostDrawEffectsTime )
+end )
+local flLastPreDrawViewModelCall, flPreDrawViewModelTime = SysTime(), 0
+hook.Add( "PreDrawViewModel", "Director", function()
+	local t = SysTime() - flLastPreDrawViewModelCall
+	flPreDrawViewModelTime = math.Approach( flPreDrawViewModelTime, t, .1 )
+	flLastPreDrawViewModelCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flPreDrawViewModelTime )
+end )
+local flLastThinkCall, flThinkTime = SysTime(), 0
+hook.Add( "Think", "Director", function()
+	local t = SysTime() - flLastThinkCall
+	flThinkTime = math.Approach( flThinkTime, t, .1 )
+	flLastThinkCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flThinkTime )
+end )
+local flLastTickCall, flTickTime = SysTime(), 0
+hook.Add( "Tick", "Director", function()
+	local t = SysTime() - flLastTickCall
+	flTickTime = math.Approach( flTickTime, t, .1 )
+	flLastTickCall = SysTime()
+	DIRECTOR_CLIENT_TICK( flTickTime )
 end )
 local flLastRenderScreenspaceEffectsCall, flRenderScreenspaceEffectsTime = SysTime(), 0
 hook.Add( "RenderScreenspaceEffects", "Director", function()

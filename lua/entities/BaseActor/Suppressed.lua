@@ -1,6 +1,9 @@
 ENT.flShootTimeMin = 2
 ENT.flShootTimeMax = 12
 
-function ENT:CanExpose( MyTable, f ) return self.GAME_flSuppression <= self:Health() * self.flSuppressionHide end
-function ENT:IsSuppressed() return self.GAME_flSuppression > self:Health() * self.flSuppressionHide end
-function ENT:GetExposedWeight() return self.GAME_flSuppression end
+ENT.GAME_flSuppression = 0
+ENT.flSuppressionMax = 8
+ENT.flSuppressionRec = 8
+ENT.flSuppressionHide = .1
+
+function ENT:CanExpose( MyTable ) return self.GAME_flSuppression <= self:Health() * self.flSuppressionHide end
