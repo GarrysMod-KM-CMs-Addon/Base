@@ -166,7 +166,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		[ "$pp_colour_mulb" ] = 0
 	}
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
-	local f = ( 1 - flDeath ) * 2
+	local f = ( 1 - flDeath ) * 4
 	DrawSharpen( f, f )
 	tDrawColorModify[ "$pp_colour_colour" ] = tDrawColorModify[ "$pp_colour_colour" ] * math_Remap( flDeath, 1, 0, 1, 0 )
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )

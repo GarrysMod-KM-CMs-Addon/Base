@@ -18,6 +18,17 @@ if CLIENT then
 	end
 end
 
+hook.Add( "CreateMove", "Improvements", function( cmd )
+	local pPlayer = LocalPlayer()
+	if !IsValid( pPlayer ) || !pPlayer:KeyDown( IN_ZOOM ) then return end
+	local ang = cmd:GetViewAngles()
+	local flBreathe = RealTime() * .5
+	local flForce = FrameTime()
+	ang[ 1 ] = ang[ 1 ] + math.cos( flBreathe ) * flForce
+	ang[ 2 ] = ang[ 2 ] + math.cos( flBreathe / 2 ) * flForce
+	cmd:SetViewAngles( ang )
+end )
+
 COVER_PEEK_NONE = 0
 COVER_BLINDFIRE_UP = 1
 COVER_BLINDFIRE_LEFT = 2
@@ -224,17 +235,6 @@ hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 		local s = CEntity_LookupSequence( ply, CEntity_GetTable( ply ).CTRL_sSlidingSequence || "zombie_slump_idle_02" )
 		ply.CalcSeqOverride = s
 		return a, s
-	end
-	local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	if v then
-		v = v.CalcMainActivity
-		if v then
-			local t = ply:GetTable()
-			local a, s = v( ply, t )
-			t.CalcIdeal = a
-			t.CalcSeqOverride = s
-			return a, s
-		end
 	end
 end )
 

@@ -123,7 +123,6 @@ function Director_Music_UpdateInternal( self, flInterval, ... )
 			// Sadly, pitch zero pauses the sound, so we can't use that to bypass SOUND_PATCH_ABSOLUTE_MINIMUM either...
 			pSound:ChangePitch( tData[ 3 ] )
 		end
-		t.Execute( self, flInterval, ... )
 	end
 	return t.Execute( self, flInterval, ... )
 end

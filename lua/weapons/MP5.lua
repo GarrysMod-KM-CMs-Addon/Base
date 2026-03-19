@@ -36,6 +36,24 @@ if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
 	SWEP.vViewModelAimAngle = Vector( .14, -3.32, -3.004 )
 	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
 	function SWEP:GetReloadActivity( bOneInTheChamber ) return bOneInTheChamber && ACT_VM_RELOAD || ACT_VM_RELOAD_EMPTY end
+	sound.Add {
+		name = "Weapon_CMP5.MagIn",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "MP5/MagIn.wav"
+	}
+	sound.Add {
+		name = "Weapon_CMP5.MagOut",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "MP5/MagOut.wav"
+	}
+	sound.Add {
+		name = "Weapon_CMP5.Bolt",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "MP5/Bolt.wav"
+	}
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_mp5.mdl"
 	SWEP.WorldModel = Model "models/weapons/w_smg_mp5.mdl"

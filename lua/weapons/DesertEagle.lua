@@ -23,16 +23,36 @@ SWEP.bPistolSprint = true
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
 SWEP.flRecoil = 5
-SWEP.flAimShoot = 1
+SWEP.flAimShoot = 4
 SWEP.sHoldType = "Pistol"
 
 if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
+	SWEP.m_bAimShootDoesntBlockNormalShoot = true
 	SWEP.ViewModelFOV = 45
 	SWEP.ViewModel = "models/weapons/c_d50.mdl"
 	SWEP.WorldModel = "models/weapons/FC3W/FC3d50w.mdl"
+	function SWEP:GetReloadActivity( bOneInTheChamber ) return bOneInTheChamber && ACT_VM_RELOAD || ACT_VM_RELOAD_EMPTY end
 	SWEP.flViewModelZ = -.5
 	SWEP.vViewModelAim = Vector( -7.204, -3.52, .31 - SWEP.flViewModelZ )
 	SWEP.vViewModelAimAngle = Vector( .2, -0.35, -2.452 )
+	sound.Add {
+		name = "Weapon_Cd50.MagIn",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "DesertEagle/MagIn.wav"
+	}
+	sound.Add {
+		name = "Weapon_Cd50.MagOut",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "DesertEagle/MagOut.wav"
+	}
+	sound.Add {
+		name = "Weapon_Cd50.Bolt",
+		channel = CHAN_ITEM,
+		soundlevel = 80,
+		sound = "DesertEagle/Bolt.wav"
+	}
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_pist_deagle.mdl"
 	SWEP.WorldModel = Model "models/weapons/w_pist_deagle.mdl"

@@ -62,6 +62,28 @@ hook.Add( "Tick", "Director", function()
 			pFlashlight:SetPos( ply:EyePos() + aAim:Forward() * 32 )
 			pFlashlight:SetLocalAngles( ply:GetViewPunchAngles() )
 		end
+		local trShoot = util.TraceLine {
+			start = ply:GetShootPos(),
+			endpos = ply:GetShootPos() + ( ply:GetAimVector():Angle() + ply:GetViewPunchAngles() ):Forward() * 1536,
+			filter = ply,
+			mask = MASK_SHOT_HULL
+		}
+		local b = true
+		local pEntity = trShoot.Entity
+		if IsValid( pEntity ) then
+			local f = pEntity.Disposition
+			if f then
+				f = f( pEntity, ply )
+				if f == D_LI then
+					ply:SetNW2Int( "DR_EAimingAt", 2 )
+					b = nil
+				else
+					ply:SetNW2Int( "DR_EAimingAt", 1 )
+					b = nil
+				end
+			end
+		end
+		if b then ply:SetNW2Int( "DR_EAimingAt", nil ) end
 		local flReinforcements, bAlarm, bAlarmCoolDown
 		local b = !cVisibleHostileReinforcementCountDown:GetBool()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do

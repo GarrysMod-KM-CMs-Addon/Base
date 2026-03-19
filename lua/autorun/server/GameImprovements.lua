@@ -98,6 +98,15 @@ function SimpleRelatedFilter( pEntity )
 	return tFilter
 end
 
+function SimpleRelatedFilterDouble( pEntity, pEnemy )
+	local tFilter = { pEntity, pEnemy }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	local pVehicle = pEnemy.GAME_pVehicle
+	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	return tFilter
+end
+
 local util_TraceLine = util.TraceLine
 
 // local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
@@ -125,7 +134,10 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 			local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
 			if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
 				if !IsValid( ent.Enemy ) && table.IsEmpty( ent.tEnemies ) && table.IsEmpty( ent.tBullseyes ) then
-					ent:DLG_Startle( Owner )
+					timer.Simple( math.Rand( 0, 1 ), function()
+						if !IsValid( ent ) then return end
+						ent:DLG_Startle( Owner )
+					end )
 					ent.Enemy = ent:SetupBullseye( Owner, vStart, ang )
 				else ent:SetupBullseye( Owner, vStart, ang ) end
 			end
@@ -335,6 +347,18 @@ local TRACER_SIZE = TRACER_SIZE
 
 local IsValid = IsValid
 
+hook.Add( "ScalePlayerDamage", "GameImprovements", function( ply, EHitGroup, dDamage )
+	if EHitGroup == HITGROUP_HEAD then dDamage:ScaleDamage( ply.GAME_flHeadshotDamageMultiplier || 5 ) return false end
+end )
+
+local cSGT = CreateConVar(
+	"SGT",
+	0,
+	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_CHEAT,
+	"Allow Scummy Game Things (SGT)?",
+	0, 1
+)
+
 hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if _Comp then return end
 	hook.Run( "EntityFireBullets", ent, Data, true )
@@ -350,6 +374,12 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	local pOwner = GetOwner( ent )
 	local bMuzzleFlash = true
 	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
+	if cSGT:GetBool() && pOwner.__ACTOR__ then
+		local v = Data.Spread
+		v[ 1 ] = v[ 1 ] * 5
+		v[ 2 ] = v[ 2 ] * 5
+		Data.Damage = Data.Damage * .1
+	end
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
@@ -363,7 +393,11 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		dDamage:SetDamagePosition( tr.HitPos )
 		if bTarget then vTargetVelocity = ent:GetVelocity() end
 		local t = OldCallBack( atk, tr, dDamage ) || { damage = true, effects = true }
-		if t.damage && bTarget then pTarget:TakeDamageInfo( dDamage ) end
+		if t.damage && bTarget then
+			local f = pTarget.SetLastHitGroup
+			if f then f( pTarget, tr.HitGroup ) end
+			pTarget:TakeDamageInfo( dDamage )
+		end
 		local b = t.effects
 		if !bTracer || !b then return { damage = false, effects = b } end
 		t = pTarget.OnBulletImpact
@@ -1197,7 +1231,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 					filter = ply
 				}
 				if !trDuck.Hit && !trStand.Hit then bLeft = true
-				elseif !trStand.Hit && trDuck.Hit then bLeft = true bLeftForceCrouch = false
+				elseif !trStand.Hit && trDuck.Hit then
 				elseif !trDuck.Hit && trStand.Hit then bLeft = true bLeftForceCrouch = true end
 			end
 			if !util_TraceLine( {
@@ -1224,7 +1258,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 					filter = ply
 				}
 				if !trDuck.Hit && !trStand.Hit then bRight = true
-				elseif !trStand.Hit && trDuck.Hit then bRight = true bRightForceCrouch = false
+				elseif !trStand.Hit && trDuck.Hit then bRightForceCrouch = false
 				elseif !trDuck.Hit && trStand.Hit then bRight = true bRightForceCrouch = true end
 			end
 			if bUp then
