@@ -46,20 +46,36 @@ function ENT:AnimationSystemTick()
 			tSequences[ seq ] = lay
 		end
 	end
-	for seq, lay in pairs( tSequences ) do
-		local s = self:LookupSequence( seq )
-		if self:GetLayerSequence( lay ) != s then self:SetLayerSequence( lay, s ) end
-		local f = tInstant[ seq ]
+	local flFrameTime, bReached = self.m_flFrameTime
+	for sSequence, iLayer in pairs( tSequences ) do
+		local s = self:LookupSequence( sSequence )
+		if self:GetLayerSequence( iLayer ) != s then self:SetLayerSequence( iLayer, s ) end
+		local f = tInstant[ sSequence ]
 		if f then
-			self:SetLayerPlaybackRate( lay, f )
-			self:SetLayerWeight( lay, 1 )
+			bReached = true
+			self:SetLayerPlaybackRate( iLayer, f )
+			self:SetLayerWeight( iLayer, 1 )
 			continue
 		end
-		local f = tPromote[ seq ]
+		local f = tPromote[ sSequence ]
 		if f then
-			self:SetLayerPlaybackRate( lay, f )
-			self:SetLayerWeight( lay, math.Clamp( self:GetLayerWeight( lay ) + 4 * FrameTime(), 0, 1 ) )
-		else self:SetLayerWeight( lay, math.Clamp( self:GetLayerWeight( lay ) - 4 * FrameTime(), 0, 1 ) ) end
+			f = math.Clamp( self:GetLayerWeight( iLayer ) + flFrameTime * 2, 0, 1 )
+			self:SetLayerWeight( iLayer, f )
+			if f >= 1 then bReached = true end
+		end
+	end
+	if bReached then
+		for sSequence, iLayer in pairs( tSequences ) do
+			local f = tPromote[ sSequence ]
+			if !f then
+				if self:GetLayerWeight( iLayer ) <= 0 then
+					self:RemoveLayer( iLayer )
+					tSequences[ sSequence ] = nil
+					continue
+				end
+				self:SetLayerWeight( iLayer, math.Clamp( self:GetLayerWeight( iLayer ) - flFrameTime * 2, 0, 1 ) )
+			end
+		end
 	end
 	table.Empty( tPromote )
 	table.Empty( tInstant )

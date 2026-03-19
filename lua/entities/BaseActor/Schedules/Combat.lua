@@ -68,263 +68,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	else enemy = MyTable.Enemy if !IsValid( enemy ) then return true end end
 	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
-	// Big thing combat
-	if self:Health() > enemy:Health() * 100 then
-		if MyTable.bPlantAttack then // Lemme guess, we're a Combine Hunter?
-			if sched.bMoving then
-				local pPath = sched.pEnemyPath
-				if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-				MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-				if util_TraceLine( {
-					start = self:GetShootPos(),
-					endpos = enemy:GetPos() + enemy:OBBCenter(),
-					mask = MASK_SHOT_HULL,
-					filter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-				} ).Hit then
-					local aDirection
-					local tGoal = pPath:NextSegment()
-					if tGoal then aDirection = ( tGoal.pos - self:GetShootPos() ):Angle()
-					else aDirection = ( enemy:GetPos() - self:GetShootPos() ):Angle() end
-					local vTarget = enemy:GetPos() + enemy:OBBCenter()
-					local vHeight = Vector( 0, 0, self.vHullDuckMaxs[ 3 ] )
-					local tPitchAngles = enemy:GetPos().z > self:GetPos().z && ACTOR_PITCH_ANGLES_UP || ACTOR_PITCH_ANGLES_DOWN
-					local bCheckDistance, flDistSqr = MyTable.flCombatState > 0
-					if bCheckDistance then
-						flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-						flDistSqr = flDistSqr * flDistSqr
-					end
-					local function fDo( vOrigin, tAngles )
-						local vPos = vOrigin + vHeight
-						local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-						for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
-							for i, flGlobalAngleYaw in ipairs( tAngles ) do
-								// local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
-								local aAim = aDirection + Angle( 0, flGlobalAngleYaw )
-								aAim[ 1 ] = flGlobalAnglePitch
-								local vAim = aAim:Forward()
-								local tr = util_TraceLine {
-									start = vPos,
-									endpos = vPos + vAim * 999999,
-									mask = MASK_SHOT_HULL,
-									filter = self
-								}
-								local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
-								if util_TraceLine( {
-									start = vPoint,
-									endpos = vTarget,
-									mask = MASK_SHOT_HULL,
-									filter = tWholeFilter
-								} ).Hit || bCheckDistance && vPoint:DistToSqr( vTarget ) > flDistSqr then continue end
-								return vPoint
-							end
-						end
-					end
-					local tAngles = { 0 }
-					for a = 5.625, 22.5, 5.625 do
-						table.insert( tAngles, -a )
-						table.insert( tAngles, a )
-					end
-					vTarget = fDo( self:GetShootPos(), tAngles )
-					if vTarget then
-						MyTable.vaAimTargetBody = vTarget
-						MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-						if MyTable.bPlanted then
-							local b
-							local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-							if tAllies then
-								for pAlly in pairs( tAllies ) do if self != pAlly && IsValid( pAlly ) && pAlly.bWantsCover then b = true break end end
-							else b = true end
-							if !MyTable.flPlantEndTime then MyTable.flPlantEndTime = CurTime() + math_Rand( MyTable.flPlantTimeMinimum || PLANT_TIME_MINIMUM, MyTable.flPlantTimeMaximum || PLANT_TIME_MAXIMUM ) end
-							if CurTime() <= MyTable.flPlantEndTime || b then MyTable.RangeAttackPlanted( self ) else MyTable.UnPlant( self ) sched.bMoving = true end
-							return
-						end
-						local tAllies = self:GetAlliesByClass()
-						if tAllies then
-							local bMaintainFire, bAtLeastOneAlly = true
-							for pAlly in pairs( tAllies ) do
-								if IsValid( pAlly ) && pAlly != self then
-									bAtLeastOneAlly = true
-									if pAlly.bSuppressing then bMaintainFire = nil break end
-								end
-							end
-							if bAtLeastOneAlly && bMaintainFire then
-								if CurTime() > self.flMaintainFireTime then
-									MyTable.DLG_MaintainFire( self, MyTable )
-									MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax )
-								end
-								return
-							else MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax ) end
-						end
-						self:MoveAlongPath( pPath, MyTable.flRunSpeed, 1 )
-					else
-						MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax )
-						self:MoveAlongPath( pPath, MyTable.flTopSpeed, 1 )
-						local pGoal = sched.pEnemyPath:GetCurrentGoal()
-						if pGoal then
-							MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
-							MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-						end
-					end
-				else
-					MyTable.vaAimTargetBody = enemy:GetPos() + enemy:OBBCenter()
-					// TODO!!!
-					//	MyTable.vaAimTargetBody = util_TraceLine( {
-					//		start = self:GetShootPos(),
-					//		endpos = enemy:GetPos() + enemy:OBBCenter(),
-					//		mask = MASK_SHOT_HULL,
-					//		filter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-					//	} ).Hit && ( enemy:GetPos() + enemy:OBBCenter() ) || x
-					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-					local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-					if MyTable.bPlanted then
-						local b
-						if tAllies then
-							for pAlly in pairs( tAllies ) do if self != pAlly && IsValid( pAlly ) && pAlly.bWantsCover then b = true break end end
-						else b = true end
-						if !MyTable.flPlantEndTime then MyTable.flPlantEndTime = CurTime() + math_Rand( MyTable.flPlantTimeMinimum || PLANT_TIME_MINIMUM, MyTable.flPlantTimeMaximum || PLANT_TIME_MAXIMUM ) end
-						if CurTime() <= MyTable.flPlantEndTime || b then self:RangeAttackPlanted() else self:UnPlant() sched.bMoving = true end
-						return
-					elseif math_Rand( 0, 10000 * FrameTime() ) <= 1 then self.flPlantEndTime = nil self:Plant() return end
-					if tAllies then
-						local bMaintainFire, bAtLeastOneAlly = true
-						for pAlly in pairs( tAllies ) do
-							if IsValid( pAlly ) && pAlly != self then
-								bAtLeastOneAlly = true
-								if pAlly.bSuppressing then bMaintainFire = nil break end
-							end
-						end
-						if bAtLeastOneAlly && bMaintainFire then
-							if CurTime() > MyTable.flMaintainFireTime then
-								MyTable.DLG_MaintainFire( self, MyTable )
-								MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax )
-							end
-							return
-						else MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax ) end
-					else MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax ) end
-					self:MoveAlongPath( pPath, MyTable.flRunSpeed, 1 )
-				end
-			else
-				MyTable.flMaintainFireTime = CurTime() + math_Rand( MyTable.flMaintainFireTimeMin, MyTable.flMaintainFireTimeMax )
-				local pPath = sched.pEnemyPath
-				if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-				MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-				if util_TraceLine( {
-					start = self:GetShootPos(),
-					endpos = enemy:GetPos() + enemy:OBBCenter(),
-					mask = MASK_SHOT_HULL,
-					filter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-				} ).Hit then
-					local aDirection
-					local tGoal = pPath:NextSegment()
-					if tGoal then aDirection = ( tGoal.pos - self:GetShootPos() ):Angle()
-					else aDirection = ( enemy:GetPos() - self:GetShootPos() ):Angle() end
-					local vTarget = enemy:GetPos() + enemy:OBBCenter()
-					local vHeight = Vector( 0, 0, self.vHullDuckMaxs[ 3 ] )
-					local tPitchAngles = enemy:GetPos().z > self:GetPos().z && ACTOR_PITCH_ANGLES_UP || ACTOR_PITCH_ANGLES_DOWN
-					local bCheckDistance, flDistSqr = self.flCombatState > 0
-					if bCheckDistance then
-						flDistSqr = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-						flDistSqr = flDistSqr * flDistSqr
-					end
-					local function fDo( vOrigin, tAngles )
-						local vPos = vOrigin + vHeight
-						local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-						for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
-							for i, flGlobalAngleYaw in ipairs( tAngles ) do
-								// local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
-								local aAim = aDirection + Angle( 0, flGlobalAngleYaw )
-								aAim[ 1 ] = flGlobalAnglePitch
-								local vAim = aAim:Forward()
-								local tr = util_TraceLine {
-									start = vPos,
-									endpos = vPos + vAim * 999999,
-									mask = MASK_SHOT_HULL,
-									filter = self
-								}
-								local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
-								if util_TraceLine( {
-									start = vPoint,
-									endpos = vTarget,
-									mask = MASK_SHOT_HULL,
-									filter = tWholeFilter
-								} ).Hit || bCheckDistance && vPoint:DistToSqr( vTarget ) > flDistSqr then
-									continue
-								end
-								return vPoint
-							end
-						end
-					end
-					local tAngles = { 0 }
-					for a = 5.625, 22.5, 5.625 do
-						table.insert( tAngles, -a )
-						table.insert( tAngles, a )
-					end
-					vTarget = fDo( self:GetShootPos(), tAngles )
-					if vTarget then
-						if MyTable.bPlanted then
-							if self:RangeAttackPlanted() then self:UnPlant() end
-						else
-							self:Plant()
-						end
-					else sched.bMoving = true end
-				else
-					// TODO!!!
-					//	self.vaAimTargetBody = SOME_FUNCTION()
-					MyTable.vaAimTargetBody = enemy:GetPos() + enemy:OBBCenter()
-					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-					if MyTable.bPlanted then
-						local b
-						local tAllies = self:GetAlliesByClass()
-						if tAllies then
-							for pAlly in pairs( tAllies ) do if self != pAlly && IsValid( pAlly ) && pAlly.bWantsCover then b = true break end end
-						else b = true end
-						if !MyTable.flPlantEndTime then self.flPlantEndTime = CurTime() + math_Rand( MyTable.flPlantTimeMinimum || PLANT_TIME_MINIMUM, MyTable.flPlantTimeMaximum || PLANT_TIME_MAXIMUM ) end
-						if CurTime() <= MyTable.flPlantEndTime || b then self:RangeAttackPlanted() else self:UnPlant() sched.bMoving = true end
-					else
-						MyTable.flPlantEndTime = nil
-						self:Plant()
-					end
-				end
-			end
-		end
-		return
-	elseif HasMeleeAttack( self ) && !HasRangeAttack( self ) then
-		if !MyTable.bEnemiesHaveRangeAttack || MyTable.bMeleeChargeAgainstRange then
-			// TODO: Melee vs melee dance behavior
-			local pPath = sched.pEnemyPath
-			if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-			MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-			self:MoveAlongPath( pPath, MyTable.flTopSpeed, 1 )
-			if self:Visible( enemy ) then
-				if math_random( 10000 * ( MyTable.flMeleeChargeTauntMultiplier || 1 ) * FrameTime() ) == 1 then self:DLG_MeleeTaunt() return end
-				local vTarget, vShoot = enemy:GetPos() + enemy:OBBCenter(), self:GetShootPos()
-				MyTable.vaAimTargetBody = vTarget
-				MyTable.vaAimTargetPose = vTarget
-				local d = MyTable.GAME_flReach || 64
-				local wep = MyTable.Weapon
-				if IsValid( wep ) then d = d + wep.Melee_flRangeAdd || 0 end
-				local vMins, vMaxs = self:GatherShootingBounds()
-				if vTarget:Distance( vShoot ) <= d then
-					if MyTable.bHoldFire then self:ReportPositionAsClear( vTarget )
-					elseif self:Disposition( util_TraceLine( {
-						start = vShoot,
-						endpos = vShoot + self:GetAimVector() * d,
-						filter = self,
-						mask = MASK_SHOT_HULL,
-						mins = vMins, maxs = vMaxs
-					} ).Entity ) != D_LI then self:WeaponPrimaryAttack() end
-				end
-			else
-				local goal = pPath:GetCurrentGoal()
-				local v = self:GetPos()
-				if goal then
-					MyTable.vaAimTargetBody = ( goal.pos - v ):Angle()
-					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-				end
-			end
-		else self:SetSchedule "TakeCover" end
-		return
-	end
 	local tCover = MyTable.tCover
 	if !tCover || !MyTable.vCover then
 		MyTable.SetSchedule( self, "TakeCover", MyTable )
@@ -353,7 +96,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local v = sched.vCoverBounds || self:GatherCoverBounds()
 			sched.vCoverBounds = v
 			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
+			local f = sched.flBoundingRadiusTwo || ( ( self:BoundingRadius() * .25 ) ^ 2 )
 			sched.flBoundingRadiusTwo = f
 			local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 			local tCovers = {}
@@ -422,10 +165,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 							flNewCost = flCostStart
 							pPath:MoveCursorTo( flCursorStart )
 						end
-						if bInADynamicCoverAndDidntFindOne then
-							
-							bInADynamicCoverAndDidntFindOne = nil
-						end
+						if bInADynamicCoverAndDidntFindOne then bInADynamicCoverAndDidntFindOne = nil end
 						table.insert( tQueue, { tNewCover, flTrueCost +
 						math.min(
 							vCurrentStart:Distance( vStart ),
@@ -469,7 +209,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 								vCurrentStart:Distance( vEnd ),
 								vCurrentEnd:Distance( vStart ),
 								vCurrentEnd:Distance( vEnd )
-							) + flNewCost, flNewCost } )
+							), flNewCost } )
 						end
 					end
 				end
@@ -625,7 +365,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local v = sched.vCoverBounds || self:GatherCoverBounds()
 			sched.vCoverBounds = v
 			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
+			local f = sched.flBoundingRadiusTwo || ( ( self:BoundingRadius() * .25 ) ^ 2 )
 			sched.flBoundingRadiusTwo = f
 			local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 			local tCovers = {}
@@ -663,7 +403,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				bAtTheResult = nil
 				if iHandled > 12 then break end
 				iHandled = iHandled + 1
-				table.SortByMember( tQueue, 2, true )
+				table.SortByMember( tQueue, 2 )
 				local tSource = table.remove( tQueue )
 				local tCover, flTrueCost, flCost = unpack( tSource )
 				if flCost <= flBestCandidate then iHandle = iHandled - 1 continue end
@@ -834,11 +574,12 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	MyTable.vaAimTargetBody = ( b && d || -d ):Angle()
 	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	if !MyTable.CanExpose( self ) then
+		sched.bRetaliateAgainstSuppression = true
 		sched.bAdvance = nil
 		sched.bRetreat = nil
 		local f = MyTable.GAME_flSuppression
-		sched.flSuppressedShort = CurTime() + math.Clamp( f / self:Health() * .5, 0, 6 )
-		sched.flSuppressed = CurTime() + math.Clamp( f / self:Health(), 0, 6 )
+		sched.flSuppressedShort = CurTime() + math.Clamp( f / self:Health(), 0, 6 )
+		sched.flSuppressed = CurTime() + math.Clamp( f / self:Health() * .5, 0, 1 )
 		if !sched.bPinned && f > self:Health() * 6 then
 			MyTable.DLG_Pinned( self, MyTable )
 			sched.bPinned = true
@@ -848,7 +589,17 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	if CurTime() <= ( sched.flSuppressedShort || 0 ) then return end
 	sched.bPinned = nil
 	if CurTime() <= ( sched.flSuppressed || 0 ) then return end
-	sched.flSuppressed = CurTime() + 2 // Do NOT run this often, even if can!
+	// TODO: Check if we can't hit 'em from cover, and if so, move, instead of staying there because of this
+	if CurTime() <= ( sched.flWaitCheck || 0 ) then return end
+	if !sched.bDoneWaitCheck then
+		for pAlly in pairs( MyTable.GetAlliesByClass( self, MyTable ) || {} ) do
+			if !IsValid( pAlly ) then continue end
+			if pAlly.bAttacking then continue end
+			sched.flWaitCheck = CurTime() + 2
+			sched.bDoneWaitCheck = true
+			return
+		end
+	end
 	local flAlarm, vPos, pAlarm = math.huge, self:GetShootPos(), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
 	local t = __ALARMS__[ self:Classify() ]
 	if t then
@@ -895,10 +646,18 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local pPath = sched.pEnemyPath
 	if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
 	MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
-	// TODO: Make this check more adequate!!!
-	if math.Rand( 1, 3 ) <= 1 then
-		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
-		return
+	if !sched.bRetaliateAgainstSuppression then
+		local iCount, iShooting = 0, 0
+		for pAlly in pairs( MyTable.GetAlliesByClass( self, MyTable ) || {} ) do
+			if !IsValid( pAlly ) then continue end
+			if pAlly.bAttacking then
+				iShooting = iShooting + 1
+			else iCount = iCount + 1 end
+		end
+		if math.Rand( 0, iCount ) <= 1 then
+			if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
+			return
+		end
 	end
 	local vStart, vEnd, bRight = tCover[ 1 ], tCover[ 2 ], tCover[ 3 ]
 	local dDirection = vEnd - vStart

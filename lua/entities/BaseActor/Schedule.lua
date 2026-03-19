@@ -35,6 +35,7 @@ ENT.__SCHEDULE__ = {}
 ENT.tPreScheduleResetVariables = {}
 ENT.tPreScheduleResetVariables.bCharging = false
 ENT.tPreScheduleResetVariables.bTaunting = false
+ENT.tPreScheduleResetVariables.bAttacking = false
 
 function ENT:SelectScheduleInternal( MyTable, ... )
 	if MyTable.m_bScript then return end
@@ -65,6 +66,7 @@ end
 ------ Include Default Schedules ------
 
 include "Schedules/Vehicle/Base.lua"
+include "Schedules/CombatHeavy/Main.lua"
 
 include "Schedules/Idle.lua"
 include "Schedules/Combat.lua"

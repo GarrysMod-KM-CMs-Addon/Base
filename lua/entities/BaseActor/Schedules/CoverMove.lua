@@ -11,7 +11,7 @@ local util_TraceLine = util.TraceLine
 Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || self.tEnemies
 	if table.IsEmpty( tEnemies ) then return {} end
-	if MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	if MyTable.GAME_flSuppression > self:Health() * 4 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local enemy = sched.Enemy
 	if !IsValid( enemy ) then enemy = self.Enemy if !IsValid( enemy ) then return false end end
 	local enemy, trueenemy = self:SetupEnemy( enemy )

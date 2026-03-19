@@ -25,7 +25,7 @@ function ENT:BehaveStart()
 	local MyTable = CEntity_GetTable( self )
 	MyTable.RunBehaviour( self, MyTable )
 end
-function ENT:BehaveUpdate( flInterval )
+function ENT:BehaveUpdate()
 	local MyTable = CEntity_GetTable( self )
 	local coBehaveThread = MyTable.m_coBehaveThread
 	if !coBehaveThread then return end
@@ -174,7 +174,16 @@ function ENT:MoveAlongPathToCover( pPath, tFilter ) self:MoveAlongPath( pPath, m
 
 ENT.bHoldFire = true
 
-function ENT:OnTakeDamage() CEntity_GetTable( self ).bHoldFire = nil end
+ENT.ELastHitGroup = HITGROUP_GENERIC
+function ENT:LastHitGroup() return self.ELastHitGroup end
+function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
+
+function ENT:OnTakeDamage( dDamage )
+	local MyTable = CEntity_GetTable( self )
+	hook.Run( "ScalePlayerDamage", self, MyTable.ELastHitGroup, dDamage )
+	MyTable.ELastHitGroup = HITGROUP_GENERIC
+	MyTable.bHoldFire = nil
+end
 
 ENT.flHearDistanceMultiplier = 1
 
@@ -354,9 +363,18 @@ end
 
 ENT.flSuppressionRecoverTime = 0
 
+ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
-	MyTable.m_coBehaveThread = coroutine_create( function( MyTable )
+	MyTable.m_coBehaveThread = coroutine_create( function( MyTable, flInterval )
 		while true do
+			local f = MyTable.m_flLastRunBehaviourCall
+			if f then
+				MyTable.m_flLastRunBehaviourCall = CurTime()
+			else
+				f = CurTime()
+				MyTable.m_flLastRunBehaviourCall = f
+			end
+			MyTable.m_flFrameTime = CurTime() - f
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
 			local f = MyTable.fCallMeInRunBehaviour
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end

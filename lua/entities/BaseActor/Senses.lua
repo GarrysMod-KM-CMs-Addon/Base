@@ -215,7 +215,7 @@ ENT.flNextLookTime = 0
 // NOTE: This does NOT grant the Actors free knowledge! tVisionStrength is only used to determine
 // how much we've spotted something, NOT to decide if we can or can't see it.
 //
-// 1 / Seconds to lose completely
+// 1 / seconds to lose completely
 ENT.flLoseSpeed = .2 // 5
 ENT.tVisionStrength = {} // Entity ( Even invalid, will be filtered ) -> Float [ 0, 1 ]
 ENT.tAlertEntities = {} // Entities that we might wanna be concerned about, such as enemies who won't attack first
@@ -453,9 +453,15 @@ function ENT:OnHeardSomething( Other, Data )
 	elseif d == D_HT || d == D_FR then
 		if !MyTable.WillAttackFirst( self, Other ) then return end
 		if !IsValid( MyTable.Enemy ) && table.IsEmpty( MyTable.tEnemies ) && table.IsEmpty( MyTable.tBullseyes ) then
-			MyTable.DLG_Startle( self, Other, MyTable )
+			// The timer helps with avoiding the overload of having hundreds of sounds play
+			// simultaneously on one tick and hundreds more in response, which is so heavy that
+			// it causes an instant crash as if someone typed quit in the console!
+			timer.Simple( math_Rand( 0, 1 ), function()
+				if !IsValid( self ) then return end
+				MyTable.DLG_Startle( self, Other, MyTable )
+			end )
 			MyTable.flLastEnemy = CurTime()
-			MyTable.Enemy = MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
+			MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
 		else
 			MyTable.flLastEnemy = CurTime()
 			MyTable.SetupBullseye( self, Other, nil, nil, MyTable )

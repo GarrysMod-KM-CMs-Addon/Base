@@ -56,6 +56,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 	MyTable.vActualCover = MyTable.vCover
 	MyTable.vActualTarget = sched.vFrom
 	MyTable.bSuppressing = true
+	MyTable.bAttacking = true
 	local f, o = MyTable.flCombatState, MyTable.flLastAttackCombatState
 	if f < -.2 && o >= -.2 then
 		MyTable.DLG_State_Retreat( self, MyTable )

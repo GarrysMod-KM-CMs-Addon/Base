@@ -100,6 +100,9 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 	MyTable.bSuppressing = bCanShoot
 	local vPoint = sched.vPoint
 	if vPoint then
+		if sched.bStanding && !sched.bHolyMotherOfJesusJustShutUpAlready then
+			if math.random( 2 ) == 1 then MyTable.DLG_FiringAtAnExposedTarget( self ) else MyTable.DLG_Advancing( self ) end
+		end
 		sched.bStanding = nil
 		sched.flNextMoveTime = CurTime() + math.Rand( 4, 6 )
 		MyTable.vActualTarget = vPoint
@@ -157,9 +160,6 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 						if b then
 							sched.flDesiredCursor = nil
 							sched.vPoint = vPoint
-							if !sched.bHolyMotherOfJesusJustShutUpAlready then
-								if math.random( 2 ) == 1 then MyTable.DLG_FiringAtAnExposedTarget( self ) else MyTable.DLG_Advancing( self ) end
-							end
 							sched.bHolyMotherOfJesusJustShutUpAlready = nil
 							return
 						end
@@ -196,9 +196,6 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 		sched.flNextCrouchTime = CurTime() + math.Rand( 1, 8 )
 		sched.flCrouch = math.Rand( 0, 1 )
 	end
-	if !sched.bStanding then
-		sched.bHolyMotherOfJesusJustShutUpAlready = nil
-		sched.bStanding = true
-	end
+	if !sched.bStanding then sched.bStanding = true end
 	MyTable.Stand( self, sched.flCrouch )
 end )

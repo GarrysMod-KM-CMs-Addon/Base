@@ -31,7 +31,7 @@ ENT.iDefaultClass = CLASS_HUMAN
 
 function ENT:Initialize()
 	self:SetModel "models/player/swat.mdl"
-	self:SetHealth( 100 )
-	self:SetMaxHealth( 100 )
+	self:SetHealth( 320 )
+	self:SetMaxHealth( 320 )
 	BaseClass.Initialize( self )
 end
