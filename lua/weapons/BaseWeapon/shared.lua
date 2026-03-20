@@ -28,7 +28,9 @@ if CLIENT then
 	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoilForGap = 0
 	function SWEP:AddRecoil( flRecoil )
-		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + flRecoil
+		local pOwner = self:GetOwner()
+		if !IsValid( pOwner ) then return end
+		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + flRecoil / pOwner:GetNW2Float( "GAME_flRecoil", 1 )
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + 1 end
 	end
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end

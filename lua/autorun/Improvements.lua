@@ -18,6 +18,15 @@ if CLIENT then
 	end
 end
 
+if SERVER then
+	local player_Iterator = player.Iterator
+	function LocalPlayer()
+		local t, f, i = player_Iterator()
+		local _, p = t( f, i )
+		return p
+	end
+end
+
 hook.Add( "CreateMove", "Improvements", function( cmd )
 	local pPlayer = LocalPlayer()
 	if !IsValid( pPlayer ) || !pPlayer:KeyDown( IN_ZOOM ) then return end
@@ -379,3 +388,8 @@ function SetVelocity( ent, vVelocity )
 end
 
 for _, n in ipairs( file.Find( "Player/*.lua", "LUA" ) ) do ProtectedCall( function() include( "Player/" .. n ) end ) end
+
+// Assumes there is only one sound attached, and assumes everything is valid!
+function SoundScriptDuration( sSound ) return SoundDuration( sound.GetProperties( sSound ).sound ) end
+
+pcall( function() include( "Map/" .. game.GetMap() .. ".lua" ) end )

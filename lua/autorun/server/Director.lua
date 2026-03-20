@@ -241,5 +241,6 @@ hook.Add( "Tick", "Director", function()
 		if flTension != flTension then flTension = 0 end // NaN
 		PlyTable.DR_flMusicTension = flTension
 		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. tostring( flTension || 0 ) )
+		hook.Run( "PostDirectorPlayerThink", ply )
 	end
 end )

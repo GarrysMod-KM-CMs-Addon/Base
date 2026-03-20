@@ -127,6 +127,23 @@ function Director_Music_UpdateInternal( self, flInterval, ... )
 	return t.Execute( self, flInterval, ... )
 end
 
+// FIXME: Until I implement support for m_pContainerFrom instead of
+// m_ELayerFrom, this is gonna break when one special changes to another
+function DIRECTOR_SPECIAL_BEGIN( pTable )
+	if DIRECTOR_SPECIAL then
+		if pTable == DIRECTOR_SPECIAL.m_pTable then return end
+	end
+	local p = Director_Music_Container()
+	p.m_pTable = pTable
+	DIRECTOR_SPECIAL = p
+end
+
+// FIXME: Properly implement this whole thing, including outros
+function DIRECTOR_SPECIAL_END()
+	DIRECTOR_SPECIAL = nil
+	DIRECTOR_SPECIAL_INTRO = nil
+end
+
 DIRECTOR_MUSIC_INTENSITY = 0 // Intensity right now
 DIRECTOR_MUSIC_TENSION = 0 // General battle intensity
 
@@ -237,7 +254,55 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 			end
 		end
 	end
-	if DIRECTOR_MUSIC_IN_VO then
+	if DIRECTOR_SPECIAL then
+		if !DIRECTOR_SPECIAL_INTRO then
+			local t = DIRECTOR_SPECIAL.m_pTable
+			local f = t.CheckIntro
+			if f && f "Special" then
+				DIRECTOR_SPECIAL_INTRO = Director_Music_Container()
+				DIRECTOR_SPECIAL_INTRO.m_pTable = { Execute = t.Intro }
+				DIRECTOR_SPECIAL_INTRO.m_pSource = DIRECTOR_SPECIAL
+				DIRECTOR_SPECIAL_INTRO.m_flVolume = 1
+				DIRECTOR_SPECIAL_INTRO.m_bToCombat = true
+				DIRECTOR_SPECIAL_INTRO.m_bIntroOfATrack = true
+				DIRECTOR_SPECIAL_INTRO.m_ELayerFrom = DIRECTOR_THREAT
+				return
+			end
+			return
+		elseif DIRECTOR_SPECIAL_INTRO != "DONE" then
+			local ELayerFrom, ELayerTo, flInitialVolumeA, flInitialVolumeB = DIRECTOR_SPECIAL_INTRO.m_ELayerFrom, DIRECTOR_SPECIAL_INTRO.m_ELayerTo
+			for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
+				if ELayer == ELayerFrom then flInitialVolumeA = pContainer.m_flVolume break end
+			end
+			local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_SPECIAL_INTRO, flInterval, flInitialVolumeA || 0, DIRECTOR_SPECIAL.m_flVolume || 0, true )
+			DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom
+			flVolumeA = flVolumeA || 0
+			flVolumeB = flVolumeB || 1
+			if bDone then DIRECTOR_SPECIAL_INTRO = "DONE" end
+			for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
+				if pContainer then
+					if ELayer == ELayerFrom then
+						pContainer.m_flVolume = flVolumeA
+					else
+						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+					end
+					Director_Music_UpdateInternal( pContainer, flInterval )
+				end
+			end
+			DIRECTOR_SPECIAL.m_flVolume = flVolumeB
+			Director_Music_UpdateInternal( DIRECTOR_SPECIAL, flInterval )
+			return
+		end
+		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
+			if pContainer then
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+				Director_Music_UpdateInternal( pContainer, flInterval )
+			end
+		end
+		DIRECTOR_SPECIAL.m_flVolume = math.Approach( DIRECTOR_SPECIAL.m_flVolume, 1, FrameTime() )
+		Director_Music_UpdateInternal( DIRECTOR_SPECIAL, flInterval )
+		return
+	elseif DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
 			local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable

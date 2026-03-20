@@ -1439,9 +1439,9 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			act:OnHeardSomething( dent, Data )
 		end
 	end
-	local sColor
-	if dent.GAME_sCaptionColor then
-		sColor = Format( "%q", dent.GAME_sCaptionColor )
+	local c, sColor = dent.GAME_cCaptionColor
+	if c then
+		sColor = Format( "%q", Format( "<clr:%d,%d,%d>", c.r, c.g, c.b ) )
 	elseif dent.GetPlayerColor then
 		local c = dent:GetPlayerColor() * 255
 		sColor = Format( "%q", Format( "<clr:%d,%d,%d>", c[ 1 ], c[ 2 ], c[ 3 ] ) )
