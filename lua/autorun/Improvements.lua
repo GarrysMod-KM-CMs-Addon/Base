@@ -392,4 +392,5 @@ for _, n in ipairs( file.Find( "Player/*.lua", "LUA" ) ) do ProtectedCall( funct
 // Assumes there is only one sound attached, and assumes everything is valid!
 function SoundScriptDuration( sSound ) return SoundDuration( sound.GetProperties( sSound ).sound ) end
 
-pcall( function() include( "Map/" .. game.GetMap() .. ".lua" ) end )
+local sPath = "Map/" .. game.GetMap() .. ".lua"
+if file.Exists( sPath, "LUA" ) then include( sPath ) end
