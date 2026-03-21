@@ -438,8 +438,7 @@ surface.CreateFont( "ReinforcementsBar", {
 	outline = false
 } )
 local flProgress = 0
-local MARKER_SIZE = 18
-local MARKER_SIZETH = 1 / MARKER_SIZE * 2
+local MARKER_SIZE = 20
 local surface_SetDrawColor = surface.SetDrawColor
 local surface_DrawLine = surface.DrawLine
 local math_abs = math.abs
@@ -454,6 +453,7 @@ hook.Add( "HUDPaint", "Graphics", function()
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
 	local i = 1
 	surface_SetDrawColor( 255, 0, 0, 128 )
+	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
 	while true do
 		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. tostring( i ) )
 		if v == vector_origin then break end
@@ -466,11 +466,11 @@ hook.Add( "HUDPaint", "Graphics", function()
 		//	) )
 		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
 		for i = 0, 2, .5 do
-			local flScale = 256 + i
+			local flScale = flOff + i
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
-				local s = MARKER_SIZE - math_abs( a - f )
-				s = ( s * MARKER_SIZETH ) ^ 4
+				local s = 1 - math_abs( a - f ) / MARKER_SIZE
+				s = ( flThickness + s ^ 5 ) * flSize
 				surface_DrawLine(
 					flCenterX + math_cos( math_rad( a ) ) * ( flScale + s ),
 					flCenterY - math_sin( math_rad( a ) ) * ( flScale + s ),

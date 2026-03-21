@@ -33,7 +33,7 @@ if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 	SWEP.WorldModel = "models/weapons/FC3W/FC3d50w.mdl"
 	function SWEP:GetReloadActivity( bOneInTheChamber ) return bOneInTheChamber && ACT_VM_RELOAD || ACT_VM_RELOAD_EMPTY end
 	SWEP.flViewModelZ = -.5
-	SWEP.vViewModelAim = Vector( -7.204, -3.52, .31 - SWEP.flViewModelZ )
+	SWEP.vViewModelAim = Vector( -4, -3.55, .31 - SWEP.flViewModelZ )
 	SWEP.vViewModelAimAngle = Vector( .2, -0.35, -2.452 )
 	sound.Add {
 		name = "Weapon_Cd50.MagIn",

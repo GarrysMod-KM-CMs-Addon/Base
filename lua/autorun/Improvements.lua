@@ -32,7 +32,7 @@ hook.Add( "CreateMove", "Improvements", function( cmd )
 	if !IsValid( pPlayer ) || !pPlayer:KeyDown( IN_ZOOM ) then return end
 	local ang = cmd:GetViewAngles()
 	local flBreathe = RealTime() * .5
-	local flForce = FrameTime()
+	local flForce = .5 * FrameTime()
 	ang[ 1 ] = ang[ 1 ] + math.cos( flBreathe ) * flForce
 	ang[ 2 ] = ang[ 2 ] + math.cos( flBreathe / 2 ) * flForce
 	cmd:SetViewAngles( ang )

@@ -333,6 +333,7 @@ if CLIENT then
 	local flLastCalcViewCall = 0
 	function SWEP:CalcView( ply, pos, ang )
 		local MyTable = CEntity_GetTable( self )
+		local b
 		local f = SysTime()
 		local flFrameTime = f - flLastCalcViewCall
 		flLastCalcViewCall = f
@@ -408,40 +409,25 @@ if CLIENT then
 		pos = pos + vViewFinalRatherQuick[ 1 ] * ang:Forward()
 		pos = pos + vViewFinalRatherQuick[ 2 ] * ang:Right()
 		pos = pos + vViewFinalRatherQuick[ 3 ] * ang:Up()
-		MyTable.aLastViewEyePosition = aViewAim - ply:EyeAngles()
 		local flMultiplier = MyTable.flAimMultiplier || 0
 		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
 			flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER )
 		else flMultiplier = 0 end
 		local flSway = MyTable.flSway * flMultiplier
 		local flSwayNeg = -flSway
-		local eye = ply:EyeAngles()
-		MyTable.flLastEyeYaw = Lerp( math_min( 1, 5 * flFrameTime ), math_Clamp( MyTable.flLastEyeYaw + math_AngleDifference( eye[ 2 ], ( MyTable.flLastTrueEyeYaw || eye[ 2 ] ) ), -MyTable.flSwayScale, MyTable.flSwayScale ), 0 )
-		MyTable.flLastTrueEyeYaw = eye[ 2 ]
-		MyTable.aLastViewEyePosition[ 2 ] = -MyTable.flLastEyeYaw
-		ang:RotateAroundAxis( ang:Right(), -math_Clamp( flSway * MyTable.aLastViewEyePosition.p / MyTable.flSwayScale, flSwayNeg, flSway ) )
-		ang:RotateAroundAxis( ang:Up(), -math_Clamp( flSwayNeg * MyTable.aLastViewEyePosition.y / MyTable.flSwayScale, flSwayNeg, flSway ) )
+		if MyTable.aLastEyePosition == nil then MyTable.aLastEyePosition = Angle( 0, 0, 0 ) end
+		ang:RotateAroundAxis( ang:Right(), -math_Clamp( flSway * MyTable.aLastEyePosition.p / MyTable.flSwayScale, flSwayNeg, flSway ) )
+		ang:RotateAroundAxis( ang:Up(), -math_Clamp( flSwayNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale, flSwayNeg, flSway ) )
 		local flSwayVector = flSway * MyTable.flSwayStabilizer
 		local flSwayVectorNeg = -flSwayVector
-		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastViewEyePosition.p / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up()
-		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastViewEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right()
+		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.p / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up()
+		pos = pos - math_Clamp( ( flSwayVectorNeg * MyTable.aLastEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right()
 		local v = MyTable.flCustomZoomFoV
 		if v then
 			if MyTable.bSniper then
-				local b = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER )
-				local f = b && v || ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
+				local f = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && v || ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
 				MyTable.flFoV = f
-				if b then
-					local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
-					local tr = util_TraceLine {
-						start = LocalPlayer():GetShootPos(),
-						endpos = LocalPlayer():GetShootPos() + self:GetAimVector() * 999999,
-						mask = MASK_SOLID,
-						filter = IsValid( v ) && { LocalPlayer(), v } || LocalPlayer()
-					}
-					ang = ( tr.HitPos - tr.StartPos ):Angle()
-					ang = ang - ply:GetViewPunchAngles() * .5
-				end
+				ang = ang - ply:GetViewPunchAngles() * .1
 				return pos, ang, f
 			else
 				local f = math_Remap( MyTable.flAimMultiplier, 1, 0, ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ), v )
@@ -692,12 +678,12 @@ if CLIENT then
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		local a = ply:GetViewPunchAngles()
-		local flYawTurn, flPitchTurn = a[ 2 ] * 2, a[ 1 ] * 2
+		local flYawTurn, flPitchTurn = a[ 2 ] * .2, a[ 1 ] * .2
 		local flAimShoot = MyTable.flAimShoot
 		if flAimShoot then
 			local f = MyTable.flBarrelBack || 0
 			// 	MyTable.flBarrelBack = math.max( 0, f - 1 / MyTable.Primary_flDelay * flFrameTime )
-			MyTable.flBarrelBack = Lerp( math_min( 1, 1 / MyTable.Primary_flDelay * f ^ 1.5 * flFrameTime ), f, 0 )
+			MyTable.flBarrelBack = Lerp( math_min( 1, .8 / MyTable.Primary_flDelay * f * flFrameTime ), f, 0 )
 			f = MyTable.flBarrelBackCurrent || 0
 			f = Lerp( math_min( 1, 2 / MyTable.Primary_flDelay * flFrameTime ), f, MyTable.flBarrelBack * ( bZoom && 1 || .25 ) )
 			MyTable.flBarrelBackCurrent = f
@@ -739,14 +725,14 @@ if CLIENT then
 		local flSwayVector = flSway * MyTable.flSwayStabilizer
 		local flSwayVectorNeg = -flSwayVector
 		if MyTable.__VIEWMODEL_FULLY_MODELED__ then flMultiplier = MyTable.flAimMultiplier end
+		ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale )
+		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale ) * ang:Right()
 		ang:RotateAroundAxis( ang:Forward(), flSway * MyTable.aLastEyePosition.y / MyTable.flSwayScale * 2 * flMultiplier )
 		pos = pos + math_Clamp( ( flSwayVector * MyTable.aLastEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up() * .4 * flMultiplier
 		MyTable.aLastEyePosition[ 1 ] = math_Clamp( MyTable.aLastEyePosition[ 1 ], -MyTable.flSwayScale, MyTable.flSwayScale )
 		ang:RotateAroundAxis( ang:Right(), flSway * ( MyTable.aLastEyePosition[ 1 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flPitchTurn ) / MyTable.flSwayScale )
-		ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, 0 ) + flYawTurn ) / MyTable.flSwayScale )
 		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 1 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flPitchTurn ) / MyTable.flSwayScale ) * ang:Up()
 		pos = pos + ( flSwayVector * MyTable.aLastEyePosition[ 2 ] / MyTable.flSwayScale ) * ang:Right() * flMultiplier
-		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, 0 ) + flYawTurn ) / MyTable.flSwayScale ) * ang:Right()
 		return pos, ang
 	end
 	include "Crosshair.lua"
