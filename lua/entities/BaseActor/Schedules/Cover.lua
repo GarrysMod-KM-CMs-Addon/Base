@@ -60,9 +60,9 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			end
 		end
 		if LevelOfDetail( sched, "flNextSearch" ) then
-			local pPath = MyTable.pLastEnemyPath || sched.pEnemyPath
+			local pPath = MyTable.pEnemyPath || sched.pEnemyPath
 			if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
-			MyTable.pLastEnemyPath = pPath
+			MyTable.pEnemyPath = pPath
 			MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
 			MyTable.vCover = nil
 			self:Stand( self:GetCrouchTarget() )
@@ -192,7 +192,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 		local v = vec + Vector( 0, 0, vMaxs[ 3 ] )
 		// Don't even try to repath often!
-		local pEnemyPath = MyTable.pLastEnemyPath || sched.pEnemyPath
+		local pEnemyPath = MyTable.pEnemyPath || sched.pEnemyPath
 		if !pEnemyPath then
 			pEnemyPath = Path "Follow"
 			MyTable.ComputeFlankPath( self, pEnemyPath, enemy, MyTable )

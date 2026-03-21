@@ -38,7 +38,7 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	local vec = self.vCover
 	local tAllies = self:GetAlliesByClass()
 	if tAllies then
-		local f = self:BoundingRadius()
+		local f = self:BoundingRadius() * .25
 		f = f * f
 		for ally in pairs( tAllies ) do
 			if self == ally then continue end
@@ -47,19 +47,12 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	end
 	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
 	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-	// We don't repath often, so have to check this
-	if !util_TraceLine( {
-		start = v,
-		endpos = enemy:GetPos(),
-		mask = MASK_SHOT_HULL,
-		filter = { self, enemy }
-	} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
 	// Don't even try to repath often!
-	local pEnemyPath = MyTable.pLastEnemyPath || sched.pEnemyPath
+	local pEnemyPath = MyTable.pEnemyPath || sched.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
 		MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
-		MyTable.pLastEnemyPath = pEnemyPath
+		MyTable.pEnemyPath = pEnemyPath
 		sched.pEnemyPath = pEnemyPath
 	end
 	pEnemyPath:MoveCursorToClosestPosition( vec )
