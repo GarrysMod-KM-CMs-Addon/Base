@@ -315,8 +315,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		end
 		local tCover = MyTable.tCover
 		local tQueue, tVisited = sched.tAdvanceSearchQueue, sched.tAdvanceSearchVisited || { [ tCover ] = true }
-		local pPath = sched.pEnemyPath
-		if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
+		local pPath = MyTable.pEnemyPath
+		if !pPath then pPath = Path "Follow" MyTable.pEnemyPath = pPath MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable ) end
 		local vEnemy = enemy:GetPos()
 		local vTarget = vEnemy + enemy:OBBCenter()
 		local pIterator = sched.pIterator
@@ -333,11 +333,70 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
 		local _, vPos = util_DistanceToLine( MyTable.tCover[ 1 ], MyTable.tCover[ 2 ], vEnemy )
 		pPath:MoveCursorToClosestPosition( vPos )
-		if !tQueue then tQueue = { { tCover, 0, 0 } } end
+		local flBestCandidate = sched.flBestCandidate || math.huge
+		if !tQueue then
+			local tNewCover = tCover
+			local flCostStart, flCostEnd, flCursorStart, flCursorEnd
+			local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
+			pPath:MoveCursorToClosestPosition( vStart )
+			flCursorStart = pPath:GetCursorPosition()
+			local f = pPath:GetLength() - flCursorStart
+			flCostStart = math.max( 0, pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) - f ) + f
+			pPath:MoveCursorToClosestPosition( vEnd )
+			flCursorEnd = pPath:GetCursorPosition()
+			f = pPath:GetLength() - flCursorEnd
+			flCostEnd = math.max( 0, pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) - f ) + f
+			local flNewCost
+			if flCostStart < flCostEnd then
+				flNewCost = flCostEnd
+				pPath:MoveCursorTo( flCursorEnd )
+			else
+				flNewCost = flCostStart
+				pPath:MoveCursorTo( flCursorStart )
+			end
+			local vDirection = vEnd - vStart
+			local dDirection = vDirection:GetNormalized()
+			local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
+			local flSizeOff = flSize * 1.5
+			local vTarget = enemy:GetPos() + enemy:OBBCenter()
+			local vLeft = vStart - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
+			local vLeftCheckDucked = vLeft + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
+			local vRight = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
+			local vRightCheckDucked = vRight + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
+			local flFractionLeft, flFractionRight = .1, .1
+			if !util_TraceLine( {
+				start = vStart + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
+				endpos = vLeftCheckDucked,
+				filter = tFilter,
+				mask = MASK_SHOT_HULL
+			} ).Hit then flFractionLeft = util_TraceLine( {
+				start = vLeftCheckDucked,
+				endpos = vTarget,
+				mask = MASK_SHOT_HULL,
+				filter = tFilter
+			} ).Fraction end
+			if !util_TraceLine( {
+				start = vEnd + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
+				endpos = vRightCheckDucked,
+				filter = tFilter,
+				mask = MASK_SHOT_HULL
+			} ).Hit then flFractionRight = util_TraceLine( {
+				start = vRightCheckDucked,
+				endpos = vTarget,
+				mask = MASK_SHOT_HULL,
+				filter = tFilter
+			} ).Fraction end
+			local fl = math.max( flFractionLeft, flFractionRight )
+			if fl >= 1 then fl = 8 else fl = fl ^ 3 end
+			flBestCandidate = flNewCost ^ 3 / fl * .75
+			tQueue = { { tNewCover, 0, flBestCandidate } }
+		end
 		sched.tAdvanceSearchQueue = tQueue
 		sched.tAdvanceSearchVisited = tVisited
 		local iHandled, bAtTheResult, tMyCover = 1, true, tCover
-		local bInADynamicCoverAndDidntFindOne = tCover[ 5 ] != nil
+		local bInADynamicCoverAndDidFindOne = sched.bAdvanceInADynamicCoverAndDidFindOne || tCover[ 5 ] == nil
+		local bFoundACandidate = sched.bAdvanceFoundACandidate
+		local flCandidatesSoFar = sched.flCandidatesSoFar || math.huge
 		while !table_IsEmpty( tQueue ) do
 			bAtTheResult = nil
 			if iHandled > 24 then break end
@@ -346,7 +405,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local tSource = table.remove( tQueue )
 			local tCover, flTrueCost, flCost, bMustPass = unpack( tSource )
 			local vCurrentStart, vCurrentEnd = tCover[ 1 ], tCover[ 2 ]
-			debugoverlay.Line(tCover[1],tCover[2],5,Color(255,0,0),true)
 			for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
 				for iIndex in pairs( tIndices ) do
 					local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
@@ -356,10 +414,12 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 					pPath:MoveCursorToClosestPosition( vStart )
 					flCursorStart = pPath:GetCursorPosition()
-					flCostStart = pPath:GetLength() - flCursorStart
+					local f = pPath:GetLength() - flCursorStart
+					flCostStart = math.max( 0, pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) - f ) + f
 					pPath:MoveCursorToClosestPosition( vEnd )
 					flCursorEnd = pPath:GetCursorPosition()
-					flCostEnd = pPath:GetLength() - flCursorEnd
+					f = pPath:GetLength() - flCursorEnd
+					flCostEnd = math.max( 0, pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) - f ) + f
 					local flNewCost
 					if flCostStart < flCostEnd then
 						flNewCost = flCostEnd
@@ -368,7 +428,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						flNewCost = flCostStart
 						pPath:MoveCursorTo( flCursorStart )
 					end
-					if bInADynamicCoverAndDidntFindOne then bInADynamicCoverAndDidntFindOne = nil end
+					if !bInADynamicCoverAndDidFindOne then bInADynamicCoverAndDidFindOne = true end
 					local vDirection = vEnd - vStart
 					local dDirection = vDirection:GetNormalized()
 					local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
@@ -407,12 +467,10 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						vCurrentEnd:Distance( vStart ),
 						vCurrentEnd:Distance( vEnd )
 					)
+					local fl = math.max( flFractionLeft, flFractionRight )
+					if fl >= 1 then fl = 8 else fl = fl ^ 3 end
 					table.insert( tQueue, { tNewCover, f,
-					// Allow us to disregard huge ass distances if we're heading towards the target.
-					// E.g. moving 2000 units to advance 500 units to the target will
-					// weigh 1500 units, but moving 1000 units to advance 750 units to the target will weigh just 250!
-					( f - flNewCost )
-					/ math.max( flFractionLeft, flFractionRight ) ^ 3 } )
+					( f + flNewCost ^ 3 ) / fl } )
 				end
 			end
 			local t = __COVER_DYNAMIC_CONNECTIONS__[ tCover ]
@@ -429,10 +487,12 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 						pPath:MoveCursorToClosestPosition( vStart )
 						flCursorStart = pPath:GetCursorPosition()
-						flCostStart = pPath:GetLength() - flCursorStart
+						local f = pPath:GetLength() - flCursorStart
+						flCostStart = math.max( 0, pPath:GetPositionOnPath( flCursorStart ):Distance( vStart ) - f ) + f
 						pPath:MoveCursorToClosestPosition( vEnd )
 						flCursorEnd = pPath:GetCursorPosition()
-						flCostEnd = pPath:GetLength() - flCursorEnd
+						f = pPath:GetLength() - flCursorEnd
+						flCostEnd = math.max( 0, pPath:GetPositionOnPath( flCursorEnd ):Distance( vStart ) - f ) + f
 						local flNewCost
 						if flCostStart < flCostEnd then
 							flNewCost = flCostEnd
@@ -479,12 +539,10 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 							vCurrentEnd:Distance( vStart ),
 							vCurrentEnd:Distance( vEnd )
 						)
+						local fl = math.max( flFractionLeft, flFractionRight )
+						if fl >= 1 then fl = 8 else fl = fl ^ 3 end
 						table.insert( tQueue, { tNewCover, f,
-						// Allow us to disregard huge ass distances if we're heading towards the target.
-						// E.g. moving 2000 units to advance 500 units to the target will
-						// weigh 1500 units, but moving 1000 units to advance 750 units to the target will weigh just 250!
-						( f - flNewCost )
-						/ math.max( flFractionLeft, flFractionRight ) ^ 2 } )
+						( f + flNewCost ^ 3 ) / fl } )
 					end
 				end
 			end
@@ -567,6 +625,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			vDirection:Normalize()
 			local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
 			vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
+			if bAdvanceFoundACandidate then flCandidatesSoFar = flCandidatesSoFar + 1 end
+			if flCost >= flBestCandidate then bAdvanceFoundACandidate = true continue end
 			for iCurrent = flStart, flEnd, flStep do
 				local vCover = vStart + vDirection * iCurrent + vOff
 				pPath:MoveCursorToClosestPosition( vCover )
@@ -612,13 +672,20 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				end
 				sched.vNextCover = vCover
 				sched.tNextCover = tCover
-				return
+				flBestCandidate = flCost
+				bFoundACandidate = true
+				if flCandidatesSoFar > 24 then sched.bAdvanceFinal = true return end
+				break
 			end
 		end
 		sched.flAdvanceSearchFraction = flFraction
-		if table_IsEmpty( tQueue ) then sched.tNextCover = false end
+		sched.flBestCandidate = flBestCandidate
+		sched.flCandidatesSoFar = flCandidatesSoFar
+		sched.bAdvanceFoundACandidate = bFoundACandidate
+		sched.bAdvanceInADynamicCoverAndDidFindOne = bInADynamicCoverAndDidFindOne
+		if table_IsEmpty( tQueue ) then sched.tNextCover = false sched.bAdvanceFinal = true end
 	end
-	if sched.bAdvance && sched.tNextCover != nil then
+	if sched.bAdvance && sched.tNextCover != nil && sched.bAdvanceFinal then
 		if sched.tNextCover == false then
 			MyTable.SetSchedule( self, "FreeMovement", MyTable )
 			return
@@ -662,12 +729,11 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		return
 	end
 	// Don't even try to repath often!
-	local pEnemyPath = MyTable.pEnemyPath || sched.pEnemyPath
+	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
 		MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
 		MyTable.pEnemyPath = pEnemyPath
-		sched.pEnemyPath = pEnemyPath
 	end
 	pEnemyPath:MoveCursorToClosestPosition( vec )
 	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
