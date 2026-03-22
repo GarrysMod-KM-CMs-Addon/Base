@@ -231,12 +231,12 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulb" ] = tDrawColorModify[ "$pp_colour_mulb" ] + flFogB * flMultiplier
 	MyTable.GP_FogDistance = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.GP_FogDistance || 0, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
 	DrawBloom(
-		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 1.33, 2 ),
+		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 2, 3 ),
 		// Setting all three to 1 and then tweaking the other settings
 		// is the way to make the scene actually beautiful, and why
 		// the new versions (since commit 266) are so freakin' beautiful!
-		1, // Size X
-		1, // Size Y
+		5, // Size X
+		5, // Size Y
 		1, // Passes
 		math_Remap( flBloom, 0, 1, 1.33, 2 ), 1, 1, 1
 	)
