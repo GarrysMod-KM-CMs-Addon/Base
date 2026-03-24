@@ -70,17 +70,17 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 	local tCover = MyTable.tCover
 	if !tCover || !MyTable.vCover then
-		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
 		return
 	end
 	local pEntity = tCover[ 6 ]
 	if pEntity != nil && !IsValid( pEntity ) then
-		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
 		return
 	end
 	local vec = MyTable.vCover
 	if !vec then
-		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
 		return
 	end
 	MyTable.Stand( self, sched.iStand )
@@ -243,76 +243,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	end
 	if MyTable.flCombatState > 0 && LevelOfDetail( sched, "flNextSearch" ) then
 		local tFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-		if sched.m_bDoesMyCoverLetMeShootAtTheEnemy == nil then
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-			local vDirection = vEnd - vStart
-			local dDirection = vDirection:GetNormalized()
-			local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
-			// This must be here. flSize is too close and flSize * 2 is too far.
-			// I love math. And if this keeps going, I'll soon love meth too.
-			local flSizeOff = flSize * 1.5
-			//	pPath:MoveCursorToClosestPosition( self:GetPos() )
-			//	local iCursor = pPath:GetCursorPosition()
-			//	local aDirection = pPath:GetPositionOnPath( iCursor )
-			//	pPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
-			//	aDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - aDirection
-			//	aDirection = aDirection:Angle()
-			local vTarget = enemy:GetPos() + enemy:OBBCenter()
-			//	local vHeight = Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-			//	local tPitchAngles = enemy:GetPos().z > self:GetPos().z && ACTOR_PITCH_ANGLES_UP || ACTOR_PITCH_ANGLES_DOWN
-			//	local flDistSqr = math.Remap( math.min( vStart:Distance( enemy:GetPos() ), vEnd:Distance( enemy:GetPos() ) ), 0, 4096, 256, 1024 )
-			//	flDistSqr = flDistSqr * flDistSqr
-			//	local function fDo( vOrigin, tAngles )
-			//		local vPos = vOrigin + vHeight
-			//		local tWholeFilter = IsValid( trueenemy ) && { self, enemy, trueenemy } || { self, enemy }
-			//		for i, flGlobalAnglePitch in ipairs( tPitchAngles ) do
-			//			for i, flGlobalAngleYaw in ipairs( tAngles ) do
-			//				local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
-			//				local vAim = aAim:Forward()
-			//				local tr = util_TraceLine {
-			//					start = vPos,
-			//					endpos = vPos + vAim * 999999,
-			//					mask = MASK_SHOT_HULL,
-			//					filter = self
-			//				}
-			//				local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
-			//				if util_TraceLine( {
-			//					start = vPoint,
-			//					endpos = vTarget,
-			//					mask = MASK_SHOT_HULL,
-			//					filter = tWholeFilter
-			//				} ).Hit || vPoint:DistToSqr( vTarget ) > flDistSqr then continue end
-			//				return true
-			//			end
-			//		end
-			//	end
-			local vLeft = vStart - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-			local vLeftCheckDucked = vLeft + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-			local vRight = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-			local vRightCheckDucked = vRight + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-			//	if !( fDo( vLeftCheckDucked, ACTOR_PITCH_ANGLES_RIGHT ) || fDo( vRightCheckDucked, ACTOR_PITCH_ANGLES_RIGHT ) ) then continue end
-			sched.m_bDoesMyCoverLetMeShootAtTheEnemy = !util_TraceLine( {
-				start = vStart + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && flSize || -flSize ),
-				endpos = vLeftCheckDucked,
-				filter = tFilter,
-				mask = MASK_SHOT_HULL
-			} ).Hit && !util_TraceLine( {
-				start = vLeftCheckDucked,
-				endpos = vTarget,
-				mask = MASK_SHOT_HULL,
-				filter = tFilter
-			} ).Hit || !util_TraceLine( {
-				start = vEnd + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && flSize || -flSize ),
-				endpos = vRightCheckDucked,
-				filter = tFilter,
-				mask = MASK_SHOT_HULL
-			} ).Hit && !util_TraceLine( {
-				start = vRightCheckDucked,
-				endpos = vTarget,
-				mask = MASK_SHOT_HULL,
-				filter = tFilter
-			} ).Hit
-		end
 		local tCover = MyTable.tCover
 		local tQueue, tVisited = sched.tAdvanceSearchQueue, sched.tAdvanceSearchVisited || { [ tCover ] = true }
 		local pPath = MyTable.pEnemyPath
@@ -354,49 +284,13 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				flNewCost = flCostStart
 				pPath:MoveCursorTo( flCursorStart )
 			end
-			local vDirection = vEnd - vStart
-			local dDirection = vDirection:GetNormalized()
-			local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
-			local flSizeOff = flSize * 1.5
-			local vTarget = enemy:GetPos() + enemy:OBBCenter()
-			local vLeft = vStart - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-			local vLeftCheckDucked = vLeft + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-			local vRight = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-			local vRightCheckDucked = vRight + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-			local flFractionLeft, flFractionRight = .1, .1
-			if !util_TraceLine( {
-				start = vStart + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-				endpos = vLeftCheckDucked,
-				filter = tFilter,
-				mask = MASK_SHOT_HULL
-			} ).Hit then flFractionLeft = util_TraceLine( {
-				start = vLeftCheckDucked,
-				endpos = vTarget,
-				mask = MASK_SHOT_HULL,
-				filter = tFilter
-			} ).Fraction end
-			if !util_TraceLine( {
-				start = vEnd + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-				endpos = vRightCheckDucked,
-				filter = tFilter,
-				mask = MASK_SHOT_HULL
-			} ).Hit then flFractionRight = util_TraceLine( {
-				start = vRightCheckDucked,
-				endpos = vTarget,
-				mask = MASK_SHOT_HULL,
-				filter = tFilter
-			} ).Fraction end
-			local fl = math.max( flFractionLeft, flFractionRight )
-			if fl >= 1 then fl = 8 else fl = fl ^ 3 end
-			flBestCandidate = flNewCost ^ 3 / fl * .75
+			flBestCandidate = flNewCost
 			tQueue = { { tNewCover, 0, flBestCandidate } }
 		end
 		sched.tAdvanceSearchQueue = tQueue
 		sched.tAdvanceSearchVisited = tVisited
 		local iHandled, bAtTheResult, tMyCover = 1, true, tCover
 		local bInADynamicCoverAndDidFindOne = sched.bAdvanceInADynamicCoverAndDidFindOne || tCover[ 5 ] == nil
-		local bFoundACandidate = sched.bAdvanceFoundACandidate
-		local flCandidatesSoFar = sched.flCandidatesSoFar || math.huge
 		while !table_IsEmpty( tQueue ) do
 			bAtTheResult = nil
 			if iHandled > 24 then break end
@@ -434,43 +328,13 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
 					local flSizeOff = flSize * 1.5
 					local vTarget = enemy:GetPos() + enemy:OBBCenter()
-					local vLeft = vStart - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-					local vLeftCheckDucked = vLeft + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-					local vRight = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-					local vRightCheckDucked = vRight + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-					local flFractionLeft, flFractionRight = .1, .1
-					if !util_TraceLine( {
-						start = vStart + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-						endpos = vLeftCheckDucked,
-						filter = tFilter,
-						mask = MASK_SHOT_HULL
-					} ).Hit then flFractionLeft = util_TraceLine( {
-						start = vLeftCheckDucked,
-						endpos = vTarget,
-						mask = MASK_SHOT_HULL,
-						filter = tFilter
-					} ).Fraction end
-					if !util_TraceLine( {
-						start = vEnd + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-						endpos = vRightCheckDucked,
-						filter = tFilter,
-						mask = MASK_SHOT_HULL
-					} ).Hit then flFractionRight = util_TraceLine( {
-						start = vRightCheckDucked,
-						endpos = vTarget,
-						mask = MASK_SHOT_HULL,
-						filter = tFilter
-					} ).Fraction end
 					local f = flTrueCost + math.min(
 						vCurrentStart:Distance( vStart ),
 						vCurrentStart:Distance( vEnd ),
 						vCurrentEnd:Distance( vStart ),
 						vCurrentEnd:Distance( vEnd )
 					)
-					local fl = math.max( flFractionLeft, flFractionRight )
-					if fl >= 1 then fl = 8 else fl = fl ^ 3 end
-					table.insert( tQueue, { tNewCover, f,
-					( f + flNewCost ^ 3 ) / fl } )
+					table.insert( tQueue, { tNewCover, f, f + flNewCost } )
 				end
 			end
 			local t = __COVER_DYNAMIC_CONNECTIONS__[ tCover ]
@@ -501,48 +365,13 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 							flNewCost = flCostStart
 							pPath:MoveCursorTo( flCursorStart )
 						end
-						local vDirection = vEnd - vStart
-						local dDirection = vDirection:GetNormalized()
-						local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
-						local flSizeOff = flSize * 1.5
-						local vTarget = enemy:GetPos() + enemy:OBBCenter()
-						local vLeft = vStart - dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-						local vLeftCheckDucked = vLeft + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-						local vRight = vEnd + dDirection * flSizeOff + dDirection:Angle():Right() * ( bRight && -flSize || flSize )
-						local vRightCheckDucked = vRight + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] )
-						local flFractionLeft, flFractionRight = .1, .1
-						if !util_TraceLine( {
-							start = vStart + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-							endpos = vLeftCheckDucked,
-							filter = tFilter,
-							mask = MASK_SHOT_HULL
-						} ).Hit then flFractionLeft = util_TraceLine( {
-							start = vLeftCheckDucked,
-							endpos = vTarget,
-							mask = MASK_SHOT_HULL,
-							filter = tFilter
-						} ).Fraction end
-						if !util_TraceLine( {
-							start = vEnd + Vector( 0, 0, MyTable.vHullDuckMaxs[ 1 ] ) + dDirection:Angle():Right() * ( bRight && -flSize || flSize ),
-							endpos = vRightCheckDucked,
-							filter = tFilter,
-							mask = MASK_SHOT_HULL
-						} ).Hit then flFractionRight = util_TraceLine( {
-							start = vRightCheckDucked,
-							endpos = vTarget,
-							mask = MASK_SHOT_HULL,
-							filter = tFilter
-						} ).Fraction end
 						local f = flTrueCost + math.min(
 							vCurrentStart:Distance( vStart ),
 							vCurrentStart:Distance( vEnd ),
 							vCurrentEnd:Distance( vStart ),
 							vCurrentEnd:Distance( vEnd )
 						)
-						local fl = math.max( flFractionLeft, flFractionRight )
-						if fl >= 1 then fl = 8 else fl = fl ^ 3 end
-						table.insert( tQueue, { tNewCover, f,
-						( f + flNewCost ^ 3 ) / fl } )
+						table.insert( tQueue, { tNewCover, f, f + flNewCost } )
 					end
 				end
 			end
@@ -625,8 +454,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			vDirection:Normalize()
 			local vOff = tCover[ 3 ] && vDirection:Angle():Right() || -vDirection:Angle():Right()
 			vOff = vOff * vMaxs[ 1 ] * math.max( 1.25, COVER_BOUND_SIZE * .5 )
-			if bAdvanceFoundACandidate then flCandidatesSoFar = flCandidatesSoFar + 1 end
-			if flCost >= flBestCandidate then bAdvanceFoundACandidate = true continue end
+			if flCost >= flBestCandidate then continue end
 			for iCurrent = flStart, flEnd, flStep do
 				local vCover = vStart + vDirection * iCurrent + vOff
 				pPath:MoveCursorToClosestPosition( vCover )
@@ -673,21 +501,16 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				sched.vNextCover = vCover
 				sched.tNextCover = tCover
 				flBestCandidate = flCost
-				bFoundACandidate = true
-				if flCandidatesSoFar > 24 then sched.bAdvanceFinal = true return end
 				break
 			end
 		end
-		sched.flAdvanceSearchFraction = flFraction
 		sched.flBestCandidate = flBestCandidate
-		sched.flCandidatesSoFar = flCandidatesSoFar
-		sched.bAdvanceFoundACandidate = bFoundACandidate
 		sched.bAdvanceInADynamicCoverAndDidFindOne = bInADynamicCoverAndDidFindOne
 		if table_IsEmpty( tQueue ) then sched.tNextCover = false sched.bAdvanceFinal = true end
 	end
-	if sched.bAdvance && sched.tNextCover != nil && sched.bAdvanceFinal then
+	if sched.bAdvance && sched.tNextCover != nil then
 		if sched.tNextCover == false then
-			MyTable.SetSchedule( self, "FreeMovement", MyTable )
+			MyTable.SetSchedule( self, "FreeMovement", MyTable ).bDontSearchForCoverTheFirstTime = true
 			return
 		end
 		local s = MyTable.SetSchedule( self, "TakeCoverMove", MyTable )
@@ -718,16 +541,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local f = MyTable.flPathTolerance * 1.5
 	if self:GetPos():DistToSqr( vec ) > ( f * f ) then MyTable.vCover = nil MyTable.tCover = nil return end
 	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-	// We don't repath often, so have to check this
-	if !util_TraceLine( {
-		start = v,
-		endpos = enemy:GetPos(),
-		mask = MASK_SHOT_HULL,
-		filter = { self, enemy }
-	} ).Hit then
-		if MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "FreeMovement", MyTable ) else MyTable.SetSchedule( self, "TakeCover", MyTable ) end
-		return
-	end
 	// Don't even try to repath often!
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
@@ -750,7 +563,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	} ).Hit then
 		MyTable.vCover = nil
 		MyTable.tCover = nil
-		if MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "FreeMovement", MyTable ) else MyTable.SetSchedule( self, "TakeCover", MyTable ) end
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
 		return
 	end
 	v = vec + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )

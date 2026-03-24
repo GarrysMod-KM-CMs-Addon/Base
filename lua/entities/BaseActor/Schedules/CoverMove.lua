@@ -47,14 +47,12 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	end
 	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
 	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-	// Don't even try to repath often!
-	local pEnemyPath = MyTable.pEnemyPath || sched.pEnemyPath
+	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
-		MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
 		MyTable.pEnemyPath = pEnemyPath
-		sched.pEnemyPath = pEnemyPath
 	end
+	MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
 	pEnemyPath:MoveCursorToClosestPosition( vec )
 	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
 	pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
@@ -70,7 +68,9 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	} ).Hit then
 		MyTable.vCover = nil
 		MyTable.tCover = nil
-		if MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "FreeMovement", MyTable ) else MyTable.SetSchedule( self, "TakeCover", MyTable ) end
+		if MyTable.CanExpose( self, MyTable ) then
+			MyTable.SetSchedule( self, "FreeMovement", MyTable ).bDontSearchForCoverTheFirstTime = sched.bFromFreeMovement
+		else MyTable.SetSchedule( self, "TakeCover", MyTable ) end
 		return
 	end
 	if !sched.Path then sched.Path = Path "Follow" end

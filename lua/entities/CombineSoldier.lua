@@ -113,8 +113,8 @@ ENT.iDefaultClass = CLASS_COMBINE
 
 function ENT:Initialize()
 	self:SetModel "models/player/combine_soldier.mdl"
-	self:SetHealth( 200 )
-	self:SetMaxHealth( 200 )
+	self:SetHealth( 250 )
+	self:SetMaxHealth( 250 )
 	self:SetPlayerColor( Vector( 0, 1, 1 ) )
 	BaseClass.Initialize( self )
 end

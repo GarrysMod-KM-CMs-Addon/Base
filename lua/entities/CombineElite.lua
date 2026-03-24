@@ -30,7 +30,7 @@ if !SERVER then return end
 function ENT:Initialize()
 	BaseClass.Initialize( self )
 	self:SetModel "models/player/combine_super_soldier.mdl"
-	self:SetHealth( 400 )
-	self:SetMaxHealth( 400 )
+	self:SetHealth( 300 )
+	self:SetMaxHealth( 300 )
 	self:SetPlayerColor( Vector( 1, 0, 0 ) )
 end

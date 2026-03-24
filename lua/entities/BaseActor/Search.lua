@@ -104,7 +104,7 @@ function ENT:SearchNodes( vPos, fWeighter, flSpacing )
 				end
 				// Sorting is expensive!!! We need to only sort this if we actually did something!!!
 				table_SortByMember( tQueue, 4 )
-				return F()
+				return F(), area
 			end
 			return area
 		end

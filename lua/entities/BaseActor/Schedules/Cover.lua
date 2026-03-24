@@ -7,7 +7,6 @@ function ENT:GatherCoverBounds()
 end
 
 include "CoverMove.lua"
-include "CoverUnReachable.lua"
 
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
@@ -80,7 +79,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 			sched.flBoundingRadiusTwo = f
 			local vMins, vMaxs = sched.vMins || ( MyTable.vHullDuckMins || MyTable.vHullMins ) + Vector( 0, 0, MyTable.loco:GetStepHeight() ), MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 			sched.vMins = vMins
-			local tCovers = {}
+			local tCovers
 			local d = MyTable.vHullMaxs.x * 4
 			local flSuppressionTraceFraction = MyTable.flSuppressionTraceFraction
 			local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
@@ -91,7 +90,7 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 					sched.pIterator = nil
 					return
 				end
-				table.Empty( tCovers )
+				tCovers = {}
 				for _, t in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
 				for pEntity, tTable in pairs( __COVERS_DYNAMIC__[ pArea:GetID() ] || {} ) do
 					if !IsValid( pEntity ) then continue end
@@ -191,13 +190,12 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		end
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 		local v = vec + Vector( 0, 0, vMaxs[ 3 ] )
-		// Don't even try to repath often!
-		local pEnemyPath = MyTable.pEnemyPath || sched.pEnemyPath
+		local pEnemyPath = MyTable.pEnemyPath
 		if !pEnemyPath then
 			pEnemyPath = Path "Follow"
-			MyTable.ComputeFlankPath( self, pEnemyPath, enemy, MyTable )
-			sched.pEnemyPath = pEnemyPath
+			MyTable.pEnemyPath = pEnemyPath
 		end
+		MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
 		pEnemyPath:MoveCursorToClosestPosition( vec )
 		local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
 		pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
@@ -205,16 +203,15 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		d[ 3 ] = 0
 		d:Normalize()
 		if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
-		if util_TraceLine( {
+		if !util_TraceLine( {
 			start = v,
 			endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
 			mask = MASK_SHOT_HULL,
 			filter = self
-		} ).Hit then
-			local f = MyTable.flPathTolerance
-			if self:GetPos():DistToSqr( vec ) <= ( f * f ) then return true end
-		end
+		} ).Hit then MyTable.vCover = nil MyTable.tCover = nil return end
 	end
+	local f = MyTable.flPathTolerance
+	if self:GetPos():DistToSqr( vec ) <= ( f * f ) then return true end
 	local tNearestEnemies = {}
 	for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
 	table.SortByMember( tNearestEnemies, 2, true )
