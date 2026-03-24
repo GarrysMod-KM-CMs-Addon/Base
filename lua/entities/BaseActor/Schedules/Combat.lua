@@ -323,11 +323,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 						pPath:MoveCursorTo( flCursorStart )
 					end
 					if !bInADynamicCoverAndDidFindOne then bInADynamicCoverAndDidFindOne = true end
-					local vDirection = vEnd - vStart
-					local dDirection = vDirection:GetNormalized()
-					local flSize = math.abs( MyTable.vHullDuckMins[ 1 ] ) + MyTable.vHullDuckMaxs[ 1 ]
-					local flSizeOff = flSize * 1.5
-					local vTarget = enemy:GetPos() + enemy:OBBCenter()
 					local f = flTrueCost + math.min(
 						vCurrentStart:Distance( vStart ),
 						vCurrentStart:Distance( vEnd ),
