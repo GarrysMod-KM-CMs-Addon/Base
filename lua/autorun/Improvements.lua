@@ -78,9 +78,9 @@ function LevelOfDetail( pContainer, sKey, flMultiplier )
 	local f = pContainer[ sKey ]
 	if f then
 		if SysTime() <= f then return end
-		pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ .5 * ( flMultiplier || 1 ), 1 )
+		pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 )
 		return true
-	else pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ .5 * ( flMultiplier || 1 ), 1 ) end
+	else pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 ) end
 end
 
 physenv.SetPerformanceSettings {

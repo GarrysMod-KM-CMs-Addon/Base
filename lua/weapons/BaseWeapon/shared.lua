@@ -36,7 +36,7 @@ if CLIENT then
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
 end
 
-function SWEP:PlayReloadSounds() end
+function SWEP:ReloadEffects() end
 
 function SWEP:GetReloadActivity() return ACT_VM_RELOAD end
 
@@ -70,6 +70,7 @@ end
 
 SWEP.m_bAllowOneInTheChamber = true
 function SWEP:Reload()
+	if self.bAllowReloadingDuringPrimaryFire || CurTime() <= self:GetNextPrimaryFire() then return end
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
 	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
@@ -88,7 +89,7 @@ function SWEP:Reload()
 		end
 	end
 	if self:DefaultReload( ACT, bOneInTheChamber ) then
-		self:PlayReloadSounds( ACT )
+		self:ReloadEffects( ACT )
 		if !pReloadOwner:IsPlayer() then return end
 		f = pReloadOwner:GetViewModel()
 		f = f:SequenceDuration( f:SelectWeightedSequence( ACT ) )
@@ -143,7 +144,7 @@ function SWEP:Deploy() self:BaseWeaponDraw( self:GetDrawActivity() ) end
 function SWEP:Holster()
 	// This is just frustarting!
 	// if CurTime() <= self:GetNextPrimaryFire() || CurTime() <= self:GetNextSecondaryFire() then return end
-	if CurTime() <= self.flReloadTime then return end
+	if CurTime() <= ( self.flReloadTime || 0 ) then return end
 	return true
 end
 
@@ -202,7 +203,7 @@ function SWEP:DoRecoil()
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
 	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
 	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 )
-	self:CallOnClient( "AddRecoil", flRecoil )
+	if pOwner:IsPlayer() then self:CallOnClient( "AddRecoil", flRecoil ) end
 	local f = pOwner.ViewPunch
 	if IsValid( pOwner ) && f then
 		if CurTime() <= self.m_flFlipMyKick then
@@ -410,7 +411,7 @@ if CLIENT then
 		pos = pos + vViewFinalRatherQuick[ 2 ] * ang:Right()
 		pos = pos + vViewFinalRatherQuick[ 3 ] * ang:Up()
 		local flMultiplier = MyTable.flAimMultiplier || 0
-		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
+		if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && !MyTable.bSniperNoSway then
 			flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER )
 		else flMultiplier = 0 end
 		local flSway = MyTable.flSway * flMultiplier
@@ -478,10 +479,12 @@ if CLIENT then
 		local flBreathe = RealTime() * 5
 		local vAim
 		if bZoom then vAim = MyTable.vViewModelAim end
-		if bZoom && vAim then
-			vTarget = Vector( vAim )
-			local vAimAngle = MyTable.vViewModelAimAngle
-			vTargetAngle = vAimAngle && Vector( vAimAngle ) || Vector()
+		if bZoom then
+			if vAim then
+				vTarget = Vector( vAim )
+				local vAimAngle = MyTable.vViewModelAimAngle
+				vTargetAngle = vAimAngle && Vector( vAimAngle ) || Vector()
+			else bZoom = nil end
 		else
 			if CurTime() > self:GetNextPrimaryFire() then
 				vTarget = Vector( 0, math_cos( flBreathe * .5 ) * .0625, math_sin( flBreathe / 3 ) * .0625 )
@@ -682,10 +685,17 @@ if CLIENT then
 		local flAimShoot = MyTable.flAimShoot
 		if flAimShoot then
 			local f = MyTable.flBarrelBack || 0
-			// 	MyTable.flBarrelBack = math.max( 0, f - 1 / MyTable.Primary_flDelay * flFrameTime )
-			MyTable.flBarrelBack = Lerp( math_min( 1, .8 / MyTable.Primary_flDelay * f * flFrameTime ), f, 0 )
+			if f > 1 then
+				MyTable.flBarrelBack = Lerp( math_min( 1, .5 / MyTable.Primary_flDelay * f * flFrameTime ), f, 0 )
+			else
+				if CurTime() > self:GetNextPrimaryFire() + .1 then
+					MyTable.flBarrelBack = Lerp( math_min( 1, 2 / MyTable.Primary_flDelay * f * flFrameTime ), f, 0 )
+				else
+					MyTable.flBarrelBack = math.max( 0, f - .2 / MyTable.Primary_flDelay * flFrameTime )
+				end
+			end
 			f = MyTable.flBarrelBackCurrent || 0
-			f = Lerp( math_min( 1, 2 / MyTable.Primary_flDelay * flFrameTime ), f, MyTable.flBarrelBack * ( bZoom && 1 || .25 ) )
+			f = Lerp( math_min( 1, 1.5 / MyTable.Primary_flDelay * flFrameTime ), f, MyTable.flBarrelBack * ( bZoom && 1 || .25 ) )
 			MyTable.flBarrelBackCurrent = f
 			pos = pos - ang:Forward() * f * flAimShoot
 		end

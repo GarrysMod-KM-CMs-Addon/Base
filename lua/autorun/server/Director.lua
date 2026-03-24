@@ -162,7 +162,7 @@ hook.Add( "Tick", "Director", function()
 		local h = ply:Health() / ply:GetMaxHealth()
 		ply:SetDSP( h <= .165 && 16 || h <= .33 && 15 || h <= .66 && 14 || 1 )
 		PlyTable.GAME_flSuppression = math.Approach( PlyTable.GAME_flSuppression || 0, 0, math.max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
-		local EThreat, flIntensity = DIRECTOR_THREAT_NULL, ( PlyTable.GAME_flSuppression || 0 ) / ( ply:Health() * 6 )
+		local EThreat = DIRECTOR_THREAT_NULL
 		local tMusicEntities = PlyTable.DR_tMusicEntities || {}
 		local vEye = ply:EyePos()
 		if RealTime() > ( PlyTable.DR_flNextUpdate || 0 ) then
@@ -205,6 +205,7 @@ hook.Add( "Tick", "Director", function()
 			// We're doin' shit to them, so add it!
 			// (Or someone else's doin' shit to them)
 			flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
+			flAllHealth = flAllHealth + pEntity:Health()
 			tNewMusicEntities[ pEntity ] = true
 			f = tSpotted[ pEntity ]
 			if f then if CurTime() > f then EThreat = ETheirThreat end
@@ -226,21 +227,24 @@ hook.Add( "Tick", "Director", function()
 			tNewSpotted[ pEntity ] = flTime
 		end
 		PlyTable.DR_tSpotted = tNewSpotted
-		local f = math.max( 0, flAllSuppression ) / flAllHealth
-		if f != f then f = 0 end // NaN
-		flIntensity = flIntensity + f
+		flIntensity = math.max( 0, flAllSuppression ) / flAllHealth
+		if flIntensity != flIntensity then flIntensity = 0 end // nan
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
 		if EThreat >= DIRECTOR_THREAT_HOLD_FIRE then Achievement_Miscellaneous( ply, "Combat" ) end
 		if bAlarm || PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
 		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
-		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. tostring( flIntensity ) )
+		local sIntensity = tostring( flIntensity )
+		if !tonumber( sIntensity ) then sIntensity = "0" end
+		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. sIntensity )
 		local flTension = PlyTable.DR_flMusicTension || 0
 		if flTension > flIntensity then flTension = Lerp( .1 * FrameTime(), flTension || 0, flIntensity )
 		else flTension = Lerp( .25 * FrameTime(), flTension || 0, flIntensity ) end
-		if flTension != flTension then flTension = 0 end // NaN
+		if flTension != flTension then flTension = 0 end // nan
 		PlyTable.DR_flMusicTension = flTension
-		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. tostring( flTension || 0 ) )
+		local sTension = tostring( flTension )
+		if !tonumber( sTension ) then sTension = "0" end
+		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. sTension )
 		hook.Run( "PostDirectorPlayerThink", ply )
 	end
 end )

@@ -30,6 +30,7 @@ SWEP.flCoverY = -8
 SWEP.Primary_flSpreadX = .05
 SWEP.Primary_flSpreadY = .05
 SWEP.bSpecial = true
+SWEP.bAllowReloadingDuringPrimaryFire = true
 
 sound.Add {
 	name = "RPG_Shot",

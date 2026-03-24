@@ -6,12 +6,8 @@ DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
 timer.Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
 
 local sound_Add = sound.Add
-local util_PrecacheSound = util.PrecacheSound
-local Sound = Sound
 local CHAN_STATIC = CHAN_STATIC
 function Director_Music( sName, sPath )
-	util_PrecacheSound( sPath )
-	Sound( sPath )
 	sound_Add {
 		name = sName,
 		channel = CHAN_STATIC,
@@ -20,11 +16,36 @@ function Director_Music( sName, sPath )
 	}
 end
 
+ENGINE_READ_SOUND = {}
+
+function WarmUpSound( sName )
+	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
+	local pSound = CreateSound( LocalPlayer(), sName )
+	pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
+	timer.Simple( 0, function() pSound:Stop() end )
+	ENGINE_READ_SOUND[ sName ] = true
+end
+
+// If you warm up the next sounds as soon as you get to a new music stage,
+// Source will waste time reading them, and the same kind of stitch as if
+// you never warmed up the current sound will appear. This function fixes
+// it, by being "generous", and warming up sounds a little later.
+function WarmUpSoundGenerous( sName )
+	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
+	timer.Simple( math.Rand( .33, .66 ), function()
+		if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
+		local pSound = CreateSound( LocalPlayer(), sName )
+		pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
+		timer.Simple( 0, function() pSound:Stop() end )
+		ENGINE_READ_SOUND[ sName ] = true
+	end )
+end
+
 DIRECTOR_MUSIC_IDLE_SEQUENCES = DIRECTOR_MUSIC_IDLE_SEQUENCES || {}
 
 local math_Rand = math.Rand
 DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
-	// Do NOT write anything here! Use DIRECTOR_IDLE_SEQUENCES instead!
+	// Do NOT write anything here! Use DIRECTOR_MUSIC_IDLE_SEQUENCES instead!
 	[ DIRECTOR_THREAT_NULL ] = {
 		Base = { Execute = function( self )
 			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
@@ -195,25 +216,6 @@ __HUD_SHOULD_NOT_DRAW__ = {
 	CHudHealth = true,
 	CHudHistoryResource = true
 }
-
-// So, this is how you get nigh perfect looping in Lua.
-// There are 26 HUD elements which this is called for per frame.
-// Meaning 1560 calls per second if you have 60 FPS.
-// But before you raise your pitchforks and start throwing
-// tomatoes at me, remember who I am. I wrote what is
-// essentially triple A Ubisoft quality into Garry's Mod.
-// I have always been a huge stickler for the performance.
-// I would not do this without reason, and I am not doing
-// this in a messy way, either. In Python, you can use
-// pygame in separate threads, since it yields until
-// the sound finishes playing. But that's simply not
-// possible in Lua. Plus, even on my shitty ass computer,
-// the FPS merely drops from 40 FPS to 30, and from 60 FPS to 40.
-// Point is, I know how to make performant code.
-// As terrifying to performance because of length it looks, it's not.
-// Bottom line: Do NOT "optimize" or "refactor" this. This ISN'T spaghetti code,
-// nor is it hacky. I'm not a casual Garry's Mod addon maker, this addon is a PROFESSIONAL passion project xD
-// My point is, I know what I'm doing.
 
 function DIRECTOR_CLIENT_TICK( flInterval )
 	local ply = LocalPlayer()

@@ -129,7 +129,7 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 			ent.GAME_tSuppressionAmount[ Owner ] = ( ent.GAME_tSuppressionAmount[ Owner ] || 0 ) + flDamage
 		else ent.GAME_tSuppressionAmount = { [ Owner ] = flDamage } end
 		local f = ent.GAME_OnRangeAttacked
-		if f == nil then if ent.GAME_flSuppression then ent.GAME_flSuppression = ent.GAME_flSuppression + flDamage end else f( ent, Owner, vStart, vEnd, flDamage ) end
+		if f == nil then ent.GAME_flSuppression = ( ent.GAME_flSuppression || 0 ) + flDamage else f( ent, Owner, vStart, vEnd, flDamage ) end
 		if ent.__ACTOR__ then
 			local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
 			if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
@@ -225,18 +225,18 @@ local cCorrectScale = CreateConVar(
 
 hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
 	if IsValid( ent ) then
+		local f = ent:GetModelScale()
+		if !f then return end
+		ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
+		local vMins, vMaxs = ent:GetCollisionBounds()
+		vMins = vMins * MODEL_SIZE_GENERAL_MULTIPLIER
+		vMaxs = vMaxs * MODEL_SIZE_GENERAL_MULTIPLIER
+		ent:SetCollisionBounds( vMins, vMaxs )
+		ent:Activate()
 		timer.Simple( .01, function()
 			if !IsValid( ent ) then return end
 			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
 			if !cCorrectScale:GetBool() || ent:GetClass() == "prop_door_rotating" then return end
-			local f = ent:GetModelScale()
-			if !f then return end
-			ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
-			local vMins, vMaxs = ent:GetCollisionBounds()
-			vMins = vMins * MODEL_SIZE_GENERAL_MULTIPLIER
-			vMaxs = vMaxs * MODEL_SIZE_GENERAL_MULTIPLIER
-			ent:SetCollisionBounds( vMins, vMaxs )
-			ent:Activate()
 		end )
 	end
 end )
@@ -376,8 +376,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
 		local v = Data.Spread
-		v[ 1 ] = v[ 1 ] * 5
-		v[ 2 ] = v[ 2 ] * 5
+		v[ 1 ] = v[ 1 ] * 2
+		v[ 2 ] = v[ 2 ] * 2
 		Data.Damage = Data.Damage * .1
 	end
 	Data.Callback = function( atk, tr, dmg )

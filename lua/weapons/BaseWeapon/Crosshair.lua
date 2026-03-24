@@ -232,11 +232,28 @@ local developer = GetConVar "developer"
 local CPlayer = FindMetaTable "Player"
 local CPlayer_IsSprinting = CPlayer.IsSprinting
 local CPlayer_KeyDown = CPlayer.KeyDown
-SWEP.bDontDrawCrosshairDuringZoom = true
 local surface_DrawTexturedRect = surface.DrawTexturedRect
 local math_min = math.min
 local cThirdPerson = GetConVar "bThirdPerson"
 local flLastDoDrawCrosshairCall = 0
+
+function SWEP:DrawSniperScope( MyTable )
+	surface_SetDrawColor( 0, 0, 0, 255 )
+	surface_SetTexture( surface_GetTextureID( MyTable.sSniperTexture || "CrosshairScope1" ) )
+	local flHeight, flWidth = ScrH(), ScrW()
+	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
+	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 )
+	surface_SetDrawColor( 255, 255, 255, 255 )
+	surface_DrawTexturedRect( flX - flSize * .5, flY - flSize * .5, flSize, flSize )
+	surface_SetDrawColor( 0, 0, 0, 255 )
+	surface_DrawRect( 0, 0, flX - flSize * .5 + 1, flHeight )
+	surface_DrawRect( flX + flSize * .5 - 1, 0, flWidth - flX, flHeight )
+	surface_DrawRect( flX - flSize * .5, 0, flSize, flY - flSize * .5 )
+	surface_DrawRect( flX - flSize * .5, flY + flSize * .5, flSize, flHeight - flY )
+	return true
+end
+
+SWEP.bDontDrawCrosshairDuringZoom = true
 SWEP.flCrosshairInAccuracyGapPart = 0
 SWEP.flCrosshairInAccuracyRecoilPart = 0
 function SWEP:DoDrawCrosshair()
@@ -282,19 +299,7 @@ function SWEP:DoDrawCrosshair()
 		flRecoilPart * MyTable.flRecoil / .033 * .15 / MyTable.Primary_flDelay / math_min( 5, self:GetMaxClip1() * .2 ) )
 	end
 	if MyTable.bSniper && flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
-		surface_SetDrawColor( 0, 0, 0, 255 )
-		surface_SetTexture( surface_GetTextureID( MyTable.sSniperTexture || "CrosshairScope1" ) )
-		local flHeight, flWidth = ScrH(), ScrW()
-		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-		local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 )
-		surface_SetDrawColor( 255, 255, 255, 255 )
-		surface_DrawTexturedRect( flX - flSize * .5, flY - flSize * .5, flSize, flSize )
-		surface_SetDrawColor( 0, 0, 0, 255 )
-		surface_DrawRect( 0, 0, flX - flSize * .5 + 1, flHeight )
-		surface_DrawRect( flX + flSize * .5 - 1, 0, flWidth - flX, flHeight )
-		surface_DrawRect( flX - flSize * .5, 0, flSize, flY - flSize * .5 )
-		surface_DrawRect( flX - flSize * .5, flY + flSize * .5, flSize, flHeight - flY )
-		return true
+		MyTable.DrawSniperScope( self, MyTable )
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes
@@ -304,7 +309,8 @@ function SWEP:DoDrawCrosshair()
 			local flW, flH = ScrW() * .9, ScrH() * .9
 			surface_SetDrawColor( 32, 32, 32, 255 )
 			local flWidth, flHeight, sFont
-			if self:GetMaxClip1() <= 15 then
+			local b = MyTable.bDontDrawAmmoBars
+			if b || self:GetMaxClip1() <= 15 then
 				flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
 			else
 				flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
@@ -317,28 +323,30 @@ function SWEP:DoDrawCrosshair()
 					draw.SimpleTextOutlined( a, sFont, flX, flY, nil, nil, nil, 1, Color( 0, 0, 0 ) )
 				end
 			end
-			for _ = 1, self:GetMaxClip1() do
-				flX = flX - flWidth - 1
-				surface_DrawRect( flX, flY, flWidth, flHeight )
-			end
-			if CurTime() <= MyTable.flReloadTime then
-				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
-				local flX, flY = flW - flWidth, flH - flHeight
+			if !b then
 				for _ = 1, self:GetMaxClip1() do
 					flX = flX - flWidth - 1
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+					surface_DrawRect( flX, flY, flWidth, flHeight )
 				end
-			else
-				surface_SetDrawColor( 255, 255, 255, 255 )
-				local flX, flY = flW - flWidth, flH - flHeight
-				for _ = 1, self:Clip1() do
-					flX = flX - flWidth - 1
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
-				end
-				surface_SetDrawColor( 64, 64, 64, 255 )
-				for _ = self:Clip1() + 1, self:GetMaxClip1() do
-					flX = flX - flWidth - 1
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+				if CurTime() <= MyTable.flReloadTime then
+					surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
+					local flX, flY = flW - flWidth, flH - flHeight
+					for _ = 1, self:GetMaxClip1() do
+						flX = flX - flWidth - 1
+						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+					end
+				else
+					surface_SetDrawColor( 255, 255, 255, 255 )
+					local flX, flY = flW - flWidth, flH - flHeight
+					for _ = 1, self:Clip1() do
+						flX = flX - flWidth - 1
+						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+					end
+					surface_SetDrawColor( 64, 64, 64, 255 )
+					for _ = self:Clip1() + 1, self:GetMaxClip1() do
+						flX = flX - flWidth - 1
+						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+					end
 				end
 			end
 		end
