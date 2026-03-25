@@ -68,9 +68,7 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	} ).Hit then
 		MyTable.vCover = nil
 		MyTable.tCover = nil
-		if MyTable.CanExpose( self, MyTable ) then
-			MyTable.SetSchedule( self, "FreeMovement", MyTable ).bDontSearchForCoverTheFirstTime = sched.bFromFreeMovement
-		else MyTable.SetSchedule( self, "TakeCover", MyTable ) end
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
 		return
 	end
 	if !sched.Path then sched.Path = Path "Follow" end

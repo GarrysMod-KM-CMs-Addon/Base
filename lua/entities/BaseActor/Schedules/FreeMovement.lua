@@ -170,11 +170,10 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 			local d = MyTable.vHullMaxs.x * 4
 			local flSuppressionTraceFraction = MyTable.flSuppressionTraceFraction
 			local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			local bDontSearchForCoverTheFirstTime = sched.bDontSearchForCoverTheFirstTime
 			for _ = 0, 24 do
 				local vPoint, pArea = pIterator()
 				if vPoint == nil then sched.pIterator = nil return end
-				if pArea != nil && !tVisited[ pArea:GetID() ] && !bDontSearchForCoverTheFirstTime then
+				if pArea != nil && !tVisited[ pArea:GetID() ] then
 					tVisited[ pArea:GetID() ] = true
 					tCovers = {}
 					for _, t in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
@@ -259,7 +258,7 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 							end
 							MyTable.vCover = vCover
 							MyTable.tCover = tCover
-							MyTable.SetSchedule( self, "TakeCoverMove", MyTable ).bFromFreeMovement = true
+							MyTable.SetSchedule( self, "TakeCoverMove", MyTable )
 							return
 						end
 					end
