@@ -452,19 +452,23 @@ end
 
 // local math_max = math.max
 
-hook.Add( "EntityTakeDamage", "GameImprovements", function( ent, dmg )
+hook.Add( "EntityTakeDamage", "GameImprovements", function( ent, dDamage )
 	// Bloodloss works only on players for now, so see PlayerHurt for bloodloss code
-	local at = dmg:GetAttacker()
+	local at = dDamage:GetAttacker()
 	if IsValid( at ) then
+		if at.GAME_bNoCollisionDamage && dDamage:IsDamageType( 1 ) then
+			dDamage:ScaleDamage( 0 )
+			return 0
+		end
 		if at:IsPlayer() then
 			local v = __PLAYER_MODEL__[ at:GetModel() ]
 			if v then
 				v = v.OnHurtSomething
-				if v then if v( at, ent, dmg ) then b = nil end end
+				if v then if v( at, ent, dDamage ) then b = nil end end
 			end
 		end
 		local f = at.GAME_OnHurtSomething
-		if f then f( at, ent, dmg ) end
+		if f then f( at, ent, dDamage ) end
 	end
 end )
 
@@ -1491,6 +1495,16 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		end
 	end
 	return true
+end )
+
+hook.Add( "EntityRemoved", "GameImprovements", function( pEntity )
+	local t = pEntity.GAME_tIWantACallBackWhenThisIsRemoved
+	if t then
+		for _, f in ipairs( t ) do
+			f()
+		end
+	end
+	pEntity.GAME_tIWantACallBackWhenThisIsRemoved = nil
 end )
 
 if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end

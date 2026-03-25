@@ -1,23 +1,3 @@
-if CLIENT then
-	// A.k.a HACKY_HACK_HACK_GUN_IN_CROTCH_ALERT_RIFLE
-	// I'm not kidding, that's the actual name I used while developing it
-	function MANUAL_WEAPON_ATTACHMENT_RIFLE( self )
-		local pOwner = self:GetOwner()
-		if IsValid( pOwner ) then
-			local i = pOwner:LookupBone "ValveBiped.Bip01_R_Hand"
-			if !i then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) return end
-			local mMatrix = pOwner:GetBoneMatrix( i )
-			if !mMatrix then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) return end
-			local vPos, aAngles = mMatrix:GetTranslation(), mMatrix:GetAngles()
-			aAngles:RotateAroundAxis( aAngles:Right(), -90 )
-			vPos = vPos + aAngles:Right() * 3
-			self:SetRenderOrigin( vPos )
-			self:SetRenderAngles( aAngles )
-		else self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) end
-		self:DrawModel()
-	end
-end
-
 if SERVER then
 	local player_Iterator = player.Iterator
 	function LocalPlayer()

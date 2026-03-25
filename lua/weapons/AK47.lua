@@ -1,4 +1,4 @@
-DEFINE_BASECLASS "BaseWeapon"
+DEFINE_BASECLASS "BaseBulletWeapon"
 
 SWEP.Category = "Assault Rifles"
 SWEP.PrintName = "#AK47"
@@ -29,6 +29,7 @@ SWEP.flSideWaysRecoilMax = .34
 SWEP.flRecoilGrowMin = .66
 SWEP.flRecoilGrowMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
+SWEP.sHoldType = "AR2"
 
 if IsMounted "left4dead2" then
 	SWEP.flAimShoot = 6
@@ -48,48 +49,23 @@ else
 	SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -6.61 - SWEP.flViewModelY, 3.4 - SWEP.flViewModelZ )
 end
 
-// We have to do this for technical reasons
 sound.Add {
-	name = "AK47_Shot",
+	name = "AK47Shot",
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^AK47Shot.wav",
 	volume = .5
 }
+SWEP.sSound = "AK47Shot"
 sound.Add {
-	name = "AK47_Shot_Auto",
+	name = "AK47ShotAuto",
 	channel = CHAN_AUTO,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^AK47Shot.wav",
 	volume = .5
 }
-
-function SWEP:Initialize() self:SetHoldType "AR2" end
-
-function SWEP:PrimaryAttack()
-	if !self:CanPrimaryAttack() then return end
-	local owner = self:GetOwner()
-	self:FireBullets {
-		Attacker = owner,
-		Src = owner:GetShootPos(),
-		Dir = self:GetAimVector(),
-		Tracer = 1,
-		Spread = Vector( self.Primary_flSpreadX, self.Primary_flSpreadY ),
-		Damage = self.Primary_flDamage
-	}
-	self:ShootEffects()
-	owner:SetAnimation( PLAYER_ATTACK1 )
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util.Effect( "MuzzleFlash", ed )
-	self:EmitSound "AK47_Shot"
-	self:EmitSound "AK47_Shot_Auto"
-	self:TakePrimaryAmmo( 1 )
-	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
-end
+SWEP.sSound = "AK47ShotAuto"
 
 list.Add( "NPCUsableWeapons", { class = "AK47", title = "#AK47", category = SWEP.Category } )

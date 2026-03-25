@@ -2,7 +2,6 @@ SWEP.flCrosshairInAccuracy = 0
 SWEP.Primary_flSpreadX = 0
 SWEP.Primary_flSpreadY = 0
 
-local math = math
 local math_max = math.max
 function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	local flSpreadX, flSpreadY

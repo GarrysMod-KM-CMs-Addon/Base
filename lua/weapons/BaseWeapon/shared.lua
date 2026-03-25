@@ -70,7 +70,7 @@ end
 
 SWEP.m_bAllowOneInTheChamber = true
 function SWEP:Reload()
-	if self.bAllowReloadingDuringPrimaryFire || CurTime() <= self:GetNextPrimaryFire() then return end
+	if !self.bAllowReloadingDuringPrimaryFire && CurTime() <= self:GetNextPrimaryFire() then return end
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
 	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
@@ -196,10 +196,15 @@ function SWEP:CalcRecoil( pOwner )
 	return flRecoil
 end
 
+// These are only used on the client, but, you know, Lua is Lua,
+// so we can't define 'em in an if, 'cause we have multiple CLIENT ifs
+local aAim, aViewAim = Angle(), Angle()
+
 SWEP.m_flFlipMyKick = 0
 function SWEP:DoRecoil()
 	local pOwner = self:GetOwner()
 	if !IsValid( pOwner ) then return end
+	if game.SinglePlayer() && SERVER then self:CallOnClient "DoRecoil" end
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
 	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
 	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 )
@@ -215,6 +220,10 @@ function SWEP:DoRecoil()
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", 0, 1 )
 			if b then flYaw = -flYaw end
 			self.m_bFlipMyKickYaw = !b
+			if CLIENT then
+				aAim[ 1 ] = aAim[ 1 ] - flPitch
+				aAim[ 2 ] = aAim[ 2 ] - flYaw
+			end
 			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * 1.5 )
 		else
 			local flPitch = util_SharedRandom( "BaseWeaponViewPunchPitch", -1, 1 )
@@ -222,6 +231,10 @@ function SWEP:DoRecoil()
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", -1, 1 )
 			self.m_bFlipMyKickYaw = flYaw > 0
 			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * 1.5 )
+			if CLIENT then
+				aAim[ 1 ] = aAim[ 1 ] - flPitch
+				aAim[ 2 ] = aAim[ 2 ] - flYaw
+			end
 		end
 		self.m_flFlipMyKick = CurTime() + self.Primary_flDelay * 1.1
 	end
@@ -277,7 +290,6 @@ if CLIENT then
 	local vViewFinalAngle, vViewFinalAngleVel = Vector(), Vector()
 	local vBezier = Vector()
 	local vBezierAngle = Vector()
-	local aAim, aViewAim = Angle(), Angle()
 	local vInstantTarget, vInstantTargetAngle = Vector(), Vector()
 	local vFinalRatherQuick, vFinalRatherQuickAngle = Vector(), Vector()
 	local vFinalRatherQuickVel, vFinalRatherQuickAngleVel = Vector(), Vector()
@@ -609,16 +621,18 @@ if CLIENT then
 					vBezier = Vector( yy, xx, zz )
 					vBezierAngle = Vector( pt, yw )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
-						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
-						vTargetRatherQuickAngle = vTargetAngle + vBezierAngle + Vector( pt, yw, rl )
+						vTargetRatherQuick:Add( vBezier * 2 )
+						vTargetRatherQuickAngle:Add( vBezierAngle )
+						vTargetRatherQuickAngle:Add( Vector( pt, yw, rl ) )
 					end
 				elseif !bOnGround then
 					local flBreathe = RealTime() * 30
 					vBezier = Vector( 0, math_cos( flBreathe * .5 ) * .0625, -5 + ( math_sin( flBreathe / 3 ) * .0625 ) )
 					vBezierAngle = Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25 )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
-						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
-						vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle + Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25, -5 )
+						vTargetRatherQuick:Add( vBezier * 2 )
+						vTargetRatherQuickAngle:Add( vBezierAngle )
+						vTargetRatherQuickAngle:Add( Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25, -5 ) )
 					end
 				elseif RealTime() <= flLandTime then
 					local f = flLandTime - RealTime()
@@ -631,8 +645,9 @@ if CLIENT then
 					vBezier = Vector( yy, xx, zz )
 					vBezierAngle = Vector( pt, yw )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
-						vTargetRatherQuick = vTargetRatherQuick + vBezier * 2
-						vTargetRatherQuickAngle = vTargetRatherQuickAngle + vBezierAngle + Vector( pt, yw, rl )
+						vTargetRatherQuick:Add( vBezier * 2 )
+						vTargetRatherQuickAngle:Add( vBezierAngle )
+						vTargetRatherQuickAngle:Add( Vector( pt, yw, rl ) )
 					end
 				end
 			end
@@ -681,7 +696,7 @@ if CLIENT then
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		local a = ply:GetViewPunchAngles()
-		local flYawTurn, flPitchTurn = a[ 2 ] * .2, a[ 1 ] * .2
+		local flYawTurn, flPitchTurn = a[ 2 ] * .5, a[ 1 ] * .5
 		local flAimShoot = MyTable.flAimShoot
 		if flAimShoot then
 			local f = MyTable.flBarrelBack || 0
@@ -709,15 +724,9 @@ if CLIENT then
 		ang:RotateAroundAxis( ang:Right(), vFinalAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vFinalAngle.z )
-		pos = pos + vFinal[ 1 ] * ang:Forward()
-		pos = pos + vFinal[ 2 ] * ang:Right()
-		pos = pos + vFinal[ 3 ] * ang:Up()
 		ang:RotateAroundAxis( ang:Right(), vInstantTargetAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vInstantTargetAngle.z )
-		pos = pos + vInstantTarget[ 1 ] * ang:Forward()
-		pos = pos + vInstantTarget[ 2 ] * ang:Right()
-		pos = pos + vInstantTarget[ 3 ] * ang:Up()
 		vFinalRatherQuickVel = vFinalRatherQuickVel + ( vTargetRatherQuick - vFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 		vFinalRatherQuickVel = vFinalRatherQuickVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinalRatherQuick = vFinalRatherQuick + vFinalRatherQuickVel * 50 * flFrameTime
@@ -727,6 +736,12 @@ if CLIENT then
 		ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle.z )
+		pos = pos + vFinal[ 1 ] * ang:Forward()
+		pos = pos + vFinal[ 2 ] * ang:Right()
+		pos = pos + vFinal[ 3 ] * ang:Up()
+		pos = pos + vInstantTarget[ 1 ] * ang:Forward()
+		pos = pos + vInstantTarget[ 2 ] * ang:Right()
+		pos = pos + vInstantTarget[ 3 ] * ang:Up()
 		pos = pos + vFinalRatherQuick[ 1 ] * ang:Forward()
 		pos = pos + vFinalRatherQuick[ 2 ] * ang:Right()
 		pos = pos + vFinalRatherQuick[ 3 ] * ang:Up()
