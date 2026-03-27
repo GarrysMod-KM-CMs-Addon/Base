@@ -32,6 +32,15 @@ function SWEP:DoMuzzleFlash()
 	util_Effect( "MuzzleFlash", ed )
 end
 
+// Handle launch velocity here
+// NOTE: vDirection is not normalized. However, feel free
+// to use Normalize (in place) instead of GetNormalized,
+// as it is not used anywhere after this
+function SWEP:LaunchProjectile( pProjectile/*, vDirection*/ )
+	// For versatility reasons, this is NOT called automatically
+	pProjectile:Spawn()
+end
+
 local ents_Create = ents.Create
 local math_Rand = math.Rand
 function SWEP:PrimaryAttack()
@@ -51,8 +60,9 @@ function SWEP:PrimaryAttack()
 		local flX = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
 		local flY = math_Rand( -.5, .5 ) + math_Rand( -.5, .5 )
 		local aAim = MyTable.GetAimVector( self, MyTable ):Angle()
-		pProjectile:SetAngles( ( aAim:Forward() + flX * MyTable.Primary_flSpreadX * aAim:Right() + flY * MyTable.Primary_flSpreadY * aAim:Up() ):Angle() )
-		pProjectile:Spawn()
+		local v = aAim:Forward() + flX * MyTable.Primary_flSpreadX * aAim:Right() + flY * MyTable.Primary_flSpreadY * aAim:Up()
+		pProjectile:SetAngles( v:Angle() )
+		MyTable.LaunchProjectile( self, pProjectile, v, MyTable )
 	end
 	MyTable.ShootEffects( self, MyTable )
 	local s = MyTable.sSound

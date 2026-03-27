@@ -302,6 +302,8 @@ end
 
 local aThirdPerson = Angle( 0, math.Rand( 0, 360 ), 0 )
 
+function ApplyRecoilToThirdPerson( aAngle ) aThirdPerson:Add( aAngle ) end
+
 local flThirdPersonAttackTime = 0
 
 hook.Add( "CreateMove", "Graphics", function( cmd )
@@ -309,6 +311,8 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	if !cThirdPerson:GetBool() then return end
 	local pPlayer = LocalPlayer()
 	if !IsValid( pPlayer ) then return end
+	local pWeapon = pPlayer:GetActiveWeapon()
+	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
 	local aAim = pPlayer:GetAimVector()
 	aAim[ 3 ] = 0
 	aAim = aAim:Angle()
@@ -323,30 +327,40 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	local f = math.min( pPlayer:GetRunSpeed(), flActualBiggerMove )
 	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
-	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .2 end
+	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
 	local bSpecial = pPlayer:WaterLevel() > 0
-	if !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
-		local a = Angle( aDirection )
-		a[ 1 ] = a[ 1 ] + 30
-		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), a ) )
-	elseif RealTime() <= flThirdPersonAttackTime then
+	if RealTime() <= flThirdPersonAttackTime then
 		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
 		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
+	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
+		local a = Angle( aDirection )
+		a[ 1 ] = a[ 1 ] + 30
+		local r = LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), a )
+		r[ 3 ] = 0
+		cmd:SetViewAngles( r )
 	elseif bSpecial then
 		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
 	elseif flActualBiggerMove > 0 then
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
-		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a ) )
+		local r = LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a )
+		r[ 3 ] = 0
+		cmd:SetViewAngles( r )
 	else
 		local a = Angle( aAim )
 		a[ 0 ] = 0
-		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a ) )
+		local r = LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a )
+		r[ 3 ] = 0
+		cmd:SetViewAngles( r )
 	end
 end )
 
 hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
+	local pPlayer = LocalPlayer()
+	if !IsValid( pPlayer ) then return end
+	local pWeapon = pPlayer:GetActiveWeapon()
+	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
 	if !cThirdPerson:GetBool() then return end
 	aThirdPerson[ 1 ] = aThirdPerson[ 1 ] + y * FrameTime()
 	aThirdPerson[ 2 ] = aThirdPerson[ 2 ] - x * FrameTime()
@@ -379,33 +393,38 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		return view
 	elseif bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool()
 	elseif cThirdPerson:GetBool() then
-		local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
-		view.drawviewer = true
-		local vTarget = Vector( -64, cThirdPersonShoulder:GetBool() && 24 || -24, ply:Crouching() && 24 || 8 )
-		local bInCover = ply:GetNW2Bool "CTRL_bInCover" || ply:GetNW2Bool "CTRL_bGunUsesCoverStance"
-		if bInCover || PEEK != COVER_PEEK_NONE then
-			if VARIANTS == COVER_VARIANTS_LEFT || PEEK == COVER_FIRE_LEFT || PEEK == COVER_BLINDFIRE_LEFT then
-				vTarget = Vector( -64, 32, ply:Crouching() && 24 || 8 )
-			elseif bInCover && VARIANTS == COVER_VARIANTS_RIGHT || PEEK == COVER_FIRE_RIGHT || PEEK == COVER_BLINDFIRE_RIGHT then
-				vTarget = Vector( -64, -32, ply:Crouching() && 24 || 8 )
-			elseif bInCover && VARIANTS == COVER_VARIANTS_BOTH || PEEK == COVER_BLINDFIRE_UP || PEEK == COVER_FIRE_UP then
-				vTarget = Vector( -64, 0, 32 )
+		local pWeapon = ply:GetActiveWeapon()
+		if !( IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) ) then
+			if IsValid( pWeapon ) && pWeapon.__WEAPON__ then pWeapon:CalcView( ply, Vector( 0, 0, 0 ), Angle( 0, 0, 0 ) ) end
+			local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
+			view.drawviewer = true
+			local bAiming = ply:KeyDown( IN_ZOOM )
+			local vTarget = Vector( -ply:OBBMaxs()[ 1 ] * ( bAiming && 1 || 4 ), ( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 2 ), ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && .244 || .008 ) )
+			local bInCover = ply:GetNW2Bool "CTRL_bInCover" || ply:GetNW2Bool "CTRL_bGunUsesCoverStance"
+			if bInCover || PEEK != COVER_PEEK_NONE then
+				if VARIANTS == COVER_VARIANTS_LEFT || PEEK == COVER_FIRE_LEFT || PEEK == COVER_BLINDFIRE_LEFT then
+					vTarget[ 2 ] = ply:OBBMaxs()[ 2 ] * ( bAiming && 1 || 2 )
+				elseif bInCover && VARIANTS == COVER_VARIANTS_RIGHT || PEEK == COVER_FIRE_RIGHT || PEEK == COVER_BLINDFIRE_RIGHT then
+					vTarget[ 2 ] = -ply:OBBMaxs()[ 2 ] * ( bAiming && 1 || 2 )
+				elseif bInCover && VARIANTS == COVER_VARIANTS_BOTH || PEEK == COVER_BLINDFIRE_UP || PEEK == COVER_FIRE_UP then
+					// Nothing
+				end
 			end
+			vThirdPersonCameraOffset = LerpVector( 3 * FrameTime(), vThirdPersonCameraOffset, vTarget )
+			local v = Vector( vThirdPersonCameraOffset )
+			v:Rotate( aThirdPerson )
+			local f = ply:GetFOV() * .33
+			local tr = util_TraceLine( {
+				start = view.origin,
+				endpos = view.origin + v:GetNormalized() * ( v:Length() + f ),
+				mask = MASK_VISIBLE_AND_NPCS,
+				filter = ply
+			} )
+			view.origin = tr.HitPos - tr.Normal * f
+			view.angles = Angle( aThirdPerson ) + ply:GetViewPunchAngles()
+			fMoreEffects( ply, view )
+			return view
 		end
-		vThirdPersonCameraOffset = LerpVector( 3 * FrameTime(), vThirdPersonCameraOffset, vTarget )
-		local v = Vector( vThirdPersonCameraOffset )
-		v:Rotate( aThirdPerson )
-		local f = ply:GetFOV() * .33
-		local tr = util_TraceLine( {
-			start = view.origin,
-			endpos = view.origin + v:GetNormalized() * ( v:Length() + f ),
-			mask = MASK_VISIBLE_AND_NPCS,
-			filter = ply
-		} )
-		view.origin = tr.HitPos - tr.Normal * f
-		view.angles = Angle( aThirdPerson ) + ply:GetViewPunchAngles()
-		fMoreEffects( ply, view )
-		return view
 	end
 	player_manager.RunClass( ply, "CalcView", view )
 	local pWeapon = ply:GetActiveWeapon()

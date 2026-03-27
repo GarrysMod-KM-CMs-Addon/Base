@@ -17,7 +17,7 @@ SWEP.__GRENADE__ = true
 SWEP.GRENADE_flMinimumTime = 1
 SWEP.GRENADE_flMaximumTime = 1
 
-SWEP.Instructions = "Primary to pull the pin, and then again to throw."
+SWEP.Instructions = "Primary to pull the pin, then again to throw."
 
 local CEntity, CWeapon = FindMetaTable "Entity", FindMetaTable "Weapon"
 
@@ -41,7 +41,7 @@ function SWEP:Equip( pOwner )
 	local sClass = CEntity_GetClass( self )
 	local f = math_max( ( tGrenades[ sClass ] || 0 ) + 1, 0 )
 	tGrenades[ sClass ] = f
-	CWeapon_SetClip1( self, f ) // Fool the ammo drawing systems of BaseWeapon into thinking we have this much ammo
+	CWeapon_SetClip1( self, f ) // Fool the ammo drawing system of BaseWeapon into thinking we have this much ammo
 	self:CallOnClient( "SetPrimaryClipSize", f )
 	pOwner.GAME_tItemCounts = tGrenades
 end

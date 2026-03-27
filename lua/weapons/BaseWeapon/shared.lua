@@ -240,8 +240,9 @@ function SWEP:DoRecoil()
 	end
 	f = pOwner.SetEyeAngles
 	local f2 = pOwner.EyeAngles
-	if f && f2 && ( game.SinglePlayer() && SERVER || !game.SinglePlayer() && CLIENT && IsFirstTimePredicted() ) then
+	if f && f2 then
 		f( pOwner, f2( pOwner ) + aAngle )
+		if CLIENT then ApplyRecoilToThirdPerson( aAngle ) end
 	end
 end
 
@@ -451,7 +452,9 @@ if CLIENT then
 		return pos, ang, ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV )
 	end
 	local util_TraceLine = util.TraceLine
+	local cThirdPerson = GetConVar "bThirdPerson"
 	function SWEP:GatherCrosshairPosition( MyTable )
+		if cThirdPerson:GetBool() then return ScrW() * .5, ScrH() * .5 end
 		local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
 		local tr = util_TraceLine {
 			start = LocalPlayer():GetShootPos(),

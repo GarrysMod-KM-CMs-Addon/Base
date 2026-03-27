@@ -456,10 +456,6 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( ent, dDamage )
 	// Bloodloss works only on players for now, so see PlayerHurt for bloodloss code
 	local at = dDamage:GetAttacker()
 	if IsValid( at ) then
-		if at.GAME_bNoCollisionDamage && dDamage:IsDamageType( 1 ) then
-			dDamage:ScaleDamage( 0 )
-			return 0
-		end
 		if at:IsPlayer() then
 			local v = __PLAYER_MODEL__[ at:GetModel() ]
 			if v then

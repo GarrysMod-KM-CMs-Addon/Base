@@ -294,11 +294,16 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 *
-		flRecoilPart * MyTable.flRecoil / .033 * .15 / MyTable.Primary_flDelay / math_min( 5, self:GetMaxClip1() * .2 ) )
+		if cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
+			MyTable.flCrosshairAlpha = Lerp( math_min( 1, flFrameTime * 5 ), MyTable.flCrosshairAlpha, 255 )
+		else
+			MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 *
+			flRecoilPart * MyTable.flRecoil / .033 * .15 / MyTable.Primary_flDelay / math_min( 5, self:GetMaxClip1() * .2 ) )
+		end
 	end
 	if MyTable.bSniper && flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
 		MyTable.DrawSniperScope( self, MyTable )
+		return true
 	end
 	if !MyTable.bDontDrawAmmo then
 		// TODO: Machine gun ammo cubes
@@ -350,8 +355,10 @@ function SWEP:DoDrawCrosshair()
 			end
 		end
 	end
-	if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
-	if flAimMultiplier <= .5 && !cThirdPerson:GetBool() && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
+	if !cThirdPerson:GetBool() then
+		if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
+		if flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
+	end
 	local v = __WEAPON_CROSSHAIR_TABLE__[ MyTable.Crosshair ]
 	if v != nil then
 		local EAimingAt = ply:GetNW2Int "DR_EAimingAt"
