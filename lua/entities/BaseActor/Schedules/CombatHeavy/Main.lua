@@ -39,11 +39,6 @@ Actor_RegisterSchedule( "CombatHeavy", function( self, sched, MyTable )
 		if IsValid( w ) then MyTable.SetActiveWeapon( self, w, MyTable ) end
 		return
 	end
-	local pWeapon = MyTable.Weapon
-	if IsValid( pWeapon ) then
-		ws = MyTable.GetWeaponClipPrimary( self, MyTable )
-		if ws < pWeapon:GetMaxClip1() then MyTable.WeaponReload( self, MyTable ) end
-	end
 	local tGoal = pPath:GetCurrentGoal()
 	if tGoal then MyTable.vaAimTargetBody = ( tGoal.pos - self:GetPos() ):Angle() MyTable.vaAimTargetPose = MyTable.vaAimTargetBody end
 end )

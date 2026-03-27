@@ -111,7 +111,9 @@ function ENT:OnKilled( dmg )
 	if BaseClass.OnKilled( self, dmg ) then return end
 	local v = self.CTRL_pSlideLoop
 	if v then v:Stop() end
-	self:EmitSound( dmg:IsDamageType( DMG_FALL ) && "Player.FallGib" || "Player.Death" )
+	// Shows [Death] in subtitles, and that gives it out.
+	// I prefer having to check if I killed them myself.
+	//	self:EmitSound( dmg:IsDamageType( DMG_FALL ) && "Player.FallGib" || "Player.Death" )
 	dmg:SetDamage( 0 )
 	self:BecomeRagdoll( dmg )
 end
