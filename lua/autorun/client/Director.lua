@@ -64,8 +64,8 @@ local t = {
 		if !self.tHandles.Main then Director_Music_Play( self, "Main", "MUS_TheLurkingTiger" ) end
 	end
 }
-DIRECTOR_ALLOCATE_HEAT_THEME( "DIRECTOR_TRACK_TheLurkingTiger", t )
-DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_TheLurkingTiger", t )
+DIRECTOR_ALLOCATE_HEAT_THEME( "DIRECTOR_TRACK_HEAT_TheLurkingTiger", t )
+DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_ALERT_TheLurkingTiger", t )
 */
 
 function DIRECTOR_ALLOCATE_HEAT_THEME( sName, tTable )
