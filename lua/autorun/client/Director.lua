@@ -50,6 +50,24 @@ DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES || 0
 DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES || 0
 DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES || 0
 
+// The director will never play the same table pointer, for your convenience. However, there is still
+// one way to accidentally shoot yourself in the leg, and that is messing up your own pointers.
+// If you want a theme to play in multiple states, MAKE SURE THAT THE TABLE POINTER IS THE SAME,
+// to avoid it being in state A AND state B which would break it, as the director thinks they're different.
+// As if it gets in state A and B at the same time, it will glitch violently, since both want the sound handle.
+// But do not worry, as long as everything is done correctly (see example below), that will never happen.
+// For example, The Lurking Tiger from Far Cry 3:
+/*
+local t = {
+	Execute = function( self )
+		if self.m_flVolume <= 0 then Director_Music_Stop( self, "Main" ) return end
+		if !self.tHandles.Main then Director_Music_Play( self, "Main", "MUS_TheLurkingTiger" ) end
+	end
+}
+DIRECTOR_ALLOCATE_HEAT_THEME( "DIRECTOR_TRACK_TheLurkingTiger", t )
+DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_TheLurkingTiger", t )
+*/
+
 function DIRECTOR_ALLOCATE_HEAT_THEME( sName, tTable )
 	if _G[ sName ] then return end
 	DIRECTOR_NUM_HEAT_THEMES = DIRECTOR_NUM_HEAT_THEMES + 1
