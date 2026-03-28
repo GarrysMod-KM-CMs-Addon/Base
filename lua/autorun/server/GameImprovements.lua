@@ -1166,14 +1166,20 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			start = vView,
 			endpos = vView + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
 			mask = MASK_SOLID,
-			filter = ply
+			filter = function( pEntity )
+				if pEntity == ply || pEntity.__PROJECTILE__ then return end
+				return true
+			end
 		}
 		local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 		local trDuck = util_TraceLine {
 			start = vViewDucked,
 			endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
 			mask = MASK_SOLID,
-			filter = ply
+			filter = function( pEntity )
+				if pEntity == ply || pEntity.__PROJECTILE__ then return end
+				return true
+			end
 		}
 		local bDuck, tr
 		if ply:IsOnGround() then

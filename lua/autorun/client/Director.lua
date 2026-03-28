@@ -41,27 +41,57 @@ function WarmUpSoundGenerous( sName )
 	end )
 end
 
-DIRECTOR_MUSIC_IDLE_SEQUENCES = DIRECTOR_MUSIC_IDLE_SEQUENCES || {}
+// DO NOT!!! Touch any of these manually!
+DIRECTOR_NUM_NULL_THEMES = 0
+DIRECTOR_NUM_HEAT_THEMES = DIRECTOR_NUM_HEAT_THEMES || 0
+DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES || 0
+DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES || 0
+DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES || 0
+
+function DIRECTOR_ALLOCATE_HEAT_THEME( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_HEAT_THEMES = DIRECTOR_NUM_HEAT_THEMES + 1
+	_G[ sName ] = DIRECTOR_NUM_HEAT_THEMES
+	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HEAT ][ DIRECTOR_NUM_HEAT_THEMES ] = tTable
+end
+
+function DIRECTOR_ALLOCATE_ALERT_THEME( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES + 1
+	_G[ sName ] = DIRECTOR_NUM_ALERT_THEMES
+	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_ALERT ][ DIRECTOR_NUM_ALERT_THEMES ] = tTable
+end
+
+function DIRECTOR_ALLOCATE_HOLD_FIRE_THEME( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES + 1
+	_G[ sName ] = DIRECTOR_NUM_HOLD_FIRE_THEMES
+	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HOLD_FIRE ][ DIRECTOR_NUM_HOLD_FIRE_THEMES ] = tTable
+end
+
+function DIRECTOR_ALLOCATE_COMBAT_THEME( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES + 1
+	_G[ sName ] = DIRECTOR_NUM_COMBAT_THEMES
+	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_COMBAT ][ DIRECTOR_NUM_COMBAT_THEMES ] = tTable
+end
 
 local math_Rand = math.Rand
+
 DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
-	// Do NOT write anything here! Use DIRECTOR_MUSIC_IDLE_SEQUENCES instead!
-	[ DIRECTOR_THREAT_NULL ] = {
-		Base = { Execute = function( self )
-			if DIRECTOR_SUPPRESS_IDLE_AMBIANCE then return end
-			if !self.tHandles.Main then
-				// TODO: FrameTime() isn't reliable, and we are called a LOT more
-				if math_Rand( 0, 1250000 * FrameTime() ) <= 1 then
-					local _, s = table.Random( DIRECTOR_MUSIC_IDLE_SEQUENCES )
-					if s then Director_Music_Play( self, "Main", s ) end
-				end
-			end
-		end }
-	},
+	[ DIRECTOR_THREAT_NULL ] = {},
 	[ DIRECTOR_THREAT_HEAT ] = {},
 	[ DIRECTOR_THREAT_ALERT ] = {},
 	[ DIRECTOR_THREAT_HOLD_FIRE ] = {},
 	[ DIRECTOR_THREAT_COMBAT ] = {}
+}
+
+local __VARNAME__ = {
+	[ DIRECTOR_THREAT_NULL ] = "DIRECTOR_NUM_NULL_THEMES",
+	[ DIRECTOR_THREAT_HEAT ] = "DIRECTOR_NUM_HEAT_THEMES",
+	[ DIRECTOR_THREAT_ALERT ] = "DIRECTOR_NUM_ALERT_THEMES",
+	[ DIRECTOR_THREAT_HOLD_FIRE ] = "DIRECTOR_NUM_HOLD_FIRE_THEMES",
+	[ DIRECTOR_THREAT_COMBAT ] = "DIRECTOR_NUM_COMBAT_THEMES"
 }
 
 function Director_Music_Container()
@@ -97,30 +127,52 @@ Director_Music( "MUS_Transition_Instant", "Music/Default/Transition_Instant.wav"
 // We have switched to HOLD_FIRE... do we even need these anymore?
 DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT = DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT || {}
 DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT = DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT || {}
-DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT.Default_Instant = { Execute = function( self )
-	if !self.tHandles.Main then
-		if self.bPartStarted then
-			self.sIndex = "Idle"
-			self.bPartStarted = nil
-			self.bA = nil
-			return true
+
+DIRECTOR_NUM_TRANSITIONS_TO_COMBAT = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT || 0
+DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT || 0
+
+function DIRECTOR_ALLOCATE_TRANSITION_TO_COMBAT( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_TRANSITIONS_TO_COMBAT = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT + 1
+	_G[ sName ] = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT
+	DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT[ DIRECTOR_NUM_TRANSITIONS_TO_COMBAT ] = tTable
+end
+function DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT + 1
+	_G[ sName ] = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT
+	DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT[ DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT ] = tTable
+end
+
+DIRECTOR_ALLOCATE_TRANSITION_TO_COMBAT( "DIRECTOR_TRANSITION_TO_COMBAT_Instant", {
+	Execute = function( self )
+		if !self.tHandles.Main then
+			if self.bPartStarted then
+				self.sIndex = "Idle"
+				self.bPartStarted = nil
+				self.bA = nil
+				return true
+			end
+			self.bPartStarted = true
+			Director_Music_Play( self, "Main", "MUS_Transition_Instant" )
 		end
-		self.bPartStarted = true
-		Director_Music_Play( self, "Main", "MUS_Transition_Instant" )
+		return false, 0, 1
 	end
-	return false, 0, 1
-end }
-DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT.Default_Fade = { Execute = function( self, flInterval, flVolumeA, flVolumeB, bCorrect )
-	if !bCorrect then return true end
-	if flVolumeA > 0 then
-		flVolumeA = flVolumeA < .1 && math.Approach( flVolumeA, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 0 )
-		return false, flVolumeA, flVolumeB
+} )
+
+DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade", {
+	Execute = function( self, flInterval, flVolumeA, flVolumeB, bCorrect )
+		if !bCorrect then return true end
+		if flVolumeA > 0 then
+			flVolumeA = flVolumeA < .1 && math.Approach( flVolumeA, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 0 )
+			return false, flVolumeA, flVolumeB
+		end
+		if self.m_ELayerTo == DIRECTOR_THREAT_NULL then return true end
+		if flVolumeB == 1 then return true end
+		flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 1 )
+		return false, 0, flVolumeB
 	end
-	if self.m_ELayerTo == DIRECTOR_THREAT_NULL then return true end
-	if flVolumeB == 1 then return true end
-	flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 1 )
-	return false, 0, flVolumeB
-end }
+} )
 local math_max = math.max
 local pairs = pairs
 function Director_Music_UpdateInternal( self, flInterval, ... )
@@ -217,25 +269,14 @@ __HUD_SHOULD_NOT_DRAW__ = {
 	CHudHistoryResource = true
 }
 
+local math_random = math.random
+
 function DIRECTOR_CLIENT_TICK( flInterval )
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
-			// Feel free to uncomment this for testing
-			//	if ELayer == DIRECTOR_THREAT_COMBAT then
-			//		local t = DIRECTOR_MUSIC_TABLE[ ELayer ].TRACK
-			//		if t then
-			//			local p = Director_Music_Container()
-			//			p.m_pTable = t
-			//			p.m_flStartTime = CurTime()
-			//			local f = p.Time
-			//			p.m_flEndTime = f && f() || ( CurTime() + math_Rand( 120, 240 ) )
-			//			DIRECTOR_MUSIC[ ELayer ] = p
-			//			continue
-			//		end
-			//	end
-			local t = table.Random( DIRECTOR_MUSIC_TABLE[ ELayer ] )
+			local t = DIRECTOR_MUSIC_TABLE[ ELayer ][ math_random( 1, _G[ __VARNAME__[ ELayer ] ] ) ]
 			if t then
 				local b
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -463,7 +504,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 	end
 	if DIRECTOR_MUSIC_LAST_THREAT < DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
-		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT )
+		local t = DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT[ math_random( 1, DIRECTOR_NUM_TRANSITIONS_TO_COMBAT ) ]
 		DIRECTOR_TRANSITION.m_pTable = t
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_bToCombat = true
@@ -472,7 +513,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 		return
 	elseif DIRECTOR_MUSIC_LAST_THREAT >= DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
-		local t = table.Random( DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT )
+		local t = DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT[ math_random( 1, DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT ) ]
 		DIRECTOR_TRANSITION.m_pTable = t
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT

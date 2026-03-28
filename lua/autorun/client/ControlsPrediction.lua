@@ -1,6 +1,7 @@
 hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 	if !ply:Alive() then return end
 	ply.m_iOriginalButtons = cmd:GetButtons()
+	/* No lol
 	if cmd:KeyDown( IN_ZOOM ) then
 		if SysTime() <= ( ply.m_flZoomOutTime || 0 ) then
 			cmd:RemoveKey( IN_ZOOM )
@@ -19,5 +20,6 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			cmd:AddKey( IN_ZOOM )
 		end
 	end
+	*/
 	ply.m_bWantsToZoom = cmd:KeyDown( IN_ZOOM )
 end )

@@ -139,7 +139,31 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		// Right
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
-	end
+	end,
+	// HACK: This is actually the RPG crosshair, which is four parts at square edges, like this:
+	//               /         \
+	//
+	//
+	//               \         /
+	// But since I have zero idea how to possibly draw that, we use the rifle crosshair as a placeholder
+	Open = function( MyTable, self, R, G, B )
+		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
+		local flHeight, flWidth = ScrH(), ScrW()
+		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
+		local flSpreadHorizontal = flSpreadX * flWidth * ( 90 / MyTable.flFoV ) * .5
+		local flSpreadVertical = flSpreadY * flHeight * ( 90 / MyTable.flFoV ) * .5 * ( flWidth / flHeight )
+		surface_SetTexture( surface_GetTextureID "Crosshair" )
+		surface_SetDrawColor( R, G, B, MyTable.flCrosshairAlpha )
+		// Top
+		surface_DrawTexturedRectRotated( flX, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 180 )
+		// Bottom
+		surface_DrawTexturedRectRotated( flX, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 0 )
+		// Left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 270 )
+		// Right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
+		return true
+	end,
 }
 local __WEAPON_CROSSHAIR_TABLE__ = __WEAPON_CROSSHAIR_TABLE__
 
