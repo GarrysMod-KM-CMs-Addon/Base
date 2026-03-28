@@ -26,13 +26,15 @@ function WarmUpSound( sName )
 	ENGINE_READ_SOUND[ sName ] = true
 end
 
+local math_Rand = math.Rand
+
 // If you warm up the next sounds as soon as you get to a new music stage,
 // Source will waste time reading them, and the same kind of stitch as if
 // you never warmed up the current sound will appear. This function fixes
 // it, by being "generous", and warming up sounds a little later.
 function WarmUpSoundGenerous( sName )
 	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
-	timer.Simple( math.Rand( .33, .66 ), function()
+	timer.Simple( math_Rand( .1, .2 ), function()
 		if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
 		local pSound = CreateSound( LocalPlayer(), sName )
 		pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
@@ -75,8 +77,6 @@ function DIRECTOR_ALLOCATE_COMBAT_THEME( sName, tTable )
 	_G[ sName ] = DIRECTOR_NUM_COMBAT_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_COMBAT ][ DIRECTOR_NUM_COMBAT_THEMES ] = tTable
 end
-
-local math_Rand = math.Rand
 
 DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 	[ DIRECTOR_THREAT_NULL ] = {},
