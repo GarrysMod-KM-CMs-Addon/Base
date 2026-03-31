@@ -1,3 +1,15 @@
+// NOTE: Heat and Alert might get better code sometime.
+// Don't set something to both just 'cause "it should play during both in the game".
+// Alert should get code that makes it transition into Heat if no one's aggressively searching.
+// Register calm tracks into Heat (such as The Dread from SCP:CB), and
+// aggressive ones (such as Tell Me the Opsuit's Not Flammable from Splinter Cell: Blacklist) into Alert.
+// Aggressive search is unused for now, but is meant to be an aggressive search, like SWAT room breaching.
+// suddenly jogging to cover and corner peeking even though you've already cleared there, etcetera.
+// It should include near combat themes, like this: https://youtu.be/vv86Tm-Wrvs?list=RDvv86Tm-Wrvs&t=690
+// Themes there can probably be added into Alert? I'm still not sure if and how I'm gonna
+// make the themes change based on the PLAYER'S stealth intensity,
+// it's more like that one dream idea you can do on words but can't do in real life 'cause you're too weak
+
 include "autorun/Director.lua"
 
 DIRECTOR_MUSIC_TENSION = 0
@@ -22,7 +34,7 @@ function WarmUpSound( sName )
 	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
 	local pSound = CreateSound( LocalPlayer(), sName )
 	pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
-	timer.Simple( 0, function() pSound:Stop() end )
+	timer.Simple( math_Rand( .05, .1 ), function() pSound:Stop() end )
 	ENGINE_READ_SOUND[ sName ] = true
 end
 
@@ -34,11 +46,11 @@ local math_Rand = math.Rand
 // it, by being "generous", and warming up sounds a little later.
 function WarmUpSoundGenerous( sName )
 	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
-	timer.Simple( math_Rand( .1, .2 ), function()
+	timer.Simple( math_Rand( .05, .1 ), function()
 		if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
 		local pSound = CreateSound( LocalPlayer(), sName )
 		pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
-		timer.Simple( 0, function() pSound:Stop() end )
+		timer.Simple( math_Rand( .05, .1 ), function() pSound:Stop() end )
 		ENGINE_READ_SOUND[ sName ] = true
 	end )
 end
@@ -47,6 +59,7 @@ end
 DIRECTOR_NUM_NULL_THEMES = 0
 DIRECTOR_NUM_HEAT_THEMES = DIRECTOR_NUM_HEAT_THEMES || 0
 DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES || 0
+DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES || 0
 DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES || 0
 DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES || 0
 
@@ -56,16 +69,16 @@ DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES || 0
 // to avoid it being in state A AND state B which would break it, as the director thinks they're different.
 // As if it gets in state A and B at the same time, it will glitch violently, since both want the sound handle.
 // But do not worry, as long as everything is done correctly (see example below), that will never happen.
-// For example, The Lurking Tiger from Far Cry 3:
+// For example:
 /*
 local t = {
 	Execute = function( self )
 		if self.m_flVolume <= 0 then Director_Music_Stop( self, "Main" ) return end
-		if !self.tHandles.Main then Director_Music_Play( self, "Main", "MUS_TheLurkingTiger" ) end
+		if !self.tHandles.Main then Director_Music_Play( self, "Main", "MUS_MyDoubleTrack" ) end
 	end
 }
-DIRECTOR_ALLOCATE_HEAT_THEME( "DIRECTOR_TRACK_HEAT_TheLurkingTiger", t )
-DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_ALERT_TheLurkingTiger", t )
+DIRECTOR_ALLOCATE_HEAT_THEME( "DIRECTOR_TRACK_HEAT_MyDoubleTrack", t )
+DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_ALERT_MyDoubleTrack", t )
 */
 
 function DIRECTOR_ALLOCATE_HEAT_THEME( sName, tTable )
@@ -80,6 +93,13 @@ function DIRECTOR_ALLOCATE_ALERT_THEME( sName, tTable )
 	DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_ALERT_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_ALERT ][ DIRECTOR_NUM_ALERT_THEMES ] = tTable
+end
+
+function DIRECTOR_ALLOCATE_AGGRESSIVE_SEARCH_THEME( sName, tTable )
+	if _G[ sName ] then return end
+	DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES + 1
+	_G[ sName ] = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES
+	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ][ DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES ] = tTable
 end
 
 function DIRECTOR_ALLOCATE_HOLD_FIRE_THEME( sName, tTable )
@@ -100,6 +120,7 @@ DIRECTOR_MUSIC_TABLE = DIRECTOR_MUSIC_TABLE || {
 	[ DIRECTOR_THREAT_NULL ] = {},
 	[ DIRECTOR_THREAT_HEAT ] = {},
 	[ DIRECTOR_THREAT_ALERT ] = {},
+	[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ] = {},
 	[ DIRECTOR_THREAT_HOLD_FIRE ] = {},
 	[ DIRECTOR_THREAT_COMBAT ] = {}
 }
@@ -108,6 +129,7 @@ local __VARNAME__ = {
 	[ DIRECTOR_THREAT_NULL ] = "DIRECTOR_NUM_NULL_THEMES",
 	[ DIRECTOR_THREAT_HEAT ] = "DIRECTOR_NUM_HEAT_THEMES",
 	[ DIRECTOR_THREAT_ALERT ] = "DIRECTOR_NUM_ALERT_THEMES",
+	[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ] = "DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES",
 	[ DIRECTOR_THREAT_HOLD_FIRE ] = "DIRECTOR_NUM_HOLD_FIRE_THEMES",
 	[ DIRECTOR_THREAT_COMBAT ] = "DIRECTOR_NUM_COMBAT_THEMES"
 }
@@ -191,29 +213,32 @@ DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade"
 		return false, 0, flVolumeB
 	end
 } )
+
 local math_max = math.max
 local pairs = pairs
-function Director_Music_UpdateInternal( self, flInterval, ... )
+
+local flLastDirectorClientTickCall = SysTime()
+
+function Director_Music_UpdateInternal( self, ... )
 	// This function repeats itself intentionally, because in continuous music playback,
 	// even one tick is a lot of time, so we call this again to allow people to still write
 	// code that passes playing to the next tick (like when changing the index),
 	// since we also technically simulate the next tick
 	local t = self.m_pTable
+	local flInterval = SysTime() - flLastDirectorClientTickCall
 	t.Execute( self, flInterval, ... )
 	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
-	for i = 1, 3 do
-		for Index, tData in pairs( tHandles ) do
-			local flPitch = tData[ 3 ] / 100
-			local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * flPitch
-			if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
-			tData[ 4 ] = f
-			tData[ 5 ] = SysTime()
-			local pSound = tData[ 1 ]
-			pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
-			// Sadly, pitch zero pauses the sound, so we can't use that to bypass SOUND_PATCH_ABSOLUTE_MINIMUM either...
-			pSound:ChangePitch( tData[ 3 ] )
-		end
+	for Index, tData in pairs( tHandles ) do
+		local flPitch = tData[ 3 ] / 100
+		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * flPitch
+		if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
+		tData[ 4 ] = f
+		tData[ 5 ] = SysTime()
+		local pSound = tData[ 1 ]
+		pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
+		// Sadly, pitch zero pauses the sound, so we can't use that to bypass SOUND_PATCH_ABSOLUTE_MINIMUM either...
+		pSound:ChangePitch( tData[ 3 ] )
 	end
 	return t.Execute( self, flInterval, ... )
 end
@@ -289,7 +314,8 @@ __HUD_SHOULD_NOT_DRAW__ = {
 
 local math_random = math.random
 
-function DIRECTOR_CLIENT_TICK( flInterval )
+function DIRECTOR_CLIENT_TICK()
+	flLastDirectorClientTickCall = SysTime()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -335,7 +361,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 			for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 				if ELayer == ELayerFrom then flInitialVolumeA = pContainer.m_flVolume break end
 			end
-			local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_SPECIAL_INTRO, flInterval, flInitialVolumeA || 0, DIRECTOR_SPECIAL.m_flVolume || 0, true )
+			local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_SPECIAL_INTRO, flInitialVolumeA || 0, DIRECTOR_SPECIAL.m_flVolume || 0, true )
 			DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom
 			flVolumeA = flVolumeA || 0
 			flVolumeB = flVolumeB || 1
@@ -347,21 +373,21 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 					else
 						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 					end
-					Director_Music_UpdateInternal( pContainer, flInterval )
+					Director_Music_UpdateInternal( pContainer )
 				end
 			end
 			DIRECTOR_SPECIAL.m_flVolume = flVolumeB
-			Director_Music_UpdateInternal( DIRECTOR_SPECIAL, flInterval )
+			Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
 			return
 		end
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
-				Director_Music_UpdateInternal( pContainer, flInterval )
+				Director_Music_UpdateInternal( pContainer )
 			end
 		end
 		DIRECTOR_SPECIAL.m_flVolume = math.Approach( DIRECTOR_SPECIAL.m_flVolume, 1, FrameTime() )
-		Director_Music_UpdateInternal( DIRECTOR_SPECIAL, flInterval )
+		Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
 		return
 	elseif DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
@@ -385,7 +411,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer, flInterval )
+						Director_Music_UpdateInternal( pContainer )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
 						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
@@ -399,7 +425,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer, flInterval )
+						Director_Music_UpdateInternal( pContainer )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
 						else pContainer.m_flVolume = 0 end
@@ -416,7 +442,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
-						Director_Music_UpdateInternal( pContainer, flInterval )
+						Director_Music_UpdateInternal( pContainer )
 						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 					end
 				end
@@ -437,7 +463,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 			end
 			if flInitialVolumeA && flInitialVolumeB then break end
 		end
-		local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_TRANSITION, flInterval, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
+		local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_TRANSITION, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
 		DIRECTOR_MUSIC_LAST_THREAT = ELayerTo
 		flVolumeA = flVolumeA || 0
 		flVolumeB = flVolumeB || 1
@@ -451,7 +477,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				else
 					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
 				end
-				Director_Music_UpdateInternal( pContainer, flInterval )
+				Director_Music_UpdateInternal( pContainer )
 			end
 		end
 		return
@@ -479,7 +505,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				if ELayer == DIRECTOR_THREAT then
 					pContainer.m_flVolume = 1
 				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
-				Director_Music_UpdateInternal( pContainer, flInterval )
+				Director_Music_UpdateInternal( pContainer )
 			end
 		end
 		DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
@@ -507,7 +533,7 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 				//		if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
 				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, FrameTime() )
 				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
-				Director_Music_UpdateInternal( pContainer, flInterval )
+				Director_Music_UpdateInternal( pContainer )
 			end
 		end
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
@@ -544,12 +570,12 @@ function DIRECTOR_CLIENT_TICK( flInterval )
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		local pContainer = DIRECTOR_MUSIC[ ELayer ]
 		if pContainer then
-			Director_Music_UpdateInternal( pContainer , flInterval )
+			Director_Music_UpdateInternal( pContainer )
 			if ELayer == DIRECTOR_THREAT then
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * RealFrameTime() )
 			else
 				if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then pContainer.m_flVolume = 0 end
-				Director_Music_UpdateInternal( pContainer, flInterval )
+				Director_Music_UpdateInternal( pContainer )
 				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, RealFrameTime() * .1 )
 				if pContainer.m_flVolume <= 0 && CurTime() > ( pContainer.m_flEndTime || 0 ) then DIRECTOR_MUSIC[ ELayer ] = nil end
 			end
@@ -562,7 +588,7 @@ hook.Add( "HUDShouldDraw", "Director", function( sName )
 	local t = SysTime() - flLastHUDShouldDrawCall
 	flHUDShouldDrawTime = math.Approach( flHUDShouldDrawTime, t, .1 )
 	flLastHUDShouldDrawCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flHUDShouldDrawTime )
+	DIRECTOR_CLIENT_TICK()
 	return __HUD_SHOULD_NOT_DRAW__[ sName ] == nil
 end )
 local flLastHUDPaintCall, flHUDPaintTime = SysTime(), 0
@@ -570,68 +596,68 @@ hook.Add( "HUDPaint", "Director", function()
 	local t = SysTime() - flLastHUDPaintCall
 	flHUDPaintTime = math.Approach( flHUDPaintTime, t, .1 )
 	flLastHUDPaintCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flHUDPaintTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastPreDrawHUDCall, flPreDrawHUDTime = SysTime(), 0
 hook.Add( "PreDrawHUD", "Director", function()
 	local t = SysTime() - flLastPreDrawHUDCall
 	flPreDrawHUDTime = math.Approach( flPreDrawHUDTime, t, .1 )
 	flLastPreDrawHUDCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flPreDrawHUDTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastPostDrawHUDCall, flPostDrawHUDTime = SysTime(), 0
 hook.Add( "PostDrawHUD", "Director", function()
 	local t = SysTime() - flLastPostDrawHUDCall
 	flPostDrawHUDTime = math.Approach( flPostDrawHUDTime, t, .1 )
 	flLastPostDrawHUDCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flPostDrawHUDTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastDrawOverlayCall, flDrawOverlayTime = SysTime(), 0
 hook.Add( "DrawOverlay", "Director", function()
 	local t = SysTime() - flLastDrawOverlayCall
 	flDrawOverlayTime = math.Approach( flDrawOverlayTime, t, .1 )
 	flLastDrawOverlayCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flDrawOverlayTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastPreDrawEffectsCall, flPreDrawEffectsTime = SysTime(), 0
 hook.Add( "PreDrawEffects", "Director", function()
 	local t = SysTime() - flLastPreDrawEffectsCall
 	flPreDrawEffectsTime = math.Approach( flPreDrawEffectsTime, t, .1 )
 	flLastPreDrawEffectsCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flPreDrawEffectsTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastPostDrawEffectsCall, flPostDrawEffectsTime = SysTime(), 0
 hook.Add( "PostDrawEffects", "Director", function()
 	local t = SysTime() - flLastPostDrawEffectsCall
 	flPostDrawEffectsTime = math.Approach( flPostDrawEffectsTime, t, .1 )
 	flLastPostDrawEffectsCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flPostDrawEffectsTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastPreDrawViewModelCall, flPreDrawViewModelTime = SysTime(), 0
 hook.Add( "PreDrawViewModel", "Director", function()
 	local t = SysTime() - flLastPreDrawViewModelCall
 	flPreDrawViewModelTime = math.Approach( flPreDrawViewModelTime, t, .1 )
 	flLastPreDrawViewModelCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flPreDrawViewModelTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastThinkCall, flThinkTime = SysTime(), 0
 hook.Add( "Think", "Director", function()
 	local t = SysTime() - flLastThinkCall
 	flThinkTime = math.Approach( flThinkTime, t, .1 )
 	flLastThinkCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flThinkTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastTickCall, flTickTime = SysTime(), 0
 hook.Add( "Tick", "Director", function()
 	local t = SysTime() - flLastTickCall
 	flTickTime = math.Approach( flTickTime, t, .1 )
 	flLastTickCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flTickTime )
+	DIRECTOR_CLIENT_TICK()
 end )
 local flLastRenderScreenspaceEffectsCall, flRenderScreenspaceEffectsTime = SysTime(), 0
 hook.Add( "RenderScreenspaceEffects", "Director", function()
 	local t = SysTime() - flLastRenderScreenspaceEffectsCall
 	flRenderScreenspaceEffectsTime = math.Approach( flRenderScreenspaceEffectsTime, t, .1 )
 	flLastRenderScreenspaceEffectsCall = SysTime()
-	DIRECTOR_CLIENT_TICK( flRenderScreenspaceEffectsTime )
+	DIRECTOR_CLIENT_TICK()
 end )

@@ -7,15 +7,29 @@ if SERVER then
 	end
 end
 
-hook.Add( "CreateMove", "Improvements", function( cmd )
-	local pPlayer = LocalPlayer()
-	if !IsValid( pPlayer ) || !pPlayer:KeyDown( IN_ZOOM ) then return end
-	local ang = cmd:GetViewAngles()
-	local flBreathe = RealTime() * .5
-	local flForce = .5 * FrameTime()
-	ang[ 1 ] = ang[ 1 ] + math.cos( flBreathe ) * flForce
-	ang[ 2 ] = ang[ 2 ] + math.cos( flBreathe / 2 ) * flForce
-	cmd:SetViewAngles( ang )
+// Weapon statuses and other complicated bullshit
+
+// At the hip facing leftwards (rifles) or at the hand (pistols)
+WEAPON_STANCE_PASSIVE = -1
+// Shotguns are at the hip, rifles are shouldered
+WEAPON_STANCE_DEFAULT = 0
+// Aiming down sights
+WEAPON_STANCE_AIMING = 1
+// EVERYTHING but pistols/revolvers/etc at the hip
+WEAPON_STANCE_HIP = 2
+// EVERYTHING but pistols/revolvers/etc shouldered
+WEAPON_STANCE_SHOULDER = 3
+
+hook.Add( "StartCommand", "Improvements", function( ply, cmd )
+	if cmd:KeyDown( IN_ZOOM ) then
+		local ang = cmd:GetViewAngles()
+		local flBreathe = RealTime() * .5
+		local flForce = .5 * FrameTime()
+		ang[ 1 ] = ang[ 1 ] + math.cos( flBreathe ) * flForce
+		ang[ 2 ] = ang[ 2 ] + math.cos( flBreathe / 2 ) * flForce
+		cmd:SetViewAngles( ang )
+	end
+	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
 end )
 
 COVER_PEEK_NONE = 0
@@ -219,6 +233,8 @@ hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 		return t.CalcIdeal, t.CalcSeqOverride
 	end
 	if CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) then
+		local f = ply.GAME_fSlidingActivity
+		if f then return f( ply, vel ) end
 		local a = ACT_MP_WALK
 		ply.CalcIdeal = a
 		local s = CEntity_LookupSequence( ply, CEntity_GetTable( ply ).CTRL_sSlidingSequence || "zombie_slump_idle_02" )

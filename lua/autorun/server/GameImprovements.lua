@@ -794,34 +794,12 @@ local ents_Create = ents.Create
 local util_TraceHull = util.TraceHull
 local function BloodlossStuff( ply, cmd )
 	local flBlood = ply:GetNW2Float( "GAME_flBlood", 1 )
-	if flBlood <= .8 then
-		cmd:RemoveKey( IN_SPEED )
-		ply.CTRL_bSprintBlockUnTilUnPressed = true
-		ply.CTRL_bHeldSprint = nil
-	end
+	if flBlood <= .8 then cmd:RemoveKey( IN_SPEED ) end
 	if flBlood <= .6 then cmd:AddKey( IN_DUCK ) cmd:AddKey( IN_WALK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
 end
-hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
+function GameImprovements_StartCommand( ply, cmd )
 	if !ply:Alive() then return end
 	ply.m_iOriginalButtons = cmd:GetButtons()
-	if cmd:KeyDown( IN_ZOOM ) then
-		if SysTime() <= ( ply.m_flZoomOutTime || 0 ) then
-			cmd:RemoveKey( IN_ZOOM )
-		elseif !ply.m_bWasZooming then
-			if SysTime() > ( ply.m_flZoomOutTime || 0 ) then
-				ply.m_flZoomInTime = SysTime() + .4
-				ply.m_bWasZooming = true
-			end
-		end
-	else
-		if ply.m_bWasZooming then
-			if SysTime() > ( ply.m_flZoomInTime || 0 ) then
-				ply.m_flZoomOutTime = SysTime() + .4
-				ply.m_bWasZooming = nil
-			end
-			cmd:AddKey( IN_ZOOM )
-		end
-	end
 	local veh = ply.GAME_pVehicle
 	if IsValid( veh ) then
 		if !ply.GAME_sRestoreGun then
@@ -895,10 +873,6 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
 		end
 	end
-	if ply.CTRL_bSprintBlockUnTilUnPressed then
-		if !cmd:KeyDown( IN_SPEED ) then ply.CTRL_bSprintBlockUnTilUnPressed = nil end
-		cmd:RemoveKey( IN_SPEED )
-	end
 	local v = __PLAYER_MODEL__[ ply:GetModel() ]
 	local bAllDirectionalSprint = Either( v, v && v.bAllDirectionalSprint, ply.CTRL_bAllDirectionalSprint ) || ( ( Either( ply.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, ply.CTRL_bCantSlide ) && GetVelocity( ply ):Length() >= ply:GetRunSpeed() ) || ply:Crouching() )
 	if bAllDirectionalSprint then
@@ -906,14 +880,11 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		ply:SetCrouchedWalkSpeed( 1 )
 	else
 		local bGroundCrouchingAndNotSliding = ply:Crouching() && !ply:GetNW2Bool "CTRL_bSliding"
-		if bGroundCrouchingAndNotSliding || cmd:KeyDown( IN_ZOOM ) || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then ply.CTRL_bHeldSprint = nil cmd:RemoveKey( IN_SPEED ) end
-		if !bGroundCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) || ply.CTRL_bHeldSprint then
-			ply.CTRL_bHeldSprint = true
+		if bGroundCrouchingAndNotSliding || cmd:KeyDown( IN_ZOOM ) || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then cmd:RemoveKey( IN_SPEED ) end
+		if !bGroundCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) then
 			cmd:AddKey( IN_SPEED )
 			local p = ply:GetActiveWeapon()
 			if cmd:GetForwardMove() <= 0 || IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then
-				ply.CTRL_bSprintBlockUnTilUnPressed = true
-				if bGround then ply.CTRL_bHeldSprint = nil end
 				cmd:RemoveKey( IN_SPEED )
 				ply:SetNW2Bool( "CTRL_bSprinting", false )
 			else
@@ -923,8 +894,6 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 				ply:SetNW2Bool( "CTRL_bSprinting", b )
 				if b then
 					if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then
-						ply.CTRL_bSprintBlockUnTilUnPressed = true
-						ply.CTRL_bHeldSprint = nil
 						cmd:RemoveKey( IN_SPEED )
 						ply:SetNW2Bool( "CTRL_bSprinting", false )
 					end
@@ -1330,7 +1299,7 @@ hook.Add( "StartCommand", "GameImprovements", function( ply, cmd )
 		end
 	end
 	BloodlossStuff( ply, cmd ) // Run it twice so that we neutralize RemoveKey( IN_DUCK )
-end )
+end
 
 local CEntity_GetVelocity = CEntity.GetVelocity
 local CEntity_GetNW2Bool = CEntity.GetNW2Bool
