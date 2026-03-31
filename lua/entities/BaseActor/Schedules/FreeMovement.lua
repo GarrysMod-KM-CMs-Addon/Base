@@ -1,3 +1,6 @@
+// I am currently cooking up a full rework of this. The current code below is shit, dunno if it was
+// the last update that broke it, but just wait, the new code's lit, I promise :)
+
 local table_IsEmpty = table.IsEmpty
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
@@ -152,11 +155,6 @@ Actor_RegisterSchedule( "FreeMovement", function( self, sched, MyTable )
 			if !pPath then pPath = Path "Follow" MyTable.ComputePath( self, pPath, pEnemy:GetPos(), MyTable ) MyTable.pEnemyPath = pPath end
 			MyTable.vCover = nil
 			self:Stand( self:GetCrouchTarget() )
-			local pIterator = sched.pIterator
-			if !sched.pIterator then
-				pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
-				sched.pIterator = pIterator
-			end
 			local vEnemy = pEnemy:GetPos()
 			local vTarget = vEnemy + pEnemy:OBBCenter()
 			local v = sched.vCoverBounds || MyTable.GatherCoverBounds( self, MyTable )
