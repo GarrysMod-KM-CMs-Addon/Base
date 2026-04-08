@@ -31,7 +31,7 @@ ENT.flCoverMoveNotShort = 8
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
 
-ENT.flHoldFireTime = 16
+ENT.flHoldFireTime = 48
 
 function ENT:DLG_HoldFire()
 	self.bHoldFire = true
@@ -69,11 +69,10 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 	if !IsValid( enemy ) || !sched.vFrom then return {} end
 	if !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) MyTable.DLG_Suppressed( self, MyTable ) return end
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
-	if table.IsEmpty( tEnemies ) then return {} end
+	if table.IsEmpty( tEnemies ) then return true end
 	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
 	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
 	if sched.bDuck == nil then sched.bDuck = math.random( 2 ) == 1 end
-	sched.bWantsCover = sched.bMove
 	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
 	if !MyTable.vCover || !MyTable.tCover then
 		if table.Count( tAllies ) > 1 then
@@ -327,9 +326,16 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if trStand.Hit && ( !trDuck || trDuck.Hit ) then
 				MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 				return
-			// They're hiding for a reason! Ideally, this would be FreeMovement, but
-			// FreeMovement doesn't support suppression yet, so just shoot more for now
-			else sched.flTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax ) return end
+			// FIXED!
+			else
+				local s = MyTable.SetSchedule( self, "FreeMovementStand", MyTable )
+				s.vPoint = sched.vFrom
+				s.bGotALineOfSightBefore = true
+				return
+			end
+			// They're hiding for a reason! Ideally, this would be FreeMovementStand, but
+			// FreeMovementStand doesn't support suppression yet, so just shoot more for now
+			// else sched.flTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax ) return end
 		end
 		local n = FrameTime()
 		for pAlly in pairs( MyTable.GetAlliesByClass( self, MyTable ) || {} ) do

@@ -194,13 +194,13 @@ local math_max = math.max
 local math_min = math.min
 local math_AngleDifference = math.AngleDifference
 local isentity = isentity
-function ENT:CanAttackHelper( VecOrEnt, MyTable, bNoStitching )
+function ENT:CanAttackHelper( VecOrEnt, MyTable, vOverride, bNoStitching )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then return end
 	local pTarget, vTarget
 	if isentity( VecOrEnt ) then
 		pTarget = VecOrEnt
-		vTarget = pTarget:GetPos() + pTarget:OBBCenter()
+		vTarget = vOverride || pTarget:GetPos() + pTarget:OBBCenter()
 	else vTarget = VecOrEnt end
 	local vShoot, vAim = MyTable.GetShootPos( self, MyTable ), MyTable.GetAimVector( self, MyTable )
 	local pWeapon = MyTable.Weapon

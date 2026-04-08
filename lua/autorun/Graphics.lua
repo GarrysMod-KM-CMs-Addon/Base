@@ -18,7 +18,7 @@ if SERVER then
 end
 
 /*
-net.Start "DynamicLight"
+net.Start "EphemeralLight"
 	net.WriteFloat( 1 ) // Brightness
 	net.WriteFloat( 1 ) // Size
 	net.WriteFloat( 1 ) // Existence length
@@ -27,7 +27,7 @@ net.Start "DynamicLight"
 net.Broadcast()
 */
 
-if SERVER then util.AddNetworkString "DynamicLight" return end
+if SERVER then util.AddNetworkString "EphemeralLight" return end
 
 local DynamicLight = DynamicLight
 local net_ReadFloat = net.ReadFloat
@@ -36,19 +36,16 @@ local net_ReadUInt = net.ReadUInt
 local math_Round = math.Round
 local math_Rand = math.Rand
 local CurTime = CurTime
-local iLightsThisTick, iLightsTickIndexLast, iLightsLastStoredTick = 0, 0
-local engine_TickCount = engine.TickCount
-net.Receive( "DynamicLight", function()
-	local iTick = engine_TickCount()
-	if iTick == iLightsLastStoredTick then
-		iLightsThisTick = iLightsThisTick + 1
-		iLightsTickIndexLast = iLightsTickIndexLast + iLightsThisTick
-	else
-		iLightsLastStoredTick = iTick
-		iLightsTickIndexLast = iLightsTickIndexLast
-		iLightsThisTick = 0
-	end
-	local pLight = DynamicLight( 8192 + iLightsTickIndexLast )
+local iEphemeralIndexLast = 0
+
+function EphemeralLight( tData )
+	iEphemeralIndexLast = iEphemeralIndexLast + 1
+	if iEphemeralIndexLast > 8192 then iEphemeralIndexLast = 0 end
+	return DynamicLight( 8192 + iEphemeralIndexLast )
+end
+
+net.Receive( "EphemeralLight", function()
+	local pLight = EphemeralLight()
 	if pLight then
 		pLight.brightness = net_ReadFloat()
 		pLight.size = net_ReadFloat()
@@ -330,7 +327,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
 	local bSpecial = pPlayer:WaterLevel() > 0
 	if RealTime() <= flThirdPersonAttackTime then
-		cmd:SetViewAngles( LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		cmd:SetViewAngles( LerpAngle( math.min( 1, 22.5 * FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
 		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
 	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
 		local a = Angle( aDirection )

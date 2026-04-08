@@ -325,7 +325,7 @@ end
 
 ENT.flNavigationAvoidTime = 0
 function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
-	self.loco:SetStepHeight( 16 )
+	self.loco:SetStepHeight( self.vHullMaxs[ 1 ] )
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
 		return

@@ -259,7 +259,7 @@ function ENT:Look( MyTable )
 		local TheirTable = CEntity_GetTable( ent )
 		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( ent ) ) then
 			if TheirTable.__PROJECTILE__ ||
-			!TheirTable.__FLARE_ACTIVE__ &&
+			!TheirTable.__FLARE_ACTIVE &&
 			!TheirTable.__ACTOR_BULLSEYE__ &&
 			!MyTable.IsHateDisposition( self, ent ) ||
 			!MyTable.CanSee( self, ent ) then continue end
@@ -297,28 +297,30 @@ function ENT:Look( MyTable )
 					if !ent.FLARE_tFoundByClass || !ent.FLARE_tFoundByClass[ self:Classify() ] then
 						local f = tOldVisionStrength[ ent ]
 						if f && f >= 1 then
-							if ent:Classify() == self:Classify() then // Go over to ally flares to help
-								if ent:GetPos():DistToSqr( self:GetPos() ) > 9437184/*3072*/ then
-									local p = self:SetupBullseye( ent, util_TraceLine( {
-										start = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ),
-										endpos = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) - HUGE_Z,
-										filter = ent,
-										mask = MASK_VISIBLE_AND_NPCS
-									} ).HitPos, CEntity_GetAngles( ent ) )
-									if IsValid( p ) then p.flTime = CurTime() end
-								end
-							else
-								local p = CEntity_GetOwner( ent )
-								if IsValid( p ) then
-									local p = self:SetupBullseye( p, util_TraceLine( {
-										start = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ),
-										endpos = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) - HUGE_Z,
-										filter = ent,
-										mask = MASK_VISIBLE_AND_NPCS
-									} ).HitPos, CEntity_GetAngles( ent ) )
-									if IsValid( p ) then p.flTime = CurTime() end
-								end
-							end
+							// Don't do anything for flares for now.
+							// I want actual help behaviours, not just "shoot below the flare".
+							//	if ent:Classify() == self:Classify() then // Go over to ally flares to help
+							//		if ent:GetPos():DistToSqr( self:GetPos() ) > 9437184/*3072*/ then
+							//			local p = self:SetupBullseye( ent, util_TraceLine( {
+							//				start = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ),
+							//				endpos = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) - HUGE_Z,
+							//				filter = ent,
+							//				mask = MASK_VISIBLE_AND_NPCS
+							//			} ).HitPos, CEntity_GetAngles( ent ) )
+							//			if IsValid( p ) then p.flTime = CurTime() end
+							//		end
+							//	else
+							//		local p = CEntity_GetOwner( ent )
+							//		if IsValid( p ) then
+							//			local p = self:SetupBullseye( p, util_TraceLine( {
+							//				start = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ),
+							//				endpos = CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) - HUGE_Z,
+							//				filter = ent,
+							//				mask = MASK_VISIBLE_AND_NPCS
+							//			} ).HitPos, CEntity_GetAngles( ent ) )
+							//			if IsValid( p ) then p.flTime = CurTime() end
+							//		end
+							//	end
 							if ent.FLARE_tFoundByClass then ent.FLARE_tFoundByClass[ self:Classify() ] = true
 							else ent.FLARE_tFoundByClass = { [ self:Classify() ] = true } end
 						else tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 ) end

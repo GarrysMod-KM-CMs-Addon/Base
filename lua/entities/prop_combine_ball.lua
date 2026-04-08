@@ -134,7 +134,7 @@ function ENT:PhysicsCollide( tData )
 		ed:SetNormal( -( tData.HitNormal || tData.OurOldVelocity:GetNormalized() ):GetNormalized() )
 		ed:SetRadius( self:BoundingRadius() )
 		util_Effect( "AR2Explosion", ed )
-		net.Start "DynamicLight"
+		net.Start "EphemeralLight"
 			net.WriteFloat( 4 ) // Brightness
 			net.WriteFloat( self:BoundingRadius() * ( self:Health() / self:GetMaxHealth() ) * 8 ) // Size
 			net.WriteFloat( 16 ) // Existence length

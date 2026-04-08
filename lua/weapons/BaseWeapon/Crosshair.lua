@@ -35,10 +35,13 @@ local surface_GetTextureID = surface.GetTextureID
 local surface_SetDrawColor = surface_SetDrawColor
 local surface_DrawTexturedRectRotated = surface.DrawTexturedRectRotated
 
-local CROSSHAIR_PART_SIZE = ScrH() * .016
+local CROSSHAIR_PART_SIZE = ScrH() * .014
 local CROSSHAIR_PART_SIZE_WIDTH = ScrH() * .004
 local CROSSHAIR_PART_SIZE_SUB = CROSSHAIR_PART_SIZE * .5
-// local CROSSHAIR_PART_SIZE_SUB_SUB = CROSSHAIR_PART_SIZE_SUB * .5
+
+local CROSSHAIR_PART_SIZE_LARGE = ScrH() * .024
+local CROSSHAIR_PART_SIZE_LARGE_WIDTH = ScrH() * .004
+local CROSSHAIR_PART_SIZE_LARGE_SUB = CROSSHAIR_PART_SIZE_LARGE * .5
 
 local surface_DrawRect = surface.DrawRect
 local surface_SetDrawColor = surface.SetDrawColor
@@ -53,7 +56,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		local flRadius = flSpread * flWidth * ( 90 / MyTable.flFoV ) * .5
 		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
 		local f = .0008 * flHeight
-		local flStart, flEnd = flRadius, flRadius + f
+		local flStart, flEnd = flRadius, flRadius + f * 2
 		local flCrosshairAlpha = MyTable.flCrosshairAlpha
 		for I = flStart, flEnd do surface.DrawCircle( flX, flY, I, 0, 0, 0, flCrosshairAlpha ) end
 		local flStart = flEnd
@@ -145,23 +148,45 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 	//
 	//
 	//               \         /
-	// But since I have zero idea how to possibly draw that, we use the rifle crosshair as a placeholder
+	// But since I have zero idea how to possibly draw that, we use the Requiem's crosshair as a placeholder
 	Open = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
+		flSpreadX = flSpreadX * .5
+		flSpreadY = flSpreadY * .5
 		local flHeight, flWidth = ScrH(), ScrW()
 		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
 		local flSpreadHorizontal = flSpreadX * flWidth * ( 90 / MyTable.flFoV ) * .5
 		local flSpreadVertical = flSpreadY * flHeight * ( 90 / MyTable.flFoV ) * .5 * ( flWidth / flHeight )
 		surface_SetTexture( surface_GetTextureID "Crosshair" )
 		surface_SetDrawColor( R, G, B, MyTable.flCrosshairAlpha )
-		// Top
-		surface_DrawTexturedRectRotated( flX, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 180 )
-		// Bottom
-		surface_DrawTexturedRectRotated( flX, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 0 )
-		// Left
-		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 270 )
-		// Right
-		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
+		// Top left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 225 )
+		// Top right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 135 )
+		// Bottom left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 315 )
+		// Bottom right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 45 )
+		return true
+	end,
+	Requiem = function( MyTable, self, R, G, B )
+		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
+		flSpreadX = flSpreadX * .5
+		flSpreadY = flSpreadY * .5
+		local flHeight, flWidth = ScrH(), ScrW()
+		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
+		local flSpreadHorizontal = flSpreadX * flWidth * ( 90 / MyTable.flFoV ) * .5
+		local flSpreadVertical = flSpreadY * flHeight * ( 90 / MyTable.flFoV ) * .5 * ( flWidth / flHeight )
+		surface_SetTexture( surface_GetTextureID "Crosshair" )
+		surface_SetDrawColor( R, G, B, MyTable.flCrosshairAlpha )
+		// Top left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 225 )
+		// Top right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 135 )
+		// Bottom left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 315 )
+		// Bottom right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 45 )
 		return true
 	end,
 }
@@ -279,7 +304,20 @@ end
 SWEP.bDontDrawCrosshairDuringZoom = true
 SWEP.flCrosshairInAccuracyGapPart = 0
 SWEP.flCrosshairInAccuracyRecoilPart = 0
+
+// Allowing this to be toggled on by the client for testing
+// how good guns feel without the smooth crosshair disappearance,
+// and because this is a straight up nerf, not a buff.
+local cNoWeaponHuD = CreateConVar(
+	"bNoWeaponHuD",
+	0,
+	FCVAR_NEVER_AS_STRING,
+	"",
+	0, 1
+)
+
 function SWEP:DoDrawCrosshair()
+	if cNoWeaponHuD:GetBool() then return true end
 	if developer:GetBool() then return end
 	local f = SysTime()
 	local flFrameTime = f - flLastDoDrawCrosshairCall

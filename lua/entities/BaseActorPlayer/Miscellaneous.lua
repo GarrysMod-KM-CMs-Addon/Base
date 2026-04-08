@@ -1,5 +1,5 @@
 local sv_friction, sv_gravity = GetConVar "sv_friction", GetConVar "sv_gravity"
-function ENT:MoveAlongPath( Path, flSpeed, flHeight, tFilter, bAllowSliding )
+function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
 	if flHeight == nil then flHeight = 1 end
 	if !bAllowSliding then self:SetNW2Bool( "CTRL_bSliding", false ) end
 	self:SetCrouchTarget( flHeight )
@@ -12,7 +12,7 @@ function ENT:MoveAlongPath( Path, flSpeed, flHeight, tFilter, bAllowSliding )
 	local f = flSpeed * ACCELERATION_NORMAL
 	self.loco:SetAcceleration( f )
 	self.loco:SetDeceleration( f )
-	self:HandleJumpingAlongPath( Path, flSpeed, tFilter )
+	self:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 end
 
 DEFINE_BASECLASS "BaseActor"

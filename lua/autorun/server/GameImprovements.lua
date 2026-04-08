@@ -1,5 +1,9 @@
 concommand.Add( "+drop", function() end )
-concommand.Add( "-drop", function( ply ) ply:DropWeapon() end )
+concommand.Add( "-drop", function( ply )
+	local pWeapon = ply:GetActiveWeapon()
+	if IsValid( pWeapon ) then pWeapon:Holster() pWeapon:CallOnClient "Holster" end
+	ply:DropWeapon()
+end )
 
 ACCELERATION_NORMAL = 5
 
@@ -100,6 +104,15 @@ end
 
 function SimpleRelatedFilterDouble( pEntity, pEnemy )
 	local tFilter = { pEntity, pEnemy }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	local pVehicle = pEnemy.GAME_pVehicle
+	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	return tFilter
+end
+
+function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
+	local tFilter = { pEntity, pEnemy, pBullseye }
 	local pVehicle = pEntity.GAME_pVehicle
 	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
 	local pVehicle = pEnemy.GAME_pVehicle
@@ -225,6 +238,7 @@ local cCorrectScale = CreateConVar(
 
 hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
 	if IsValid( ent ) then
+		if !cCorrectScale:GetBool() || ent:GetClass() == "prop_door_rotating" then return end
 		local f = ent:GetModelScale()
 		if !f then return end
 		ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
@@ -236,7 +250,6 @@ hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
 		timer.Simple( .01, function()
 			if !IsValid( ent ) then return end
 			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
-			if !cCorrectScale:GetBool() || ent:GetClass() == "prop_door_rotating" then return end
 		end )
 	end
 end )
@@ -366,6 +379,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	local OldCallBack = Data.Callback || function() return { damage = true, effects = true } end
 	local flDamage = Data.Damage
 	local col
+	if !Data.TracerName then Data.TracerName = "Bullet" end
 	local bTracer = Data.Tracer > 0
 	// TODO: Find a way to conceal tracers of your own gun in first person,
 	// that will make the crosshair disappearing actually matter
@@ -403,8 +417,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		t = pTarget.OnBulletImpact
 		if t then t( pTarget, dDamage ) end
 		if bMuzzleFlash then
-			net.Start "DynamicLight"
-				net.WriteFloat( col[ 4 ] * .006 ) // Brightness
+			net.Start "EphemeralLight"
+				net.WriteFloat( col[ 4 ] * .003 ) // Brightness
 				net.WriteFloat( 128 ) // Size
 				net.WriteFloat( 2 ) // Existence length
 				net.WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
@@ -422,7 +436,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		// pt:Spawn()
 		// timer.Simple( .1, function() if IsValid( pt ) then pt:Remove() end end )
 		// As cool as this looks sometimes, bullets don't do this in real life!
-		//	net.Start "DynamicLight"
+		//	net.Start "EphemeralLight"
 		//		net.WriteFloat( col[ 4 ] * .006 ) // Brightness
 		//		net.WriteFloat( 32 ) // Size
 		//		net.WriteFloat( 4 ) // Existence length

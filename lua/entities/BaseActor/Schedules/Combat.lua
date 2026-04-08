@@ -95,7 +95,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = CurTime() <= ( sched.flSweep || 0 ) && WEAPON_STANCE_AIMING || WEAPON_STANCE_PASSIVE
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
-	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovement", MyTable ) return end
+	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovementStand", MyTable ) return end
 	local enemy = sched.Enemy
 	if IsValid( enemy ) then enemy = enemy
 	else enemy = MyTable.Enemy if !IsValid( enemy ) then return true end end
@@ -103,17 +103,17 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 	local tCover = MyTable.tCover
 	if !tCover || !MyTable.vCover then
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 	local pEntity = tCover[ 6 ]
 	if pEntity != nil && !IsValid( pEntity ) then
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 	local vec = MyTable.vCover
 	if !vec then
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 	MyTable.Stand( self, sched.iStand )
@@ -552,7 +552,11 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	end
 	if sched.bAdvance && sched.tNextCover != nil then
 		if sched.tNextCover == false then
-			MyTable.SetSchedule( self, "FreeMovement", MyTable ).bDontSearchForCoverTheFirstTime = true
+			local s = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
+			s.vMyStart = tCover[ 1 ]
+			s.vMyEnd = tCover[ 2 ]
+			// Lie to them so they go straight to a LoS
+			s.bGotALineOfSightBefore = true
 			return
 		end
 		local s = MyTable.SetSchedule( self, "TakeCoverMove", MyTable )
@@ -605,7 +609,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	} ).Hit then
 		MyTable.vCover = nil
 		MyTable.tCover = nil
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovement" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 	v = vec + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
@@ -797,7 +801,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local v = fDo( vLeftCheckDucked, ACTOR_PITCH_ANGLES_LEFT )
 			if v then
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-				sched.vFrom = vRight
+				sched.vFrom = vLeft
 				sched.vTo = v
 				sched.Enemy = enemy
 				sched.bSuppressing = true
@@ -892,7 +896,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			local v = fDo( vLeftCheckDucked, ACTOR_PITCH_ANGLES_LEFT )
 			if v then
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
-				sched.vFrom = vRight
+				sched.vFrom = vLeft
 				sched.vTo = v
 				sched.Enemy = enemy
 				sched.bSuppressing = true

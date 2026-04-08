@@ -217,7 +217,7 @@ DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade"
 local math_max = math.max
 local pairs = pairs
 
-local flLastDirectorClientTickCall = SysTime()
+LAST_DIRECTOR_CLIENT_TICK = SysTime()
 
 function Director_Music_UpdateInternal( self, ... )
 	// This function repeats itself intentionally, because in continuous music playback,
@@ -225,20 +225,28 @@ function Director_Music_UpdateInternal( self, ... )
 	// code that passes playing to the next tick (like when changing the index),
 	// since we also technically simulate the next tick
 	local t = self.m_pTable
-	local flInterval = SysTime() - flLastDirectorClientTickCall
+	local flInterval = SysTime() - LAST_DIRECTOR_CLIENT_TICK
 	t.Execute( self, flInterval, ... )
 	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
 	for Index, tData in pairs( tHandles ) do
-		local flPitch = tData[ 3 ] / 100
-		local f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * flPitch
+		local pSound = tData[ 1 ]
+		f = flVolume * tData[ 2 ]
+		if f <= SOUND_PATCH_ABSOLUTE_MINIMUM then
+			tData[ 5 ] = SysTime()
+			pSound:ChangeVolume( SOUND_PATCH_ABSOLUTE_MINIMUM )
+			pSound:ChangePitch( 0 )
+			continue
+		else
+			pSound:ChangeVolume( f )
+			pSound:ChangePitch( tData[ 3 ] )
+		end
+		local flPitch = pSound:GetPitch()
+		local f = 0
+		if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
 		if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
 		tData[ 4 ] = f
 		tData[ 5 ] = SysTime()
-		local pSound = tData[ 1 ]
-		pSound:ChangeVolume( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * tData[ 2 ] ) )
-		// Sadly, pitch zero pauses the sound, so we can't use that to bypass SOUND_PATCH_ABSOLUTE_MINIMUM either...
-		pSound:ChangePitch( tData[ 3 ] )
 	end
 	return t.Execute( self, flInterval, ... )
 end
@@ -315,9 +323,10 @@ __HUD_SHOULD_NOT_DRAW__ = {
 local math_random = math.random
 
 function DIRECTOR_CLIENT_TICK()
-	flLastDirectorClientTickCall = SysTime()
+	// Not now! I'm a dumbass.
+	// LAST_DIRECTOR_CLIENT_TICK = SysTime()
 	local ply = LocalPlayer()
-	if !IsValid( ply ) then return end // NO!
+	if !IsValid( ply ) then LAST_DIRECTOR_CLIENT_TICK = SysTime() return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
 			local t = DIRECTOR_MUSIC_TABLE[ ELayer ][ math_random( 1, _G[ __VARNAME__[ ELayer ] ] ) ]
@@ -353,8 +362,10 @@ function DIRECTOR_CLIENT_TICK()
 				DIRECTOR_SPECIAL_INTRO.m_bToCombat = true
 				DIRECTOR_SPECIAL_INTRO.m_bIntroOfATrack = true
 				DIRECTOR_SPECIAL_INTRO.m_ELayerFrom = DIRECTOR_THREAT
+				LAST_DIRECTOR_CLIENT_TICK = SysTime()
 				return
 			end
+			LAST_DIRECTOR_CLIENT_TICK = SysTime()
 			return
 		elseif DIRECTOR_SPECIAL_INTRO != "DONE" then
 			local ELayerFrom, ELayerTo, flInitialVolumeA, flInitialVolumeB = DIRECTOR_SPECIAL_INTRO.m_ELayerFrom, DIRECTOR_SPECIAL_INTRO.m_ELayerTo
@@ -371,23 +382,25 @@ function DIRECTOR_CLIENT_TICK()
 					if ELayer == ELayerFrom then
 						pContainer.m_flVolume = flVolumeA
 					else
-						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 					Director_Music_UpdateInternal( pContainer )
 				end
 			end
 			DIRECTOR_SPECIAL.m_flVolume = flVolumeB
 			Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
+			LAST_DIRECTOR_CLIENT_TICK = SysTime()
 			return
 		end
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end
-		DIRECTOR_SPECIAL.m_flVolume = math.Approach( DIRECTOR_SPECIAL.m_flVolume, 1, FrameTime() )
+		DIRECTOR_SPECIAL.m_flVolume = math.Approach( DIRECTOR_SPECIAL.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 		Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	elseif DIRECTOR_MUSIC_IN_VO then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
@@ -404,6 +417,7 @@ function DIRECTOR_CLIENT_TICK()
 				DIRECTOR_TRANSITION.m_bIntroOfATrack = true
 				DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 				net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
+				LAST_DIRECTOR_CLIENT_TICK = SysTime()
 				return
 			end
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
@@ -414,7 +428,7 @@ function DIRECTOR_CLIENT_TICK()
 						Director_Music_UpdateInternal( pContainer )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
-						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
+						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 					end
 				end
 			else DIRECTOR_MUSIC_IN_VO = nil end
@@ -436,18 +450,19 @@ function DIRECTOR_CLIENT_TICK()
 					if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 						DIRECTOR_TRANSITION = nil
 					else
-						DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, FrameTime() )
+						DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 				end
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
 						Director_Music_UpdateInternal( pContainer )
-						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 				end
 			end
 		end
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	elseif DIRECTOR_TRANSITION then
 		local b
@@ -475,11 +490,12 @@ function DIRECTOR_CLIENT_TICK()
 				elseif ELayer == ELayerTo then
 					pContainer.m_flVolume = flVolumeB
 				else
-					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() )
+					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 				end
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
@@ -497,6 +513,7 @@ function DIRECTOR_CLIENT_TICK()
 			DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
 			net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
+			LAST_DIRECTOR_CLIENT_TICK = SysTime()
 			return
 		end
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -504,7 +521,7 @@ function DIRECTOR_CLIENT_TICK()
 			if pContainer then
 				if ELayer == DIRECTOR_THREAT then
 					pContainer.m_flVolume = 1
-				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
+				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end
@@ -513,7 +530,7 @@ function DIRECTOR_CLIENT_TICK()
 			if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 				DIRECTOR_TRANSITION = nil
 			else
-				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, FrameTime() )
+				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 			end
 		end
 	elseif DIRECTOR_MUSIC_WAS_HOLD_FIRE then
@@ -531,8 +548,8 @@ function DIRECTOR_CLIENT_TICK()
 				else pContainer.m_flVolume = 0 end
 				//	if ELayer == DIRECTOR_THREAT then
 				//		if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
-				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, FrameTime() )
-				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, FrameTime() ) end
+				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 				Director_Music_UpdateInternal( pContainer )
 			end
 		end
@@ -541,9 +558,10 @@ function DIRECTOR_CLIENT_TICK()
 			if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 				DIRECTOR_TRANSITION = nil
 			else
-				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, FrameTime() )
+				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 			end
 		end
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	end
 	if DIRECTOR_MUSIC_LAST_THREAT < DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT then
@@ -554,6 +572,7 @@ function DIRECTOR_CLIENT_TICK()
 		DIRECTOR_TRANSITION.m_bToCombat = true
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	elseif DIRECTOR_MUSIC_LAST_THREAT >= DIRECTOR_THREAT_COMBAT && DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT then
 		DIRECTOR_TRANSITION = Director_Music_Container()
@@ -562,6 +581,7 @@ function DIRECTOR_CLIENT_TICK()
 		DIRECTOR_TRANSITION.m_flVolume = 1
 		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_MUSIC_LAST_THREAT
 		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT
+		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	end
 	// Do NOT mistake this for the fade transition!
@@ -572,15 +592,16 @@ function DIRECTOR_CLIENT_TICK()
 		if pContainer then
 			Director_Music_UpdateInternal( pContainer )
 			if ELayer == DIRECTOR_THREAT then
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * RealFrameTime() )
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
 			else
 				if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then pContainer.m_flVolume = 0 end
 				Director_Music_UpdateInternal( pContainer )
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, RealFrameTime() * .1 )
+				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
 				if pContainer.m_flVolume <= 0 && CurTime() > ( pContainer.m_flEndTime || 0 ) then DIRECTOR_MUSIC[ ELayer ] = nil end
 			end
 		end
 	end
+	LAST_DIRECTOR_CLIENT_TICK = SysTime()
 end
 
 local flLastHUDShouldDrawCall, flHUDShouldDrawTime = SysTime(), 0

@@ -55,7 +55,6 @@ sound.Add {
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^AK47Shot.wav",
-	volume = .5
 }
 SWEP.sSound = "AK47Shot"
 sound.Add {
@@ -64,7 +63,6 @@ sound.Add {
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^AK47Shot.wav",
-	volume = .5
 }
 SWEP.sSound = "AK47ShotAuto"
 

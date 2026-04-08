@@ -44,11 +44,13 @@ local util_TraceLine = util.TraceLine
 // WRONG: BUG: Returns navmesh areas sometimes when called as self:SearchAreas()().
 // WRONG: Why? Unknown. Probably something to do with the recursive F() call
 // Nevermind I am so freakin' stupid I called self:SearchAreas() instead of this function
+
+// TODO: Implement flSpacing in a way that isn't CPU heavy as shit
 function ENT:SearchNodes( vPos, fWeighter, flSpacing )
 	if !vPos then vPos = self:GetPos() end
 	local area = navmesh.GetNearestNavArea( vPos )
 	if !area then return function() return nil end end
-	flSpacing = self:BoundingRadius() * ( flSpacing || 24 )
+	// flSpacing = self:BoundingRadius() * ( flSpacing || 10 )
 	local tQueue, tVisited = { { true, area, 0, 0, self:GetPos() } }, { [ area:GetID() ] = true }
 	local bCantClimb, flJumpHeight, flNegDeathDrop = !self.bCanClimb, self.loco:GetJumpHeight(), -self.loco:GetDeathDropHeight()
 	local tAllies = self:GetAlliesByClass()
@@ -87,24 +89,9 @@ function ENT:SearchNodes( vPos, fWeighter, flSpacing )
 				f = vCenter:Distance( vPrev )
 				local n = dist + f
 				table_insert( tQueue, { false, vCenter, n, fWeighter( v, dist, n ), vCenter } )
-				for x = flCornerX, flCornerX + flSizeX, flSpacing do
-					for y = flCornerY, flCornerY + flSizeY, flSpacing do
-						local v = Vector( x, y )
-						v.z = area:GetZ( v )
-						if util_TraceLine( {
-							start = v + s,
-							endpos = v + z,
-							mask = MASK_SOLID,
-							filter = tFilter
-						} ).Hit then continue end
-						f = vPrev:Distance( v )
-						n = dist + f
-						table_insert( tQueue, { false, v, n, fWeighter( v, dist, n ), vCenter } )
-					end
-				end
 				// Sorting is expensive!!! We need to only sort this if we actually did something!!!
 				table_SortByMember( tQueue, 4 )
-				return F(), area
+				return F(), area, dist
 			end
 			return area
 		end

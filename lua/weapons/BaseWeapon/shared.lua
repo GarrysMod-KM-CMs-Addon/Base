@@ -438,7 +438,13 @@ if CLIENT then
 	local CPlayer_InVehicle = CPlayer.InVehicle
 	local bOnGroundLast
 	local math_Remap = math.Remap
-	function SWEP:AdjustMouseSensitivity() local v = CEntity_GetTable( self ).flFoV if v then return v / LocalPlayer():GetInfoNum( "fov_desired", UNIVERSAL_FOV ) end end
+	function SWEP:AdjustMouseSensitivity()
+		local MyTable = CEntity_GetTable( self )
+		local f = CurTime() <= ( ( MyTable.flLastShot || 0 ) + math.min( .5, MyTable.Primary_flDelay ) + ( MyTable.Primary.Automatic && 0 || .5 ) ) && .5 || 1
+		local v = MyTable.flFoV
+		if v then return v / LocalPlayer():GetInfoNum( "fov_desired", UNIVERSAL_FOV ) * f end
+		return f
+	end
 	local CPlayer_IsSprinting = CPlayer.IsSprinting
 	local CPlayer_Crouching = CPlayer.Crouching
 	local CEntity_GetNW2Int = CEntity.GetNW2Int

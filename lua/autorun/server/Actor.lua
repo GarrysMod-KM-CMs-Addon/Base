@@ -4,10 +4,10 @@ local __SCHEDULE__ = __SCHEDULE__
 function Actor_RegisterSchedule( Name, Func ) __SCHEDULE__[ Name ] = Func end
 function Actor_RegisterScheduleSpecial( Name, Fall ) __SCHEDULE__[ Name ] = function( self, sched ) return ( self.__SCHEDULE__[ Fall ] || __SCHEDULE__[ Fall ] )( self, sched ) end end
 
-__BEHAVIOUR__ = __BEHAVIOUR__ || {}
-local __BEHAVIOUR__ = __BEHAVIOUR__
+__INTERACTION__ = __INTERACTION__ || {}
+local __INTERACTION__ = __INTERACTION__
 
-function Actor_RegisterBehaviour( Name, Data ) __BEHAVIOUR__[ Name ] = Data end
+function ActorRegisterInteraction( Name, Data ) __INTERACTION__[ Name ] = Data end
 
 __ALARMS__ = __ALARMS__ || {}
 __ALARMS_ACTIVE__ = __ALARMS_ACTIVE__ || {}

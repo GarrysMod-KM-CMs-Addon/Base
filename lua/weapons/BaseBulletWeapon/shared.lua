@@ -36,13 +36,15 @@ function SWEP:DoMuzzleFlash()
 	util_Effect( self:GetMuzzleFlash(), ed )
 end
 
+function SWEP:FurtherModificationsToBulletTable( tBullets, MyTable ) end
+
 function SWEP:PrimaryAttack()
 	local MyTable = CEntity_GetTable( self )
 	if !MyTable.CanPrimaryAttack( self, MyTable ) then return end
 	local owner = CEntity_GetOwner( self )
 	if MyTable.bNoMuzzleFlash then MyTable.GAME_bNoMuzzleFlash = true
 	else MyTable.DoMuzzleFlash( self, MyTable ) end
-	CEntity_FireBullets( self, {
+	local tBullets = {
 		Attacker = owner,
 		Src = owner:GetShootPos(),
 		Dir = MyTable.GetAimVector( self, MyTable ),
@@ -51,7 +53,9 @@ function SWEP:PrimaryAttack()
 		Spread = Vector( MyTable.Primary_flSpreadX, MyTable.Primary_flSpreadY ),
 		Damage = MyTable.Primary_flDamage,
 		Num = MyTable.Primary_iNum
-	} )
+	}
+	MyTable.FurtherModificationsToBulletTable( self, tBullets, MyTable )
+	CEntity_FireBullets( self, tBullets )
 	owner:SetAnimation( PLAYER_ATTACK1 )
 	MyTable.ShootEffects( self, MyTable )
 	local s = MyTable.sSound
