@@ -1,11 +1,3 @@
-// NOTE: You should probably use DLG_State_TakeCover() and DLG_State_Retreat() if you want them to shout it once
-function ENT:DLG_Advancing() end
-function ENT:DLG_Retreating() end
-function ENT:DLG_TakeCoverGeneral() end
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
-function ENT:DLG_TakeCoverAdvance() CEntity_GetTable( self ).DLG_TakeCoverGeneral( self ) end
-function ENT:DLG_TakeCoverRetreat() CEntity_GetTable( self ).DLG_TakeCoverGeneral( self ) end
-
 local util_TraceLine = util.TraceLine
 
 Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
@@ -19,23 +11,6 @@ Actor_RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 	local c = self:GetWeaponClipPrimary()
 	if c != -1 && c <= 0 then self:WeaponReload() end
 	if !self.tCover then return false end
-	if sched.bActed == nil then
-		local flCombatState = MyTable.flCombatState
-		if flCombatState < 0 then
-			if flCombatState > -.25 then
-				self:DLG_TakeCoverRetreat()
-			else
-				self:DLG_Retreating()
-			end
-		else
-			if flCombatState < .25 then
-				self:DLG_TakeCoverAdvance()
-			else
-				self:DLG_Advancing()
-			end
-		end
-		sched.bActed = true
-	end
 	local vec = self.vCover
 	local tAllies = self:GetAlliesByClass()
 	if tAllies then

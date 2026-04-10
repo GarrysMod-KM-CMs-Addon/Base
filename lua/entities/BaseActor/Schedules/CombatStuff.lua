@@ -22,12 +22,6 @@ function ENT:DLG_Pinned( MyTable ) end
 // See the code, I have no easy way of explaining this one
 ENT.flSuppressionTraceFraction = .8
 
-ENT.flCoverMoveStart = 1
-ENT.flCoverMoveStartSuppressed = 0
-ENT.flCoverMoveStep = 1
-ENT.flCoverMoveShort = 4
-ENT.flCoverMoveNotShort = 8
-
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
 
@@ -65,8 +59,10 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 		MyTable.DLG_State_TakeCover( self, MyTable )
 	end
 	MyTable.flLastAttackCombatState = f
-	local enemy, trueenemy = MyTable.SetupEnemy( self, sched.Enemy, MyTable )
-	if !IsValid( enemy ) || !sched.vFrom then return {} end
+	local enemy = MyTable.Enemy
+	if !IsValid( enemy ) then return true end
+	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
+	if !sched.vFrom then return false end
 	if !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) MyTable.DLG_Suppressed( self, MyTable ) return end
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end

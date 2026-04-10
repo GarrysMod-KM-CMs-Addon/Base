@@ -7,6 +7,7 @@ ENT.flTurnRate = 128
 ENT.flBodyTensity = 1 // 1 means as fast as possible, lower values make us turn slower to face smaller angles
 
 local math_AngleDifference = math.AngleDifference
+local math_Clamp = math.Clamp
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local CEntity_GetAngles = CEntity.GetAngles
@@ -19,21 +20,20 @@ function ENT:SetEyeAngles( a, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	local sPitch = MyTable.m_sPitchPoseParameter
 	local sYaw = MyTable.m_sYawPoseParameter
-	local ppAimPitch = CEntity_LookupPoseParameter( self, sPitch )
-	local Angles = CEntity_GetAngles( self )
-	if !MyTable.bPhysics then a[ 1 ] = math.Clamp( a[ 1 ], -89, 89 ) end
+	local aAngles = CEntity_GetAngles( self )
+	if !MyTable.bPhysics then a[ 1 ] = math_Clamp( a[ 1 ], -89, 89 ) end
 	local aAim = Angle( Angles )
-	local aDesAim = a
+	local ppAimPitch = CEntity_LookupPoseParameter( self, sPitch )
 	if ppAimPitch != -1 then
 		local p = CEntity_GetPoseParameter( self, sPitch )
-		CEntity_SetPoseParameter( self, sPitch, p + math_AngleDifference( aDesAim.p, Angles.p + p ) )
-		aAim.p = aAim.p + CEntity_GetPoseParameter( self, sPitch )
+		CEntity_SetPoseParameter( self, sPitch, math_AngleDifference( a[ 1 ], aAngles[ 1 ] - p ) )
+		aAim[ 1 ] = aAim[ 1 ] + CEntity_GetPoseParameter( self, sPitch )
 	end
 	local ppAimYaw = CEntity_LookupPoseParameter( self, sYaw )
 	if ppAimYaw != -1 then
 		local p = CEntity_GetPoseParameter( self, sYaw )
-		CEntity_SetPoseParameter( self, sYaw, p + math_AngleDifference( aDesAim.y, Angles.y + p ) )
-		aAim.y = aAim.y + CEntity_GetPoseParameter( self, sYaw )
+		CEntity_SetPoseParameter( self, sYaw, math_AngleDifference( a[ 2 ], aAngles[ 2 ] - p ) )
+		aAim[ 2 ] = aAim[ 2 ] + CEntity_GetPoseParameter( self, sYaw )
 	end
 	MyTable.aAim = aAim
 	MyTable.vAim = aAim:Forward()

@@ -295,9 +295,9 @@ function ENT:HandleKeyValue( Key, Value ) end
 
 function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
-	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage
+	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage / 3
 	MyTable.flSuppressionRecoverTime = CurTime() + .5
-	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage
+	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage / 3
 end
 
 local ProtectedCall = ProtectedCall

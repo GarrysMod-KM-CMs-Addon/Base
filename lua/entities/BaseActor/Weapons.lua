@@ -154,7 +154,8 @@ function ENT:WeaponPrimaryAttack( MyTable )
 	if CurTime() <= pWeapon:GetNextPrimaryFire() then return end
 	local WeaponTable = CEntity_GetTable( pWeapon )
 	WeaponTable.PrimaryAttack( pWeapon )
-	self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
+	// Nuh uh!
+	// self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
 	return true
 end
 

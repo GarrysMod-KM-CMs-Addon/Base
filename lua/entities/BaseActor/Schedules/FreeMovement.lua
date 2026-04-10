@@ -34,6 +34,17 @@ Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 		filter = tFilter
 	}
 	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
+		local flHealth = pEnemy:Health()
+		local ws, w = 0 // Weapon Strength
+		for wep in pairs( MyTable.tWeapons ) do
+			if wep.bSpecial then continue end
+			local t = wep.Primary_flDelay || 0
+			if t <= 0 then continue end
+			local d = wep.Primary_flDamage || 0
+			if d <= 0 then continue end
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			if nws < ws then w, ws = wep, nws end
+		end
 		sched.flSuppressTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax )
 		sched.bGotALineOfSightBefore = true
 		MyTable.Stand( self, trStandToCenter.Hit && 0 || 1, MyTable )
@@ -282,14 +293,12 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 		sched.pIterator = pIterator
 	end
 	// SHIT. I lost motivation halfway :(
-	local flDesiredCursor, flDesiredCursorLarge = sched.flDesiredCursor, sched.flDesiredCursorLarge
+	local flDesiredCursor = sched.flDesiredCursor
 	if !flDesiredCursor then
 		pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
 		local flBoundingRadius = self:BoundingRadius()
 		flDesiredCursor = math.Clamp( pEnemyPath:GetCursorPosition() + flBoundingRadius * math.Remap( pEnemyPath:GetLength() - pEnemyPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState, 0, pEnemyPath:GetLength() - flBoundingRadius * 12 )
 		sched.flDesiredCursor = flDesiredCursor
-		flDesiredCursorLarge = math.Clamp( pEnemyPath:GetCursorPosition() + flBoundingRadius * math.Remap( pEnemyPath:GetLength() - pEnemyPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState * 4, 0, pEnemyPath:GetLength() - flBoundingRadius * 12 * 4 )
-		sched.flDesiredCursorLarge = flDesiredCursorLarge
 	end
 	if LevelOfDetail( sched, "flNextSearch", .1 ) then
 		local vMyStart, vMyEnd = sched.vMyStart, sched.vMyEnd
@@ -344,11 +353,11 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 					flCursorStart = pPath:GetCursorPosition() - pPath:GetPositionOnPath( pPath:GetCursorPosition() ):Distance( vStart )
 					pPath:MoveCursorToClosestPosition( vEnd )
 					flCursorEnd = pPath:GetCursorPosition() - pPath:GetPositionOnPath( pPath:GetCursorPosition() ):Distance( vEnd )
-					if math.max( flCursorStart, flCursorEnd ) <= flDesiredCursorLarge then continue end
+					if math.max( flCursorStart, flCursorEnd ) <= flDesiredCursor then continue end
 					for iCurrent = flStart, flEnd, flStep do
 						local vCover = vStart + vDirection * iCurrent + vOff
 						pPath:MoveCursorToClosestPosition( vCover )
-						if pPath:GetCursorPosition() - pPath:GetPositionOnPath( pPath:GetCursorPosition() ):Distance( vCover ) <= flDesiredCursorLarge then continue end
+						if pPath:GetCursorPosition() - pPath:GetPositionOnPath( pPath:GetCursorPosition() ):Distance( vCover ) <= flDesiredCursor then continue end
 						local dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() )
 						pPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
 						dDirection = pPath:GetPositionOnPath( pPath:GetCursorPosition() ) - dDirection

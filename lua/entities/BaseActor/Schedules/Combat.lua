@@ -96,9 +96,8 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovementStand", MyTable ) return end
-	local enemy = sched.Enemy
-	if IsValid( enemy ) then enemy = enemy
-	else enemy = MyTable.Enemy if !IsValid( enemy ) then return true end end
+	local enemy = MyTable.Enemy
+	if !IsValid( enemy ) then return true end
 	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 	local tCover = MyTable.tCover
@@ -684,7 +683,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local pPath = MyTable.pEnemyPath
 	if !pPath then pPath = Path "Follow" MyTable.pEnemyPath = pPath end
 	MyTable.ComputePath( self, pPath, enemy:GetPos(), MyTable )
-	if math.Rand( 0, 1 + self.flAdvanceTimes * math.Remap( self.flCombatState, 0, 1, 3, 1.5 ) / self.flFireTimes ) <= 1 then
+	if math.Rand( 0, 1 + self.flAdvanceTimes * math.Remap( self.flCombatState, 0, 1, 4, 2 ) / self.flFireTimes ) <= 1 then
 		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
 		return
 	end
@@ -764,7 +763,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			} ).Hit then
 				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				s.vFrom = vLeft
-				s.Enemy = enemy
 				return
 			end
 		end
@@ -793,7 +791,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			} ).Hit then
 				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				s.vFrom = vRight
-				s.Enemy = enemy
 				return
 			end
 		end
@@ -803,7 +800,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				sched.vFrom = vLeft
 				sched.vTo = v
-				sched.Enemy = enemy
 				sched.bSuppressing = true
 				return
 			end
@@ -814,7 +810,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				sched.vFrom = vRight
 				sched.vTo = v
-				sched.Enemy = enemy
 				sched.bSuppressing = true
 				return
 			end
@@ -848,7 +843,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			} ).Hit then
 				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				s.vFrom = vRight
-				s.Enemy = enemy
 				return
 			end
 		end
@@ -877,7 +871,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 			} ).Hit then
 				local s = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				s.vFrom = vLeft
-				s.Enemy = enemy
 				return
 			end
 		end
@@ -887,7 +880,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				sched.vFrom = vRight
 				sched.vTo = v
-				sched.Enemy = enemy
 				sched.bSuppressing = true
 				return
 			end
@@ -898,7 +890,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				local sched = MyTable.SetSchedule( self, "RangeAttack", MyTable )
 				sched.vFrom = vLeft
 				sched.vTo = v
-				sched.Enemy = enemy
 				sched.bSuppressing = true
 				return
 			end
