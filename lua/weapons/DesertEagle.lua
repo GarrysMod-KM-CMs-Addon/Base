@@ -65,21 +65,19 @@ end
 SWEP.__VIEWMODEL_FULLY_MODELED__ = true
 
 sound.Add {
-	name = "DesertEagleShot",
+	name = "DesertEagle_Shot",
 	channel = CHAN_WEAPON,
-	volume = .5,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^DesertEagleShot.wav"
 }
-SWEP.sSound = "DesertEagleShot"
+SWEP.sSound = "DesertEagle_Shot"
 
 sound.Add {
-	name = "DesertEagleShotAuto",
+	name = "DesertEagle_ShotAuto",
 	channel = CHAN_AUTO,
-	volume = .5,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "^DesertEagleShot.wav"
 }
-SWEP.sSoundAuto = "DesertEagleShotAuto"
+SWEP.sSoundAuto = "DesertEagle_ShotAuto"

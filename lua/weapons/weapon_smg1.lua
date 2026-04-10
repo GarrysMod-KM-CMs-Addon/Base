@@ -33,6 +33,7 @@ SWEP.flSideWaysRecoilMax = .22
 SWEP.flRecoilGrowMin = .55
 SWEP.flRecoilGrowMax = .95
 SWEP.flAimShoot = 5
+SWEP.flViewModelX = 2
 
 sound.Add {
 	name = "MP7Shot",

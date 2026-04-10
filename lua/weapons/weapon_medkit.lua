@@ -3,13 +3,7 @@ DEFINE_BASECLASS "BaseWeapon"
 SWEP.PrintName = "#weapon_medkit"
 SWEP.Instructions = "Primary to heal, secondary to heal other."
 // UNDONE: This hint is WAY too good to actually be in the game!
-SWEP.Instructions = [[
-Primary to heal, secondary to heal other.
-
-TIP: Medical kits heal both, your direct wounds and your blood loss.
-But they do NOT give you blood. Heal while you can, because
-the organism may not be able to make enough blood for you to live
-after there's not enough to carry oxygen.]]
+SWEP.Instructions = "Primary to heal, secondary to heal other.\n\nTIP: Medical kits heal both, your direct wounds and your blood loss. But they do NOT give you blood. Heal while you can, because the organism may not be able to make enough blood for you to live after there's not enough to carry oxygen."
 SWEP.Slot = 5
 SWEP.SlotPos = 3
 SWEP.Spawnable = true

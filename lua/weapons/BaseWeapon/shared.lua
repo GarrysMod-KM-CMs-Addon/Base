@@ -126,16 +126,17 @@ function SWEP:TranslateActivity( EIntendedActivity )
 	return EActivity
 end
 
+SWEP.flAimShoot = 2
 if CLIENT then
-	SWEP.flAimShoot = 2
 	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoilForGap = 0
 	function SWEP:LastShot() self.flLastShot = CurTime() end
 	function SWEP:AddRecoil( flRecoil )
 		local pOwner = self:GetOwner()
 		if !IsValid( pOwner ) then return end
-		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + flRecoil / pOwner:GetNW2Float( "GAME_flRecoil", 1 )
+		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + 1 / pOwner:GetNW2Float( "GAME_flRecoil", 1 )
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + 1 end
+		SHOOTING_MOTION_BLUR = SHOOTING_MOTION_BLUR + self.Primary_flDelay / math.min( 1 / 3, self:GetMaxClip1() / 90 )
 	end
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
 end
@@ -382,11 +383,17 @@ local math_min = math.min
 
 AddCSLuaFile "Crosshair.lua"
 
+function SWEP:Think()
+	local pViewModel = self:GetOwner():GetViewModel()
+	pViewModel:SetColor( self:GetColor() )
+	if SERVER then return end
+	local f = self.flRemoveWorldModelOverrideIn
+	if f && CurTime() > f then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) self.flRemoveWorldModelOverrideIn = nil end
+end
+
+function SWEP:DrewWorldModelAndUsedRenderOverrides() self.flRemoveWorldModelOverrideIn = CurTime() + .1 end
+
 if CLIENT then
-	function SWEP:Think()
-		local pViewModel = self:GetOwner():GetViewModel()
-		pViewModel:SetColor( self:GetColor() )
-	end
 	local vFinal, vFinalVel = Vector(), Vector()
 	local vFinalAngle, vFinalAngleVel = Vector(), Vector()
 	local vTarget = Vector()
@@ -404,7 +411,7 @@ if CLIENT then
 	local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
 	local flLandTime, flJumpTime = 0, 0
 	SWEP.flSwayStabilizer = .415
-	SWEP.ViewModelFOV = 45
+	SWEP.ViewModelFOV = 40
 	SWEP.flViewModelX = 0
 	SWEP.flViewModelY = 0
 	SWEP.flViewModelZ = 0
@@ -425,11 +432,12 @@ if CLIENT then
 	SWEP.flAimRoll = 45
 	SNIPER_AIMING_MULTIPLIER = .5
 	SNIPER_AIMING_SWAY_MULTIPLIER = .5
-	local SPRING_STIFFNESS, SPRING_DAMPING = 2, -10
+	local SPRING_STIFFNESS, SPRING_DAMPING = 3, -15
 	local SPRING_STIFFNESS_CURRENT, SPRING_DAMPING_CURRENT = SPRING_STIFFNESS, SPRING_DAMPING
 	local math_cos = math.cos
 	local math_sin = math.sin
 	local math_abs = math.abs
+	local math_exp = math.exp
 	local math_Clamp = math.Clamp
 	local math_AngleDifference = math.AngleDifference
 	local math_NormalizeAngle = math.NormalizeAngle
@@ -510,10 +518,10 @@ if CLIENT then
 			vViewTargetRatherQuickAngle = vViewTargetRatherQuickAngle + vBezierAngle
 		end
 		vViewFinalVel = vViewFinalVel + ( vTarget - vViewFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vViewFinalVel = vViewFinalVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vViewFinalVel = vViewFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vViewFinal = vViewFinal + vViewFinalVel * 50 * flFrameTime
 		vViewFinalAngleVel = vViewFinalAngleVel + ( vTargetAngle - vViewFinalAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vViewFinalAngleVel = vViewFinalAngleVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vViewFinalAngleVel = vViewFinalAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vViewFinalAngle = vViewFinalAngle + vViewFinalAngleVel * 50 * flFrameTime
 		ang:RotateAroundAxis( ang:Right(), vViewFinalAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vViewFinalAngle.y )
@@ -522,10 +530,10 @@ if CLIENT then
 		pos = pos + vViewFinal[ 2 ] * ang:Right()
 		pos = pos + vViewFinal[ 3 ] * ang:Up()
 		vViewFinalRatherQuickVel = vViewFinalRatherQuickVel + ( vViewTargetRatherQuick - vViewFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * 2 * flFrameTime
-		vViewFinalRatherQuickVel = vViewFinalRatherQuickVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vViewFinalRatherQuickVel = vViewFinalRatherQuickVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vViewFinalRatherQuick = vViewFinalRatherQuick + vViewFinalRatherQuickVel * 50 * flFrameTime
 		vViewFinalRatherQuickAngleVel = vViewFinalRatherQuickAngleVel + ( vViewTargetRatherQuickAngle - vViewFinalRatherQuickAngle ) * SPRING_STIFFNESS_CURRENT * 2 * flFrameTime
-		vViewFinalRatherQuickAngleVel = vViewFinalRatherQuickAngleVel * math.exp( SPRING_DAMPING_CURRENT  * flFrameTime )
+		vViewFinalRatherQuickAngleVel = vViewFinalRatherQuickAngleVel * math_exp( SPRING_DAMPING_CURRENT  * flFrameTime )
 		vViewFinalRatherQuickAngle = vViewFinalRatherQuickAngle + vViewFinalRatherQuickAngleVel * 50 * flFrameTime
 		ang:RotateAroundAxis( ang:Right(), vViewFinalRatherQuickAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vViewFinalRatherQuickAngle.y )
@@ -765,12 +773,12 @@ if CLIENT then
 				end
 			end
 		end
-		local flRecoil, f = MyTable.CalcRecoil( self, ply )
+		local f
 		if MyTable.Primary.Automatic then
-			f = flRecoil * ( .66 / MyTable.Primary_flDelay )
+			f = .66 / MyTable.Primary_flDelay
 			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		else
-			f = flRecoil * ( .66 / ( MyTable.Primary_flDelay + .1 ) )
+			f =.66 / ( MyTable.Primary_flDelay + .1 )
 			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		end
 		local flRoll = MyTable.flAimRoll
@@ -829,10 +837,10 @@ if CLIENT then
 		end
 		vInstantTarget = vInstantTarget + Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ )
 		vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vFinalVel = vFinalVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinal = vFinal + vFinalVel * 50 * flFrameTime
 		vFinalAngleVel = vFinalAngleVel + ( vTargetAngle - vFinalAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vFinalAngleVel = vFinalAngleVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vFinalAngleVel = vFinalAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinalAngle = vFinalAngle + vFinalAngleVel * 50 * flFrameTime
 		ang:RotateAroundAxis( ang:Right(), vFinalAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalAngle.y )
@@ -841,10 +849,10 @@ if CLIENT then
 		ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle.y )
 		ang:RotateAroundAxis( ang:Forward(), vInstantTargetAngle.z )
 		vFinalRatherQuickVel = vFinalRatherQuickVel + ( vTargetRatherQuick - vFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vFinalRatherQuickVel = vFinalRatherQuickVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vFinalRatherQuickVel = vFinalRatherQuickVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinalRatherQuick = vFinalRatherQuick + vFinalRatherQuickVel * 50 * flFrameTime
 		vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel + ( vTargetRatherQuickAngle - vFinalRatherQuickAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-		vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel * math.exp( SPRING_DAMPING_CURRENT * flFrameTime )
+		vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinalRatherQuickAngle = vFinalRatherQuickAngle + vFinalRatherQuickAngleVel * 50 * flFrameTime
 		ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle.x )
 		ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle.y )

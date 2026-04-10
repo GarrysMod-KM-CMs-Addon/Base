@@ -36,7 +36,7 @@ if IsMounted "left4dead2" then
 	SWEP.ViewModel = Model "models/v_models/v_rifle_ak47.mdl"
 	function SWEP:GetDrawActivity() return ACT_VM_DEPLOY end
 	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
-	SWEP.flViewModelX = -2
+	SWEP.flViewModelX = 0
 	SWEP.flViewModelY = -4
 	SWEP.flViewModelZ = .5
 	SWEP.vViewModelAim = Vector( -8 - SWEP.flViewModelX, -6.8 - SWEP.flViewModelY, 2.1 - SWEP.flViewModelZ )
@@ -57,13 +57,13 @@ sound.Add {
 	sound = "^AK47Shot.wav",
 }
 SWEP.sSound = "AK47Shot"
-sound.Add {
-	name = "AK47ShotAuto",
-	channel = CHAN_AUTO,
-	level = 150,
-	pitch = { 90, 110 },
-	sound = "^AK47Shot.wav",
-}
-SWEP.sSound = "AK47ShotAuto"
+//	sound.Add {
+//		name = "AK47ShotAuto",
+//		channel = CHAN_AUTO,
+//		level = 150,
+//		pitch = { 90, 110 },
+//		sound = "^AK47Shot.wav",
+//	}
+//	SWEP.sSoundAuto = "AK47ShotAuto"
 
 list.Add( "NPCUsableWeapons", { class = "AK47", title = "#AK47", category = SWEP.Category } )
