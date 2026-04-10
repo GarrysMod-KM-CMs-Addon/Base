@@ -1,7 +1,5 @@
 VELOCITY = 3072
 
-local VECTOR_ADD_SUB = Vector( 12, 12, 12 )
-
 function EFFECT:Init( pData )
 	local vEnd = pData:GetOrigin()
 	local v = pData:GetStart()
@@ -23,13 +21,11 @@ function EFFECT:Init( pData )
 	local flLifeTime = flDistance / VELOCITY
 	self.flLifeTime = flLifeTime
 	self.flDieTime = CurTime() + flLifeTime
-	self.vPos = v
-	self:SetRenderBoundsWS( v, vEnd, VECTOR_ADD_SUB )
 end
 
 function EFFECT:Think()
 	local flLifeTime = self.flLifeTime
-	self.vPos = self.vStart + ( self.dDirection * ( self.flDistance * ( flLifeTime - ( self.flDieTime - CurTime() ) ) / flLifeTime ) )
+	self:SetPos( self.vStart + ( self.dDirection * ( self.flDistance * ( flLifeTime - ( self.flDieTime - CurTime() ) ) / flLifeTime ) ) )
 	return CurTime() < self.flDieTime
 end
 
@@ -37,9 +33,9 @@ local mMaterial = Material "effects/ar2_altfire1b"
 local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
 local DynamicLight = DynamicLight
-local COLOR = Color( 255, 64, 0 )
+local COLOR = Color( 255, 128, 64 )
 function EFFECT:Render()
-	local vPos = self.vPos
+	local vPos = self:GetPos()
 	local dDirection = self.dDirection
 	render_SetMaterial( mMaterial )
 	local l = VELOCITY * .05
@@ -53,7 +49,7 @@ function EFFECT:Render()
 	// is so complicated even for me to write, that I'd rather simply NOT.
 	//	local pLight = DynamicLight( self:EntIndex() )
 	//	if pLight then
-	//		pLight.pos = self.vPos
+	//		pLight.pos = self:GetPos()
 	//		pLight.r = 255
 	//		pLight.g = 255
 	//		pLight.b = 255

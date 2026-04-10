@@ -202,13 +202,22 @@ DIRECTOR_ALLOCATE_TRANSITION_TO_COMBAT( "DIRECTOR_TRANSITION_TO_COMBAT_Instant",
 
 DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade", {
 	Execute = function( self, flInterval, flVolumeA, flVolumeB, bCorrect )
-		if !bCorrect then return true end
+		if !bCorrect then
+			if flVolumeB > 0 then
+				flVolumeB = flVolumeB < .1 && math.Approach( flVolumeB, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 0 )
+				return false, flVolumeA, flVolumeB
+			end
+			if self.m_ELayerFrom == DIRECTOR_THREAT_NULL then return true end
+			if flVolumeA >= 1 then return true end
+			flVolumeA = flVolumeA > .9 && math.Approach( flVolumeA, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 1 )
+			return false, 0, flVolumeA
+		end
 		if flVolumeA > 0 then
 			flVolumeA = flVolumeA < .1 && math.Approach( flVolumeA, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 0 )
 			return false, flVolumeA, flVolumeB
 		end
 		if self.m_ELayerTo == DIRECTOR_THREAT_NULL then return true end
-		if flVolumeB == 1 then return true end
+		if flVolumeB >= 1 then return true end
 		flVolumeB = flVolumeB > .9 && math.Approach( flVolumeB, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 1 )
 		return false, 0, flVolumeB
 	end

@@ -67,14 +67,14 @@ local cDisableLevelOfDetail = CreateConVar(
 local SysTime = SysTime
 local math_min = math.min
 local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
-function LevelOfDetail( pContainer, sKey, flMultiplier )
+function LevelOfDetail( pContainer, Key, flMultiplier )
 	if cDisableLevelOfDetail:GetBool() then pContainer[ sKey ] = 0 return true end
-	local f = pContainer[ sKey ]
+	local f = pContainer[ Key ]
 	if f then
 		if SysTime() <= f then return end
-		pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 )
+		pContainer[ Key ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 )
 		return true
-	else pContainer[ sKey ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 ) end
+	else pContainer[ Key ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 ) end
 end
 
 physenv.SetPerformanceSettings {

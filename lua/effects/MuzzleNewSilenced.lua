@@ -1,11 +1,15 @@
 function EFFECT:Init( pData )
 	self:SetRenderMode( RENDERMODE_TRANSALPHA )
-	local pWeapon = pData:GetEntity()
-	if !IsValid( pWeapon ) then return end
-	local pOwner = pWeapon:GetOwner()
-	if !IsValid( pOwner ) then return end
-	local v = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
-	local vVelocity = pOwner:GetVelocity()
+	local v = pData:GetStart()
+	local pWeapon, pOwner = pData:GetEntity()
+	if IsValid( pWeapon ) then
+		local vRenderOrigin = pWeapon:GetRenderOrigin()
+		if vRenderOrigin then v = vRenderOrigin else
+			pOwner = pWeapon:GetOwner()
+			if IsValid( pOwner ) then v = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() ) end
+		end
+	end
+	local vVelocity = IsValid( pOwner ) && pOwner:GetVelocity() || vector_origin
 	local pEmitter = ParticleEmitter( v )
 	for i = 1, 3 do
 		local pPart = pEmitter:Add( "particle/particle_smokegrenade", v )

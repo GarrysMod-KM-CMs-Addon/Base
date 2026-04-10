@@ -148,7 +148,12 @@ local ANALYZATION_STEP = 22.5 / 4
 
 local mDepthOfField = Material "pp/dof"
 
+SHOOTING_MOTION_BLUR = 0
+
+local flLastRenderScreenspaceEffectsCall = RealTime()
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
+	local flFrameTime = RealTime() - flLastRenderScreenspaceEffectsCall
+	flLastRenderScreenspaceEffectsCall = RealTime()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	local tDrawColorModify = {
@@ -210,7 +215,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f )
 		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f, math_Clamp( 1 - f, 0, 1 ) * f, 0 )
 	end
-	DrawMotionBlur( .75, 1, 0 )
+	SHOOTING_MOTION_BLUR = math.Clamp( SHOOTING_MOTION_BLUR - flFrameTime, 0, 1 )
+	DrawMotionBlur( .66 - SHOOTING_MOTION_BLUR * .26, 1, 0 )
 	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
 	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), 1 * FrameTime() )
 	MyTable.GP_FogR = math_Approach( MyTable.GP_FogR || 255, vTargetColor[ 1 ] * 255, 32 * FrameTime() )
@@ -229,9 +235,6 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	MyTable.GP_FogDistance = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.GP_FogDistance || 0, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
 	DrawBloom(
 		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 2, 3 ),
-		// Setting all three to 1 and then tweaking the other settings
-		// is the way to make the scene actually beautiful, and why
-		// the new versions (since commit 266) are so freakin' beautiful!
 		5, // Size X
 		5, // Size Y
 		1, // Passes
