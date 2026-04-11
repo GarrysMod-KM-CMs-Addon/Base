@@ -1,7 +1,7 @@
 concommand.Add( "+drop", function() end )
 concommand.Add( "-drop", function( ply )
 	local pWeapon = ply:GetActiveWeapon()
-	if IsValid( pWeapon ) then pWeapon:Holster() pWeapon:CallOnClient "Holster" end
+	if IsValid( pWeapon ) && pWeapon.Holster then pWeapon:Holster() pWeapon:CallOnClient "Holster" end
 	ply:DropWeapon()
 end )
 
