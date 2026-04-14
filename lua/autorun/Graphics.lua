@@ -150,6 +150,9 @@ local mDepthOfField = Material "pp/dof"
 
 SHOOTING_MOTION_BLUR = 0
 
+local render_SetMaterial = render.SetMaterial
+local render_DrawSprite = render.DrawSprite
+
 local flLastRenderScreenspaceEffectsCall = RealTime()
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	local flFrameTime = RealTime() - flLastRenderScreenspaceEffectsCall
@@ -216,7 +219,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f, math_Clamp( 1 - f, 0, 1 ) * f, 0 )
 	end
 	SHOOTING_MOTION_BLUR = math.Clamp( SHOOTING_MOTION_BLUR - flFrameTime, 0, 1 )
-	DrawMotionBlur( .66 - SHOOTING_MOTION_BLUR * .26, 1, 0 )
+	DrawMotionBlur( .66 - SHOOTING_MOTION_BLUR * .2, 1, 0 )
 	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
 	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), 1 * FrameTime() )
 	MyTable.GP_FogR = math_Approach( MyTable.GP_FogR || 255, vTargetColor[ 1 ] * 255, 32 * FrameTime() )
@@ -259,9 +262,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		local vEye, vForward = EyePos(), EyeVector()
 		render.UpdateRefractTexture()
 		for i = 0, 32 do
-			render.SetMaterial( mDepthOfField )
+			render_SetMaterial( mDepthOfField )
 			local flSize = ( flDistance + flSpacing * i ) * 8
-			render.DrawSprite( vEye + vForward * ( flDistance + flSpacing * i ), flSize, flSize, color_white )
+			render_DrawSprite( vEye + vForward * ( flDistance + flSpacing * i ), flSize, flSize, color_white )
 		end
 	cam.End3D()
 end )

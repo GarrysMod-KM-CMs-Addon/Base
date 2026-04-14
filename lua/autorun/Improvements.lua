@@ -20,13 +20,17 @@ WEAPON_STANCE_HIP = 2
 // EVERYTHING but pistols/revolvers/etc shouldered
 WEAPON_STANCE_SHOULDER = 3
 
+local RealTime = RealTime
+local FrameTime = FrameTime
+local math_cos = math.cos
+
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	if cmd:KeyDown( IN_ZOOM ) then
 		local ang = cmd:GetViewAngles()
 		local flBreathe = RealTime() * .5
 		local flForce = .5 * FrameTime()
-		ang[ 1 ] = ang[ 1 ] + math.cos( flBreathe ) * flForce
-		ang[ 2 ] = ang[ 2 ] + math.cos( flBreathe / 2 ) * flForce
+		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
+		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
 		cmd:SetViewAngles( ang )
 	end
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end

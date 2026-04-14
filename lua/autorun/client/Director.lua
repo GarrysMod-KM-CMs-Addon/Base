@@ -411,12 +411,13 @@ function DIRECTOR_CLIENT_TICK()
 		Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
 		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
-	elseif DIRECTOR_MUSIC_IN_VO then
+	elseif DIRECTOR_MUSIC_IN_VO && ( !DIRECTOR_TRANSITION || !DIRECTOR_TRANSITION.m_bIntroOfATrack ) then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
 			local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable
 			local f = t.CheckIntro
 			if f && f "HoldFire" then
+				DIRECTOR_MUSIC_IN_VO = nil
 				DIRECTOR_TRANSITION = Director_Music_Container()
 				DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
 				DIRECTOR_TRANSITION.m_flVolume = 1

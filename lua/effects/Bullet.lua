@@ -8,7 +8,12 @@ function EFFECT:Init( pData )
 		local vRenderOrigin = pWeapon:GetRenderOrigin()
 		if vRenderOrigin then v = vRenderOrigin + ( vEnd - vRenderOrigin ):GetNormalized() * 32 else
 			local pOwner = pWeapon:GetOwner()
-			if IsValid( pOwner ) then v = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() ) end
+			if IsValid( pOwner ) then
+				local vNew = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
+				if vNew:DistToSqr( v ) <= 1048576/*1024*/ then
+					v = vNew
+				end
+			end
 		end
 	end
 	self.vStart = v
