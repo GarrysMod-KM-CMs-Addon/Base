@@ -79,6 +79,11 @@ local __KEY_VALUES__ = {
 		if v == "1" then
 			self.m_bScript = true
 		else self.m_bScript = nil end
+	end,
+	sonspawn = function( self, _, v )
+		ACTOR = self
+		RunString( v )
+		ACTOR = nil
 	end
 }
 __KEY_VALUES__.additionalequipment = __KEY_VALUES__.cweapon

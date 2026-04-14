@@ -14,6 +14,8 @@ include "Animation.lua"
 include "Mind.lua"
 include "Pursuit.lua"
 
+ENT.GAME_flThrowForce = 1024
+
 function ENT:ModifyMoveAimVector() end
 
 local CEntity = FindMetaTable "Entity"

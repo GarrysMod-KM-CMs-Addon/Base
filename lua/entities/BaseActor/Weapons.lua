@@ -64,6 +64,7 @@ function ENT:SetActiveWeapon( wep, MyTable )
 	wep:SetLocalPos( vector_origin )
 	wep:SetLocalAngles( angle_zero )
 	wep:SetTransmitWithParent( true )
+	if wep.__SMOKE_GRENADE__ then MyTable.m_bHadSmokesLast = true end
 	MyTable.tWeapons[ wep ] = true
 	return wep
 end
@@ -109,6 +110,7 @@ function ENT:DropWeapon( wep, vVelocity, MyTable )
 	else
 		wep:SetVelocity( vVelocity )
 	end
+	wep:OnDrop()
 	MyTable.tWeapons[ wep ] = nil
 	hook_Run( "PlayerDroppedWeapon", self, wep )
 	return wep

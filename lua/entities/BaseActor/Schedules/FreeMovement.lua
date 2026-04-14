@@ -62,6 +62,12 @@ Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 			end
 		end
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+		// TODO
+		/*if MyTable.m_bHadSmokesLast && MyTable.GAME_flSuppression > 0 && LevelOfDetail( sched, "flNextSmoke" ) then
+			local vShoot = self:GetShootPos()
+			local vSmokeTarget = ( vEnemyCenter - vShoot ):GetNormalized() * math.min( MyTable.GAME_flThrowForce, math.Rand( 0, self:BoundingRadius() * 10 ) )
+			vSmokeTarget[ 3 ] = vShoot[ 3 ]
+		end*/
 		return
 	end
 	if sched.bGotALineOfSightBefore then
