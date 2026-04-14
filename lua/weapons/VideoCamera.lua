@@ -208,4 +208,4 @@ SWEP.flViewModelX = 30
 SWEP.flViewModelY = 16
 SWEP.flViewModelZ = -6
 
-SWEP.bPistolSprint = true
+SWEP.sAnimationSet = "Pistol"

@@ -13,7 +13,7 @@ SWEP.Primary.DefaultClip = 1
 SWEP.Spawnable = true
 SWEP.Slot = 0
 SWEP.ViewModelFOV = 54
-SWEP.bPistolSprint = true
+SWEP.sAnimationSet = "Pistol"
 SWEP.bDontDrawAmmo = true
 SWEP.Crosshair = "Special"
 

@@ -26,16 +26,17 @@ local CEntity_EmitSound = CEntity.EmitSound
 local EffectData = EffectData
 local util_Effect = util.Effect
 
+SWEP.GRENADE_flRadius = 384
+
 SWEP.__PROJECTILE_EXPLOSION__ = true
-SWEP.EXPLOSION_flRadius = 384
 SWEP.EXPLOSION_flDamage = 4096
 
 SWEP.flNextTick = 0
 
-function SWEP:Detonate()
+function SWEP:DetonateThink()
 	local MyTable = CEntity_GetTable( self )
 	local v = CEntity_GetPos( self ) + CEntity_OBBCenter( self )
-	util_BlastDamage( self, self, v, MyTable.EXPLOSION_flRadius, MyTable.EXPLOSION_flDamage )
+	util_BlastDamage( self, self, v, MyTable.GRENADE_flRadius, MyTable.EXPLOSION_flDamage )
 	local ed = EffectData()
 	ed:SetOrigin( v )
 	ed:SetFlags( 128 )

@@ -19,8 +19,9 @@ local CEntity_Remove = CEntity.Remove
 local EffectData = EffectData
 local util_Effect = util.Effect
 
+SWEP.GRENADE_flRadius = 256
+
 SWEP.__PROJECTILE_EXPLOSION__ = true
-SWEP.EXPLOSION_flRadius = 256
 SWEP.EXPLOSION_flDamage = 32
 
 SWEP.__FLASHBANG__ = true
@@ -30,10 +31,10 @@ SWEP.FLASHBANG_flBlindFadeTime = 5
 SWEP.GRENADE_flMinimumTime = 2.2
 SWEP.GRENADE_flMaximumTime = 2.4
 
-function SWEP:Detonate()
+function SWEP:DetonateThink()
 	local MyTable = CEntity_GetTable( self )
 	local v = CEntity_GetPos( self ) + CEntity_OBBCenter( self )
-	util_BlastDamage( self, self, v, MyTable.EXPLOSION_flRadius, MyTable.EXPLOSION_flDamage )
+	util_BlastDamage( self, self, v, MyTable.GRENADE_flRadius, MyTable.EXPLOSION_flDamage )
 	local ed = EffectData()
 	ed:SetOrigin( v )
 	ed:SetFlags( 128 )
@@ -50,7 +51,7 @@ function SWEP:GAME_OnHurtSomething( ent, dmg )
 	if f then
 		local MyTable = CEntity_GetTable( self )
 		f( ent, SCREENFADE.IN, color_white,
-			math_Clamp( math_Remap( dmg:GetDamage(), 0, MyTable.GRENADE_flDamage, 0, MyTable.FLASHBANG_flBlindTime ), 0, MyTable.FLASHBANG_flBlindTime ),
-			math_Clamp( math_Remap( dmg:GetDamage(), 0, MyTable.GRENADE_flDamage, 0, MyTable.FLASHBANG_flBlindFadeTime ), 0, MyTable.FLASHBANG_flBlindFadeTime ) )
+			math_Clamp( math_Remap( dmg:GetDamage(), 0, MyTable.EXPLOSION_flDamage, 0, MyTable.FLASHBANG_flBlindTime ), 0, MyTable.FLASHBANG_flBlindTime ),
+			math_Clamp( math_Remap( dmg:GetDamage(), 0, MyTable.EXPLOSION_flDamage, 0, MyTable.FLASHBANG_flBlindFadeTime ), 0, MyTable.FLASHBANG_flBlindFadeTime ) )
 	end
 end
