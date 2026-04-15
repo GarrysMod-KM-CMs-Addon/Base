@@ -32,7 +32,6 @@ SWEP.Crosshair = "Rifle"
 SWEP.flViewModelY = -2
 SWEP.flViewModelX = 6
 SWEP.vViewModelAim = Vector( -8, -5.82 - SWEP.flViewModelY, 1.255 )
-SWEP.vSprint = Vector( -1.228, .6, -1.2 )
 SWEP.flRecoil = .7
 SWEP.flSideWaysRecoilMin = -.15
 SWEP.flSideWaysRecoilMax = .15
