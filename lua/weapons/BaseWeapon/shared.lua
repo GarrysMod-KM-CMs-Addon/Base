@@ -411,10 +411,10 @@ function SWEP:ShootEffects()
 			local iSequence = pViewModel:SelectWeightedSequence( iActivity )
 			if iSequence != -1 then
 				pViewModel:SendViewModelMatchingSequence( iSequence )
-			elseif self.m_bAimShootDoesntBlockNormalShoot || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
+			elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
 				self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 			else self:DoMuzzleFlashInternal() end
-		elseif self.m_bAimShootDoesntBlockNormalShoot || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
+		elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
 			self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 		else self:DoMuzzleFlashInternal() end
 	end
@@ -460,11 +460,14 @@ if CLIENT then
 	local WEAPON_SPRINT_DEFAULT = Vector( 1.228, 1.358, -.94 )
 	local WEAPON_SPRINT_DEFAULT_ANGLE = Vector( -10.554, 34.167, -20 )
 
-	local WEAPON_SPRINT_AK_DEFAULT = Vector( -2, 4, -2 )
-	local WEAPON_SPRINT_AK_DEFAULT_ANGLE = Vector( -10, 30, -30 )
+	local WEAPON_SPRINT_RIFLE_DEFAULT = Vector( -2, 4, -2 )
+	local WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE = Vector( -10, 30, -30 )
 
-	local WEAPON_SPRINT_UPRUN_DEFAULT = Vector( 0, 4, -3 )
-	local WEAPON_SPRINT_UPRUN_DEFAULT_ANGLE = Vector( 2, 35, -10 )
+	local WEAPON_SPRINT_RIFLEUP_DEFAULT = Vector( 0, 4, -3 )
+	local WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE = Vector( 2, 35, -10 )
+
+	local WEAPON_SPRINT_SNIPER_DEFAULT = Vector( 0, 4, -3 )
+	local WEAPON_SPRINT_SNIPER_DEFAULT_ANGLE = Vector( 2, 35, -10 )
 
 	SWEP.vPistolSprint = Vector( 0, 4, -2 )
 	SWEP.vPistolSprintAngle = Vector( -16, 0, 0 )
@@ -527,7 +530,14 @@ if CLIENT then
 			local flBreathe = RealTime() * 18
 			vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
 		end,
-		UpRun = function( f )
+		RifleUp = function( f )
+			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
+			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
+			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 2
+			local flBreathe = RealTime() * 18
+			vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
+		end,
+		Sniper = function( f )
 			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
 			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
 			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 2
@@ -560,7 +570,7 @@ if CLIENT then
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if flVelocity > 10 then
 					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * ( MyTable.flBobScale * 1.5 )
-					local flBreathe = RealTime() * 9
+					local flBreathe = RealTime() * 12
 					vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
 				end
 			end
@@ -678,16 +688,24 @@ if CLIENT then
 			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
 			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
 			local flBreathe = RealTime() * 18
-			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_AK_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
-			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_AK_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
+			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
+			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
 		end,
-		UpRun = function( MyTable, f, flViewModelSprint )
+		RifleUp = function( MyTable, f, flViewModelSprint )
 			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
 			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
 			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
 			local flBreathe = RealTime() * 18
-			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_UPRUN_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
-			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_UPRUN_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
+			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
+			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
+		end,
+		Sniper = function( MyTable, f, flViewModelSprint )
+			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
+			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
+			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
+			local flBreathe = RealTime() * 18
+			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_SNIPER_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
+			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_SNIPER_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
 		end
 	}
 	function SWEP:CalcViewModelView( _, pos, ang )
@@ -799,7 +817,7 @@ if CLIENT then
 						end
 					end
 					if flVelocity > 10 then
-						local flBreathe = RealTime() * 9
+						local flBreathe = RealTime() * 12
 						local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
 						vTarget = vTarget + Vector( 0, -math_sin( flBreathe * .5 ), .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
 					end

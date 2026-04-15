@@ -87,6 +87,24 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+	Sniper = function( MyTable, self, R, G, B )
+		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
+		local flHeight, flWidth = ScrH(), ScrW()
+		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
+		local flSpreadHorizontal = flSpreadX * flWidth * ( 90 / MyTable.flFoV ) * .5
+		local flSpreadVertical = flSpreadY * flHeight * ( 90 / MyTable.flFoV ) * .5 * ( flWidth / flHeight )
+		surface_SetTexture( surface_GetTextureID "Crosshair" )
+		surface_SetDrawColor( R, G, B, MyTable.flCrosshairAlpha )
+		// Top
+		surface_DrawTexturedRectRotated( flX, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 180 )
+		// Bottom
+		surface_DrawTexturedRectRotated( flX, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_SUB, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 0 )
+		// Left
+		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 270 )
+		// Right
+		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
+		return true
+	end,
 	SubMachineGun = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -287,7 +305,7 @@ function SWEP:DrawSniperScope( MyTable )
 	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 )
 	surface_SetDrawColor( 255, 255, 255, 255 )
 	surface_DrawTexturedRect( flX - flSize * .5, flY - flSize * .5, flSize, flSize )
-	surface_SetDrawColor( 0, 0, 0, 255 )
+	surface_SetDrawColor( 10, 10, 10, 255 )
 	surface_DrawRect( 0, 0, flX - flSize * .5 + 1, flHeight )
 	surface_DrawRect( flX + flSize * .5 - 1, 0, flWidth - flX, flHeight )
 	surface_DrawRect( flX - flSize * .5, 0, flSize, flY - flSize * .5 )
@@ -319,7 +337,7 @@ function SWEP:DoDrawCrosshair()
 	local MyTable = CEntity_GetTable( self )
 	local ply = LocalPlayer()
 	local flAimMultiplier = MyTable.flAimMultiplier
-	local flGapPart = Lerp( math_min( 1, 20 * flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033 + .033, 0, .1 ) )
+	local flGapPart = Lerp( math_min( 1, 20 * flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033, 0, .033 ) + ( MyTable.Crosshair == "Sniper" && .15 || .033 ) )
 	MyTable.flCrosshairInAccuracyGapPart = flGapPart
 	local flRecoilPart = Lerp( math_min( 1, MyTable.flRecoil * MyTable.Primary_flDelay * 10000 * flFrameTime ), MyTable.flCrosshairInAccuracyRecoilPart, ( ( MyTable.flCurrentRecoilForGap * .15 ) ^ 1.5 ) * .75 )
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
