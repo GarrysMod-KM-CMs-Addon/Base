@@ -20,6 +20,11 @@ WEAPON_STANCE_HIP = 2
 // EVERYTHING but pistols/revolvers/etc shouldered
 WEAPON_STANCE_SHOULDER = 3
 
+hook.Add( "PlayerStepSoundTime", "Improvements", function( ply, EType, bWalk )
+	if ply:GetNW2Bool "CTRL_bSprinting" then return 350 end
+	return 500
+end )
+
 local RealTime = RealTime
 local FrameTime = FrameTime
 local math_cos = math.cos

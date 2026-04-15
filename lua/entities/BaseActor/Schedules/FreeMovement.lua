@@ -203,6 +203,7 @@ Actor_RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 			end
 		end
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+		return
 	end
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then

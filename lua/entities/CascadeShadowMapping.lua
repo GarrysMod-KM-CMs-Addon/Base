@@ -94,8 +94,6 @@ if CLIENT then
 			pTexture:SetEnableShadows( true )
 			pTexture:SetTexture( i == 1 && "CascadeShadowMapping/MaskCenter" || "CascadeShadowMapping/MaskRing" )
 		end
-	end
-	function ENT:OnRemove()
 		timer.Simple( .1, function() render.RedownloadAllLightmaps( false, true ) end )
 		for _, pTexture in pairs( self.tProjectedTexture ) do pTexture:Remove() end
 		table.Empty( self.tProjectedTexture )

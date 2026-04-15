@@ -281,7 +281,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 		if !pPath then
 			pPath = Path "Follow"
 			MyTable.pEnemyPath = pPath
-			MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
+			MyTable.ComputeEnemyPath( self, pEnemyPath, enemy )
 		end
 		local vEnemy = enemy:GetPos()
 		local vTarget = vEnemy + enemy:OBBCenter()
@@ -590,7 +590,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
-		MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
+		MyTable.ComputeFlankPath( self, pEnemyPath, enemy )
 		MyTable.pEnemyPath = pEnemyPath
 	end
 	pEnemyPath:MoveCursorToClosestPosition( vec )
@@ -682,7 +682,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 	end
 	local pPath = MyTable.pEnemyPath
 	if !pPath then pPath = Path "Follow" MyTable.pEnemyPath = pPath end
-	MyTable.ComputePath( self, pPath, enemy:GetPos(), MyTable )
+	MyTable.ComputeFlankPath( self, pPath, enemy )
 	if math.Rand( 0, 1 + self.flAdvanceTimes * math.Remap( self.flCombatState, 0, 1, 4, 2 ) / self.flFireTimes ) <= 1 then
 		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
 		return

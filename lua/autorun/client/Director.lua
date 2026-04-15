@@ -156,6 +156,7 @@ function Director_Music_Play( self, Index, sName, flVolume, flPitch )
 end
 
 function Director_Music_Stop( self, Index )
+	if !self then return end
 	local tHandles = self.tHandles
 	local pSound = tHandles[ Index ]
 	tHandles[ Index ] = nil
