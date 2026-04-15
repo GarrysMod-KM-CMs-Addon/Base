@@ -1283,7 +1283,7 @@ function GameImprovements_StartCommand( ply, cmd )
 					ply.GAME_sCoverState = "MOVE"
 					ply.GAME_bPeekForceCrouch = bLeftForceCrouch
 					ply.GAME_vPeekTarget = vLeft
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < 1
+					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
 					ply.GAME_vPeekSource = ply:GetPos()
 					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
 					ply.GAME_EPeek = COVER_FIRE_LEFT
@@ -1294,7 +1294,7 @@ function GameImprovements_StartCommand( ply, cmd )
 					ply.GAME_sCoverState = "MOVE"
 					ply.GAME_bPeekForceCrouch = bRightForceCrouch
 					ply.GAME_vPeekTarget = vRight
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < 1
+					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
 					ply.GAME_vPeekSource = ply:GetPos()
 					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
 					ply.GAME_EPeek = COVER_FIRE_RIGHT
