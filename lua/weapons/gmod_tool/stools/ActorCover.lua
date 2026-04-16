@@ -41,6 +41,7 @@ function TOOL:LeftClick()
 			self.vEnd = vPos
 		end
 	else self.vStart = vPos end
+	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 end
 
 function TOOL:RightClick()
@@ -86,6 +87,7 @@ function TOOL:RightClick()
 			end
 		end
 	end
+	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 end
 
 function TOOL:Think()
@@ -149,4 +151,5 @@ function TOOL:Think()
 			end
 		end
 	end
+	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 end

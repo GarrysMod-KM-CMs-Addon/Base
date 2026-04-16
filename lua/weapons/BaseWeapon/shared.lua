@@ -568,10 +568,16 @@ if CLIENT then
 				end
 			else
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
+				//	if flVelocity > 10 then
+				//		local f = flVelocity / CPlayer_GetRunSpeed( ply ) * ( MyTable.flBobScale * 1.5 )
+				//		local flBreathe = RealTime() * 12
+				//		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
+				//	end
 				if flVelocity > 10 then
-					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * ( MyTable.flBobScale * 1.5 )
-					local flBreathe = RealTime() * 12
-					vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
+					local flBreathe = RealTime() * 6
+					local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
+					vTarget = vTarget - Vector( 0, -math_sin( flBreathe ), .5 - math_abs( math_cos( flBreathe ) ) ) * f
+					vTargetAngle = vTargetAngle + Vector( -math_abs( math_sin( flBreathe ) ), math_sin( flBreathe ) ) * f
 				end
 			end
 		end
@@ -816,11 +822,11 @@ if CLIENT then
 							vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
 						end
 					end
-					if flVelocity > 10 then
-						local flBreathe = RealTime() * 12
-						local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
-						vTarget = vTarget + Vector( 0, -math_sin( flBreathe * .5 ), .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
-					end
+					//	if flVelocity > 10 then
+					//		local flBreathe = RealTime() * 12
+					//		local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
+					//		vTarget = vTarget + Vector( 0, -math_sin( flBreathe * .5 ), .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
+					//	end
 				end
 			else
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
