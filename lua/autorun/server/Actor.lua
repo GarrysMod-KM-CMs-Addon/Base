@@ -25,6 +25,25 @@ function Alarm_IsClouded( vOrigin, vPos, pAlarm )
 	return tr.Fraction <= .33 && tr.HitPos:DistToSqr( vPos ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE )
 end
 
+// ACTOR_QUEUE_LAST
+
+local coroutine_create = coroutine.create
+function ACTOR_QUEUE( fFunction )
+	if ACTOR_QUEUE_LAST then
+		local pNew = { coThread = coroutine_create( fFunction ) }
+		local pHead = ACTOR_QUEUE_LAST.pNext
+		pNew.pPrev = ACTOR_QUEUE_LAST
+		pNew.pNext = pHead
+		ACTOR_QUEUE_LAST.pNext = pNew
+		pHead.pPrev = pNew
+		ACTOR_QUEUE_LAST = pNew
+	else
+		ACTOR_QUEUE_LAST = { coThread = coroutine_create( fFunction ) }
+		ACTOR_QUEUE_LAST.pPrev = ACTOR_QUEUE_LAST
+		ACTOR_QUEUE_LAST.pNext = ACTOR_QUEUE_LAST
+	end
+end
+
 // Cover: ( Vector vStart, Vector vEnd, Boolean bLeftSide, Table tConnections )
 // CNavArea:GetID() -> SequentialTable[ Cover ]
 __COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json" ) || "[]", true )
@@ -45,6 +64,6 @@ CreateConVar(
 	"bHunger",
 	1,
 	FLAGS,
-	"Does hunger exist? Some entities cannot be hungry even if this at 1.",
+	"Does hunger exist? Some entities cannot be hungry even with this enabled.",
 	0, 1
 )

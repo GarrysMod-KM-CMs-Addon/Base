@@ -27,70 +27,36 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		if pEntity != nil && !IsValid( pEntity ) then MyTable.tCover = nil MyTable.vCover = nil vec = nil tCover = nil end
 	end
 	if !vec || !tCover then
-		local tNearestEnemies = {}
-		for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-		table.SortByMember( tNearestEnemies, 2, true )
-		local tAllies, pEnemy = self:GetAlliesByClass()
-		for _, d in ipairs( tNearestEnemies ) do
-			local ent = d[ 1 ]
-			local v = ent:GetPos() + ent:OBBCenter()
-			local tr = util_TraceLine {
-				start = self:GetShootPos(),
-				endpos = v,
-				mask = MASK_SHOT_HULL,
-				filter = { self, ent }
-			}
-			if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-				local b = true
-				if ent.GAME_tSuppressionAmount then
-					local flThreshold, flSoFar = ent:Health() * .1, 0
-					for other, am in pairs( ent.GAME_tSuppressionAmount ) do
-						if other == self || self:Disposition( other ) != D_LI || CurTime() <= ( other.flWeaponReloadTime || 0 ) then continue end
-						flSoFar = flSoFar + am
-						if flSoFar > flThreshold then continue end
-					end
-					if flSoFar > flThreshold then continue end
-				else b = true end
-				if b then
-					MyTable.vaAimTargetBody = ent:GetPos() + ent:OBBCenter()
-					MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-					if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then MyTable.WeaponReload( self, MyTable ) end
-					if MyTable.CanAttackHelper( self, ent, MyTable ) then MyTable.RangeAttack( self ) end
-					break
-				end
-			end
-		end
-		if LevelOfDetail( sched, "flNextSearch", .1 ) then
+		if sched.bBeganSearching then return end
+		sched.bBeganSearching = true
+		ACTOR_QUEUE( function()
+			if !IsValid( self ) then return true end
+			if MyTable.Schedule != sched then return true end
 			local pPath = MyTable.pEnemyPath || sched.pEnemyPath
 			if !pPath then pPath = Path "Follow" sched.pEnemyPath = pPath end
 			MyTable.pEnemyPath = pPath
 			MyTable.ComputeFlankPath( self, pPath, enemy, MyTable )
 			MyTable.vCover = nil
 			self:Stand( self:GetCrouchTarget() )
-			local pIterator = sched.pIterator
-			if !sched.pIterator then
-				pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
-				sched.pIterator = pIterator
-			end
+			local pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
 			local vEnemy = enemy:GetPos()
 			local vTarget = vEnemy + enemy:OBBCenter()
-			local v = sched.vCoverBounds || MyTable.GatherCoverBounds( self, MyTable )
-			sched.vCoverBounds = v
+			local v = MyTable.GatherCoverBounds( self, MyTable )
 			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
-			local f = sched.flBoundingRadiusTwo || ( self:BoundingRadius() ^ 2 )
-			sched.flBoundingRadiusTwo = f
-			local vMins, vMaxs = sched.vMins || ( MyTable.vHullDuckMins || MyTable.vHullMins ) + Vector( 0, 0, MyTable.loco:GetStepHeight() ), MyTable.vHullDuckMaxs || MyTable.vHullMaxs
-			sched.vMins = vMins
+			local f = self:BoundingRadius() ^ 2
+			local vMins, vMaxs = ( MyTable.vHullDuckMins || MyTable.vHullMins ) + Vector( 0, 0, MyTable.loco:GetStepHeight() ), MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 			local tCovers
-			local d = MyTable.vHullMaxs.x * 4
+			local d = MyTable.vHullMaxs[ 1 ] * 4
 			local flSuppressionTraceFraction = MyTable.flSuppressionTraceFraction
 			local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
-			for _ = 0, 4 do
+			while true do
+				if !IsValid( self ) then return true end
+				if MyTable.Schedule != sched then return true end
 				local pArea = pIterator()
 				if pArea == nil then
 					// REPEAT!!! AND TRY HARDER!!!
-					sched.pIterator = nil
-					return
+					pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
+					coroutine.yield()
 				end
 				tCovers = {}
 				for _, t in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do table.insert( tCovers, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], self:GetPos() ) } ) end
@@ -169,14 +135,15 @@ Actor_RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 						end
 						MyTable.vCover = vCover
 						MyTable.tCover = tCover
-						return
+						sched.bBeganSearching = nil
+						return true
 					end
 				end
+				coroutine.yield()
 			end
-		end
+		end )
 		return
 	end
-	sched.pIterator = nil
 	MyTable.vActualCover = MyTable.vCover
 	if !sched.Path then sched.Path = Path "Follow" end
 	MyTable.ComputePath( self, sched.Path, MyTable.vCover, MyTable )

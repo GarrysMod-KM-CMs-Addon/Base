@@ -268,6 +268,7 @@ local function GrantWeaponAchievement( ply, wep )
 			ply:SendLua( "Achievement_Acquire(" .. "\"" .. wep:GetClass() .. "\"" .. ")" )
 			__ACHIEVEMENTS_ACQUIRED__[ s ] = { [ sAchievement ] = true }
 		end
+		file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
 	end
 end
 
@@ -573,9 +574,18 @@ function CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, pEntity, sIdentifier )
 	end
 end
 
+local cActorQueueCallsPerTick = CreateConVar(
+	"iActorQueueCallsPerTick",
+	128,
+	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
+	"Complex calculations (such as firing nearest cover) are enqueued in a Circular Double Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
+	1
+)
+
+local ACTOR_QUEUE_CURRENT = nil
+local coroutine_resume = coroutine.resume
+local coroutine_status = coroutine.status
 hook.Add( "Think", "GameImprovements", function()
-	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
-	file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
 	if cEvents:GetBool() && __EVENTS_LENGTH__ > 0 && math.Rand( 0, cEventProbability:GetFloat() * FrameTime() ) <= 1 then
 		local iRemaining, tEncountered = __EVENTS_LENGTH__, {}
 		while iRemaining > 0 do
@@ -586,6 +596,31 @@ hook.Add( "Think", "GameImprovements", function()
 			iRemaining = iRemaining - 1
 		end
 	end
+	if ACTOR_QUEUE_LAST then
+		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
+		local iCalls = 0
+		local f = cActorQueueCallsPerTick:GetInt()
+		while iCalls < f && ACTOR_QUEUE_LAST != nil do
+			local pNode = ACTOR_QUEUE_CURRENT
+			local pNext = pNode.pNext
+			local _, bResult = coroutine_resume( pNode.coThread )
+			if bResult == true || coroutine_status( pNode.coThread ) == "dead" then
+				if pNode.pNext == pNode then
+					ACTOR_QUEUE_LAST = nil
+					ACTOR_QUEUE_CURRENT = nil
+				else
+					pNode.pPrev.pNext = pNode.pNext
+					pNode.pNext.pPrev = pNode.pPrev
+					if pNode == ACTOR_QUEUE_LAST then ACTOR_QUEUE_LAST = pNode.pPrev end
+					ACTOR_QUEUE_CURRENT = pNext
+				end
+			else
+				ACTOR_QUEUE_CURRENT = pNext
+				if bResult != false then iCalls = iCalls + 1 end
+			end
+			if !ACTOR_QUEUE_LAST then break end
+		end
+	else ACTOR_QUEUE_CURRENT = nil end
 	if IsValid( CascadeShadowMapping ) then
 		if SUN_ANGLES then
 			CascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )

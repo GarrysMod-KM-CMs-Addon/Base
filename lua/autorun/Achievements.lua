@@ -167,6 +167,7 @@ function Achievement_Miscellaneous_Grant( ply, sName )
 		ply:SendLua( "Achievement_Miscellaneous(\"" .. sName .. "\")" )
 		__ACHIEVEMENTS_ACQUIRED__[ s ] = { [ sName ] = true }
 	end
+	file.Write( "Achievements/" .. engine.ActiveGamemode() .. ".json", util.TableToJSON( __ACHIEVEMENTS_ACQUIRED__ ) )
 end
 
 ACHIEVEMENT_MISCELLANEOUS "Kill"
