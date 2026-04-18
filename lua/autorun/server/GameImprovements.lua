@@ -578,7 +578,7 @@ local cActorQueueCallsPerTick = CreateConVar(
 	"iActorQueueCallsPerTick",
 	4,
 	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
-	"Complex calculations (such as firing nearest cover) are enqueued in a Circular Double Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
+	"Complex calculations (such as finding nearest cover) are enqueued in a Circular Double Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
 	1
 )
 
