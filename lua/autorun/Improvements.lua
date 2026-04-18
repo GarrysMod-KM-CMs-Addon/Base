@@ -50,13 +50,13 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		cmd:SetViewAngles( ang )
 	end
 	if CLIENT then
-		//	if ply:GetNW2Bool "CTRL_bSliding" then
-		//		if cmd:KeyDown( IN_DUCK ) then ply.GAME_bInDuckPressed = true
-		//		elseif ply.GAME_bInDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bInDuckPressed = nil end
-		//		if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
-		//		if ply.GAME_bSprint then cmd:AddKey( IN_SPEED ) end
-		//		ply.GAME_bSlid = true
-		//	else
+		if ply:GetNW2Bool "CTRL_bSliding" then
+			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bInDuckPressed = true
+			elseif ply.GAME_bInDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bInDuckPressed = nil end
+			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
+			//	if ply.GAME_bSprint then cmd:AddKey( IN_SPEED ) end
+			//	ply.GAME_bSlid = true
+		else
 			//	if ply.GAME_bSlid then
 			//		ply.GAME_bSlid = nil
 			//		ply.GAME_bSprint = nil
@@ -82,7 +82,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 				ply.GAME_bWantsToDuck = nil
 				ply.GAME_bInDuckPressed = nil
 			end
-		//	end
+		end
 	end
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
 end )
