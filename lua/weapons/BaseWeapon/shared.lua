@@ -787,10 +787,12 @@ if CLIENT then
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireUpAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_LEFT then
 					//	if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, 1, .5 ) b = true end
+					b = true
 					vTarget = vTarget + ( MyTable.vBlindFireLeft || vector_origin )
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireLeftAngle || vector_origin )
 				elseif p == COVER_BLINDFIRE_RIGHT then
 					//	if CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) b = true end
+					b = true
 					vTarget = vTarget + ( MyTable.vBlindFireRight || vector_origin )
 					vTargetAngle = vTargetAngle + ( MyTable.vBlindFireRightAngle || vector_origin )
 				end
