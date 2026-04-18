@@ -82,7 +82,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 				ply.GAME_bWantsToDuck = nil
 				ply.GAME_bInDuckPressed = nil
 			end
-		end
+		//	end
 	end
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
 end )
