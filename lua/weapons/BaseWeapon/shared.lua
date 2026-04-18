@@ -457,8 +457,8 @@ if CLIENT then
 	SWEP.SwayScale = 0
 	SWEP.BobScale = 0
 
-	local WEAPON_SPRINT_DEFAULT = Vector( 1.228, 1.358, -.94 )
-	local WEAPON_SPRINT_DEFAULT_ANGLE = Vector( -10.554, 34.167, -20 )
+	//	local WEAPON_SPRINT_DEFAULT = Vector( 1.228, 1.358, -.94 )
+	//	local WEAPON_SPRINT_DEFAULT_ANGLE = Vector( -10.554, 34.167, -20 )
 
 	local WEAPON_SPRINT_RIFLE_DEFAULT = Vector( -2, 4, -2 )
 	local WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE = Vector( -10, 30, -30 )
@@ -574,8 +574,8 @@ if CLIENT then
 				//		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
 				//	end
 				if flVelocity > 10 then
-					local flBreathe = RealTime() * 6
-					local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
+					local flBreathe = RealTime() * 5
+					local f = flVelocity / CPlayer_GetWalkSpeed( ply )/* * MyTable.flAimMultiplier*/ * MyTable.flBobScale * .5
 					vTarget = vTarget - Vector( 0, -math_sin( flBreathe ), .5 - math_abs( math_cos( flBreathe ) ) ) * f
 					vTargetAngle = vTargetAngle + Vector( -math_abs( math_sin( flBreathe ) ), math_sin( flBreathe ) ) * f
 				end
@@ -778,9 +778,9 @@ if CLIENT then
 		else
 			local p, b = CEntity_GetNW2Int( ply, "CTRL_Peek" )
 			if p == COVER_FIRE_LEFT then
-				vTargetAngle.z = vTargetAngle.z - 22.5
+				//	vTargetAngle.z = vTargetAngle.z - 22.5
 			elseif p == COVER_FIRE_RIGHT then
-				vTargetAngle.z = vTargetAngle.z + 22.5
+				//	vTargetAngle.z = vTargetAngle.z + 22.5
 			elseif MyTable.__VIEWMODEL_FULLY_MODELED__ then
 				if p == COVER_BLINDFIRE_UP then
 					vTarget = vTarget + ( MyTable.vBlindFireUp || vector_origin )
@@ -923,9 +923,9 @@ if CLIENT then
 			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - MyTable.flAimLastEyeYaw / MyTable.flSwayScale * 135 * ( 1 - flMultiplier )
 		end
 		if bSliding then
-			vTarget = vTarget + ( MyTable.vSprint || WEAPON_SPRINT_DEFAULT )
+			vTarget = vTarget + ( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT )
 			vTarget[ 3 ] = vTarget[ 3 ] - 3
-			vTargetAngle = Vector( MyTable.vSprintAngle || WEAPON_SPRINT_DEFAULT_ANGLE )
+			vTargetAngle = Vector( MyTable.vSprintAngle || WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		local flYawTurn, flPitchTurn = 0, 0
