@@ -1,5 +1,6 @@
 local RENDERMODE_TRANSALPHA = RENDERMODE_TRANSALPHA
 local ParticleEmitter = ParticleEmitter
+local math_max = math.max
 local math_Rand = math.Rand
 local math_random = math.random
 
@@ -16,14 +17,19 @@ function EFFECT:Init( pData )
 	end
 	local vVelocity = IsValid( pOwner ) && pOwner:GetVelocity() || vector_origin
 	local pEmitter = ParticleEmitter( v )
+	local f = .1
+	for i = 1, 4 do
+		local n = math_Rand( 0, 1 ) ^ .5
+		if n > f then f = n end
+	end
 	for i = 1, 2 do
 		local pPart = pEmitter:Add( "effects/muzzleflash" .. math_random( 1, 4 ), v )
 		pPart:SetVelocity( vVelocity )
 		pPart:SetDieTime( .1 )
 		pPart:SetStartAlpha( 255 )
 		pPart:SetEndAlpha( math_Rand( 0, 255 ) )
-		pPart:SetStartSize( 1 * i )
-		pPart:SetEndSize( 12 * i )
+		pPart:SetStartSize( 1 * i * f )
+		pPart:SetEndSize( 12 * i * f )
 		pPart:SetRoll( math_Rand( 180, 480 ) )
 		pPart:SetRollDelta( math_Rand( -1, 1 ) )
 		pPart:SetColor( 255, 255, 255 )	

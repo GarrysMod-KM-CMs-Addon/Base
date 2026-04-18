@@ -93,6 +93,8 @@ local util_TraceLine = util.TraceLine
 local MASK_VISIBLE_AND_NPCS = MASK_VISIBLE_AND_NPCS
 local LocalPlayer = LocalPlayer
 local EyePos = EyePos
+local EyeVector = EyeVector
+local EyeAngles = EyeAngles
 local vUpHuge = Vector( 0, 0, 999999 )
 
 // Similar to util.IsSkyboxVisibleFromPoint
@@ -153,37 +155,59 @@ SHOOTING_MOTION_BLUR = 0
 local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
 
-local flLastRenderScreenspaceEffectsCall = RealTime()
-hook.Add( "RenderScreenspaceEffects", "Graphics", function()
-	local flFrameTime = RealTime() - flLastRenderScreenspaceEffectsCall
-	flLastRenderScreenspaceEffectsCall = RealTime()
+local cam_Start3D = cam.Start3D
+local render_UpdateRefractTexture = render.UpdateRefractTexture
+local cam_End3D = cam.End3D
+
+local tDrawColorModify = {
+	[ "$pp_colour_addr" ] = 0,
+	[ "$pp_colour_addg" ] = 0,
+	[ "$pp_colour_addb" ] = 0,
+	[ "$pp_colour_brightness" ] = 0,
+	[ "$pp_colour_contrast" ] = 1,
+	[ "$pp_colour_colour" ] = 1,
+	[ "$pp_colour_mulr" ] = 0,
+	[ "$pp_colour_mulg" ] = 0,
+	[ "$pp_colour_mulb" ] = 0
+}
+
+local RealTime = RealTime
+
+local vColor, flColorSum, flColor = Vector(), 0, 0
+
+local flTotalMotionBlur = 0
+
+local bBleedingBlur
+local flBleedingBlur = 0
+local flBleedingMotionBlurAdd = 0
+local flBleedingMotionBlurDraw = 0
+
+local bWaterBlur
+local flWaterBlur = 0
+local flWaterBlurDirect = 0
+local flWaterBlurRefractAmount = 0
+
+local flBloom = 0
+
+local flFogDensityMul = 0
+local flFogDistance = 0
+local flFogR, flFogG, flFogB = 0, 0, 0
+local flFogMaxDensity = 0
+
+local flBloomDarken, flBloomMultiply, flBloomColorMultiply = 0, 0, 0
+
+local flDepthOfField, flDistance, flSpacing = 0, 0, 0, 0
+
+local flLastTickCall = RealTime()
+hook.Add( "Tick", "Graphics", function()
+	local flFrameTime = RealTime() - flLastTickCall
+	if flFrameTime < .05 then return end // This will be ran 20 FPS MAX
+	flLastTickCall = RealTime()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
-	local tDrawColorModify = {
-		[ "$pp_colour_addr" ] = 0,
-		[ "$pp_colour_addg" ] = 0,
-		[ "$pp_colour_addb" ] = 0,
-		[ "$pp_colour_brightness" ] = 0,
-		[ "$pp_colour_contrast" ] = 1,
-		[ "$pp_colour_colour" ] = 1,
-		[ "$pp_colour_mulr" ] = 0,
-		[ "$pp_colour_mulg" ] = 0,
-		[ "$pp_colour_mulb" ] = 0
-	}
-	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
-	local f = ( 1 - flDeath ) * 4
-	DrawSharpen( f, f )
-	tDrawColorModify[ "$pp_colour_colour" ] = tDrawColorModify[ "$pp_colour_colour" ] * math_Remap( flDeath, 1, 0, 1, 0 )
-	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
-	if flOxygen != -1 && flOxygenLimit != -1 then
-		local f = flOxygenLimit * .33
-		if flOxygen <= f then
-			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
-		end
-	end
-	local vEye, aEye = EyePos(), EyeVector():Angle()
-	local iPasses = 1
-	local vColor = Vector()
+	vColor = Vector()
+	local iPasses = 0
+	local vEye, aEye, dEye = EyePos(), EyeAngles(), EyeVector()
 	for flPitch = -22.5, 22.5, ANALYZATION_STEP do
 		for flYaw = -22.5, 22.5, ANALYZATION_STEP do
 			iPasses = iPasses + 1
@@ -195,78 +219,104 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 				mask = MASK_VISIBLE_AND_NPCS,
 				filter = self
 			}
-			vColor = vColor + ( render_ComputeLighting( tr.HitPos, tr.HitNormal ) + render_ComputeDynamicLighting( tr.HitPos, tr.HitNormal ) )
+			local vHitPos, dHitNormal = tr.HitPos, tr.HitNormal
+			vColor:Add( render_ComputeLighting( vHitPos, dHitNormal ) )
+			vColor:Add( render_ComputeDynamicLighting( vHitPos, dHitNormal ) )
 			aEye[ 1 ] = aEye[ 1 ] - flPitch
 			aEye[ 2 ] = aEye[ 2 ] - flYaw
 		end
 	end
-	vColor = vColor / iPasses
-	local flColor = math_Clamp( VectorSum( vColor ), 0, 1 )
-	local MyTable = CEntity_GetTable( self )
-	local flBloom = Lerp( math.min( 1, FrameTime() * .5 ), MyTable.GP_flBloom || 0, 1 - flColor )
-	MyTable.GP_flBloom = flBloom
-	if self:WaterLevel() >= 3 then
-		MyTable.GP_flWaterBlur = math_Approach( MyTable.GP_flWaterBlur || 0, 1, WATER_BLUR_CHANGE_SPEED_TO * FrameTime() )
-	else MyTable.GP_flWaterBlur = math_Approach( MyTable.GP_flWaterBlur || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * FrameTime() ) end
-	if MyTable.GP_flWaterBlur > 0 then
-		DrawBlur( MyTable.GP_flWaterBlur * MAX_WATER_BLUR )
-		DrawMaterialOverlay( "effects/water_warp01", MyTable.GP_flWaterBlur * .01 )
-		flBloom = math_Clamp( flBloom + MyTable.GP_flWaterBlur * .2, 0, 1 )
-	end
+	vColor:Div( iPasses )
+	flColorSum = VectorSum( vColor )
+	SHOOTING_MOTION_BLUR = math_Clamp( SHOOTING_MOTION_BLUR - flFrameTime, 0, 1 )
+	flTotalMotionBlur = .66 - SHOOTING_MOTION_BLUR * .2
+	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
+	if flOxygen != -1 && flOxygenLimit != -1 then
+		local f = flOxygenLimit * .33
+		if flOxygen <= f then
+			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
+		else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
+	else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
+	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
+	local f = ( 1 - flDeath ) * 4
+	DrawSharpen( f, f )
+	tDrawColorModify[ "$pp_colour_colour" ] = math_Remap( flDeath, 1, 0, 1, 0 )
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
-		DrawBlur( math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f )
-		DrawMotionBlur( math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f, math_Clamp( 1 - f, 0, 1 ) * f, 0 )
-	end
-	SHOOTING_MOTION_BLUR = math.Clamp( SHOOTING_MOTION_BLUR - flFrameTime, 0, 1 )
-	DrawMotionBlur( .66 - SHOOTING_MOTION_BLUR * .2, 1, 0 )
-	local vTargetColor = LerpVector( ( ( vColor[ 1 ] + vColor[ 2 ] + vColor[ 3 ] ) / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
-	MyTable.GP_FogDensityMul = math_Approach( MyTable.GP_FogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), 1 * FrameTime() )
-	MyTable.GP_FogR = math_Approach( MyTable.GP_FogR || 255, vTargetColor[ 1 ] * 255, 32 * FrameTime() )
-	MyTable.GP_FogG = math_Approach( MyTable.GP_FogG || 255, vTargetColor[ 2 ] * 255, 32 * FrameTime() )
-	MyTable.GP_FogB = math_Approach( MyTable.GP_FogB || 255, vTargetColor[ 3 ] * 255, 32 * FrameTime() )
-	local flFogR, flFogG, flFogB = MyTable.GP_FogR, MyTable.GP_FogG, MyTable.GP_FogB
+		bBleedingBlur = true
+		flBleedingBlur = math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f
+		flBleedingMotionBlurAdd = math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f
+		flBleedingMotionBlurDraw = math_Clamp( 1 - f, 0, 1 ) * f
+	else bBleedingBlur = nil end
+	if self:WaterLevel() >= 3 then
+		flWaterBlur = math_Approach( flWaterBlur || 0, 1, WATER_BLUR_CHANGE_SPEED_TO * flFrameTime )
+	else flWaterBlur = math_Approach( flWaterBlur || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * flFrameTime ) end
+	bWaterBlur = flWaterBlur > 0
+	flWaterBlurDirect = flWaterBlur * MAX_WATER_BLUR
+	flWaterBlurRefractAmount = flWaterBlur * .01
+	local vTargetColor = LerpVector( ( flColorSum / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
+	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )
+	flColor = math_Clamp( flColorSum, 0, 1 )
+	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
+	flFogG = math_Approach( flFogG || 255, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
+	flFogB = math_Approach( flFogB || 255, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
+	flFogDistance = Lerp( math_min( 1, 10 * flFrameTime ), flFogDistance, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
 	local flMultiplier = math_Remap( flBrightness, 0, 1, 1, 0 )
-	flFogR, flFogG, flFogB = flFogR * .00392156862, flFogG * .00392156862, flFogB * .00392156862
-	tDrawColorModify[ "$pp_colour_addr" ] = tDrawColorModify[ "$pp_colour_addr" ] + flFogR * .2 * flMultiplier
-	tDrawColorModify[ "$pp_colour_addg" ] = tDrawColorModify[ "$pp_colour_addg" ] + flFogG * .2 * flMultiplier
-	tDrawColorModify[ "$pp_colour_addb" ] = tDrawColorModify[ "$pp_colour_addb" ] + flFogB * .2 * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulr" ] = tDrawColorModify[ "$pp_colour_mulr" ] + flFogR * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulg" ] = tDrawColorModify[ "$pp_colour_mulg" ] + flFogG * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulb" ] = tDrawColorModify[ "$pp_colour_mulb" ] + flFogB * flMultiplier
-	MyTable.GP_FogDistance = Lerp( math_min( 1, 10 * FrameTime() ), MyTable.GP_FogDistance || 0, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
+	local flFogR, flFogG, flFogB = flFogR * .00392156862, flFogG * .00392156862, flFogB * .00392156862
+	tDrawColorModify[ "$pp_colour_addr" ] = flFogR * .33 * flMultiplier
+	tDrawColorModify[ "$pp_colour_addg" ] = flFogG * .33 * flMultiplier
+	tDrawColorModify[ "$pp_colour_addb" ] = flFogB * .33 * flMultiplier
+	tDrawColorModify[ "$pp_colour_mulr" ] = flFogR * flMultiplier
+	tDrawColorModify[ "$pp_colour_mulg" ] = flFogG * flMultiplier
+	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
+	flBloom = Lerp( math_min( 1, FrameTime() * .5 ), flBloom || 0, 1 - flColor )
+	flBloom = math_Clamp( flBloom + flWaterBlur * .2, 0, 1 )
+	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 2, 3 )
+	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
+	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
+	flDistance = Lerp(
+		math_min( 1, 5 * FrameTime() ),
+		flDepthOfField || 0,
+		math_Clamp( util_TraceLine( {
+			start = vEye,
+			endpos = vEye + dEye * 999999,
+			mask = MASK_VISIBLE_AND_NPCS,
+			filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
+		} ).HitPos:Distance( EyePos() ), 0, 6144 )
+	)
+	flDepthOfField = flDistance * 1.5
+	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
+end )
+
+hook.Add( "RenderScreenspaceEffects", "Graphics", function()
+	if bWaterBlur then
+		DrawBlur( flWaterBlurDirect )
+		DrawMaterialOverlay( "effects/water_warp01", flWaterBlurRefractAmount )
+	end
+	if bBleedingBlur then
+		DrawBlur( flBleedingBlur )
+		DrawMotionBlur( flBleedingMotionBlurAdd, flBleedingMotionBlurDraw, 0 )
+	end
+	DrawMotionBlur( flTotalMotionBlur, 1, 0 )
 	DrawBloom(
-		math_Remap( flBloom, 0, 1, .2, 0 ), math_Remap( flBloom, 0, 1, 2, 3 ),
+		flBloomDarken, flBloomMultiply,
 		5, // Size X
 		5, // Size Y
 		1, // Passes
-		math_Remap( flBloom, 0, 1, 1.33, 2 ), 1, 1, 1
+		flBloomColorMultiply, 1, 1, 1
 	)
 	DrawColorModify( tDrawColorModify )
-	cam.Start3D()
-		local pVehicle = self:GetNW2Entity "GAME_pVehicle"
-		local flDistance = Lerp(
-			math_min( 1, 5 * FrameTime() ),
-			MyTable.m_flDepthOfField || 0,
-			math.Clamp( util_TraceLine( {
-				start = EyePos(),
-				endpos = EyePos() + EyeVector() * 999999,
-				mask = MASK_VISIBLE_AND_NPCS,
-				filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
-			} ).HitPos:Distance( EyePos() ), 0, 6000 )
-		)
-		MyTable.m_flDepthOfField = flDistance
-		local flSpacing = flDistance
-		flDistance = flDistance * 1.5
+	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
-		render.UpdateRefractTexture()
+		render_UpdateRefractTexture()
 		for i = 0, 32 do
 			render_SetMaterial( mDepthOfField )
-			local flSize = ( flDistance + flSpacing * i ) * 8
-			render_DrawSprite( vEye + vForward * ( flDistance + flSpacing * i ), flSize, flSize, color_white )
+			local flSize = ( flDistance + flDistance * i ) * 8
+			render_DrawSprite( vEye + vForward * ( flDistance + flDistance * i ), flSize, flSize, color_white )
 		end
-	cam.End3D()
+	cam_End3D()
 end )
 
 local render = render
@@ -281,12 +331,10 @@ hook.Add( "SetupWorldFog", "Graphics", function()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	render_FogMode( MATERIAL_FOG_LINEAR )
-	local MyTable = CEntity_GetTable( self )
-	render_FogColor( MyTable.GP_FogR || 255, MyTable.GP_FogG || 255, MyTable.GP_FogB || 255 )
+	render_FogColor( flFogR, flFogG, flFogB )
 	render_FogStart( 0 )
-	render_FogEnd( MyTable.GP_FogDistance || 0 )
-	local flBrightness = GetBrightness( MyTable.GP_FogR || 255, MyTable.GP_FogG || 255, MyTable.GP_FogB || 255 )
-	render_FogMaxDensity( ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( MyTable.GP_FogDensityMul || 0 ) )
+	render_FogEnd( flFogDistance )
+	render_FogMaxDensity( flFogMaxDensity )
 	return true
 end )
 
