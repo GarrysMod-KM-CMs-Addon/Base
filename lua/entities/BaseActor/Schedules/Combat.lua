@@ -387,7 +387,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 				local tMyCover = tCover
 				local bInADynamicCoverAndDidFindOne = tCover[ 5 ] == nil
 				while !table_IsEmpty( tQueue ) do
-					if !IsValid( self ) || MyTable.Schedule != sched || MyTable.flCombatState <= 0 then return true end
+					if !IsValid( self ) || !IsValid( enemy ) || MyTable.Schedule != sched || MyTable.flCombatState <= 0 then return true end
 					local vEnemy = enemy:GetPos()
 					local vTarget = vEnemy + enemy:OBBCenter()
 					table.SortByMember( tQueue, 3 )
@@ -396,8 +396,10 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 					local vCurrentStart, vCurrentEnd = tCover[ 1 ], tCover[ 2 ]
 					for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
 						for iIndex in pairs( tIndices ) do
-							local tNewCover = __COVERS_STATIC__[ iAreaID ][ iIndex ]
-							if tVisited[ tNewCover ] then continue end
+							local tNewCover = __COVERS_STATIC__[ iAreaID ]
+							if !tNewCover then continue end
+							tNewCover = tNewCover[ iIndex ]
+							if !tNewCover || tVisited[ tNewCover ] then continue end
 							tVisited[ tNewCover ] = true
 							local flCostStart, flCostEnd, flCursorStart, flCursorEnd
 							local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
@@ -439,6 +441,7 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 								tVisited[ tNewCover ] = true
 								local flCostStart, flCostEnd, flCursorStart, flCursorEnd
 								local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
+								debugoverlay.Line(vStart,vEnd,5,Color(255,0,0),true)
 								pPath:MoveCursorToClosestPosition( vStart )
 								flCursorStart = pPath:GetCursorPosition()
 								local f = pPath:GetLength() - flCursorStart

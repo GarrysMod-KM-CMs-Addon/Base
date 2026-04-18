@@ -341,7 +341,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 		local flSuppressionTraceFraction = MyTable.flSuppressionTraceFraction
 		local RANGE_ATTACK_SUPPRESSION_BOUND_SIZE_SQR = RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE
 		while true do
-			if !IsValid( self ) || MyTable.Schedule != sched then return true end
+			if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != sched then return true end
 			local vEnemy = pEnemy:GetPos()
 			local vTarget = vEnemy + pEnemy:OBBCenter()
 			local vPoint, pArea = pIterator()

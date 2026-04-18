@@ -543,6 +543,7 @@ function CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, pEntity, sIdentifier )
 	local pCenterArea = navmesh.GetNearestNavArea( vCenter )
 	if !pCenterArea then return end
 	local pArea = pCenterArea
+
 	local tQueue, tVisited = { { pArea, 0 } }, {}
 	while !table_IsEmpty( tQueue ) do
 		table_SortByMember( tQueue, 2, true )
@@ -561,6 +562,48 @@ function CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, pEntity, sIdentifier )
 			if !table_IsEmpty( tCoversThisArea ) then
 				table_SortByMember( tCoversThisArea, 2, true )
 				local t = tCoversThisArea[ 1 ][ 1 ]
+				tCover[ 4 ] = { [ pArea:GetID() ] = { [ tCoversThisArea[ 1 ][ 3 ] ] = true } }
+				local tForCover = __COVER_DYNAMIC_CONNECTIONS__[ t ]
+				if tForCover then
+					local tForEntity = tForCover[ pEntity ]
+					if tForEntity then tForEntity[ sIdentifier ] = pCenterArea:GetID()
+					else tForCover[ pEntity ] = { [ sIdentifier ] = pCenterArea:GetID() } end
+				else __COVER_DYNAMIC_CONNECTIONS__[ t ] = { [ pEntity ] = { [ sIdentifier ] = pCenterArea:GetID() } } end
+				break
+			end
+		end
+	end
+
+	local tQueue, tVisited = { { pArea, 0 } }, {}
+	while !table_IsEmpty( tQueue ) do
+		table_SortByMember( tQueue, 2, true )
+		local pArea, flDistance = unpack( table_remove( tQueue ) )
+		for _, t in ipairs( pArea:GetAdjacentAreaDistances() ) do
+			local pNew = t.area
+			local id = pNew:GetID()
+			if tVisited[ id ] then continue end
+			tVisited[ id ] = true
+			table_insert( tQueue, { pNew, flDistance + t.dist } )
+		end
+		local tCoversThisArea = {}
+		local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
+		if tCovers then
+			for i, t in ipairs( tCovers ) do table_insert( tCoversThisArea, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], vCenter ), i, true } ) end
+		end
+		local tCovers = __COVERS_DYNAMIC__[ pArea:GetID() ]
+		if tCovers then
+			for pEntity, tEntityCovers in pairs( tCovers ) do
+				if !IsValid( pEntity ) then continue end
+				for i, t in pairs( tEntityCovers ) do
+					table_insert( tCoversThisArea, { t, util.DistanceToLine( t[ 1 ], t[ 2 ], vCenter ), i } )
+				end
+			end
+			if !table_IsEmpty( tCoversThisArea ) then
+				table_SortByMember( tCoversThisArea, 2, true )
+				local t = tCoversThisArea[ 1 ]
+				if t[ 4 ] then break end
+				t = t[ 1 ]
+				if t[ 6 ] == pEntity then continue end
 				tCover[ 4 ] = { [ pArea:GetID() ] = { [ tCoversThisArea[ 1 ][ 3 ] ] = true } }
 				local tForCover = __COVER_DYNAMIC_CONNECTIONS__[ t ]
 				if tForCover then
@@ -674,8 +717,8 @@ hook.Add( "Think", "GameImprovements", function()
 								tParticipatingAreas[ pArea:GetID() ] = true
 							end
 							local tCover = { vStart, vEnd, true, nil, nil, ent }
+							if !ent.GAME_tRightCover then CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pRight" ) end
 							ent.GAME_tRightCover = tCover
-							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pRight" )
 							ent.GAME_tRightCoverParticipatingAreas = tParticipatingAreas
 							for ID in pairs( tParticipatingAreas ) do
 								local tCovers = __COVERS_DYNAMIC__[ ID ]
@@ -703,8 +746,8 @@ hook.Add( "Think", "GameImprovements", function()
 								tParticipatingAreas[ pArea:GetID() ] = true
 							end
 							local tCover = { vStart, vEnd, nil, nil, nil, ent }
+							if !ent.GAME_tLeftCover then CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pLeft" ) end
 							ent.GAME_tLeftCover = tCover
-							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pLeft" )
 							ent.GAME_tLeftCoverParticipatingAreas = tParticipatingAreas
 							for ID in pairs( tParticipatingAreas ) do
 								local tCovers = __COVERS_DYNAMIC__[ ID ]
@@ -732,8 +775,8 @@ hook.Add( "Think", "GameImprovements", function()
 								tParticipatingAreas[ pArea:GetID() ] = true
 							end
 							local tCover = { vStart, vEnd, nil, nil, nil, ent }
+							if !ent.GAME_tForwardCover then CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pForward" ) end
 							ent.GAME_tForwardCover = tCover
-							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pForward" )
 							ent.GAME_tForwardCoverParticipatingAreas = tParticipatingAreas
 							for ID in pairs( tParticipatingAreas ) do
 								local tCovers = __COVERS_DYNAMIC__[ ID ]
@@ -761,8 +804,8 @@ hook.Add( "Think", "GameImprovements", function()
 								tParticipatingAreas[ pArea:GetID() ] = true
 							end
 							local tCover = { vStart, vEnd, true, nil, nil, ent }
+							if !ent.GAME_tBackwardCover then CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pBackward" ) end
 							ent.GAME_tBackwardCover = tCover
-							CONNECT_DYNAMIC_COVER_ON_MESH( tCover, vCenter, ent, "pBackward" )
 							ent.GAME_BackwardCoverParticipatingAreas = tParticipatingAreas
 							for ID in pairs( tParticipatingAreas ) do
 								local tCovers = __COVERS_DYNAMIC__[ ID ]
