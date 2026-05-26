@@ -299,6 +299,7 @@ function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage / 3
 	MyTable.flSuppressionRecoverTime = CurTime() + .5
+	MyTable.flCombatStateSuppressionRecoverTime = CurTime() + 5
 	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage / 3
 end
 
@@ -361,30 +362,32 @@ function ENT:HandleTurning( MyTable )
 end
 
 ENT.flSuppressionRecoverTime = 0
+ENT.flCombatStateSuppressionRecoverTime = 0
+
+local Lerp = Lerp
+local math_min = math.min
 
 ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
 	MyTable.m_coBehaveThread = coroutine_create( function( MyTable, flInterval )
 		while true do
-			local f = MyTable.m_flLastRunBehaviourCall
-			if f then
-				MyTable.m_flLastRunBehaviourCall = CurTime()
-			else
-				f = CurTime()
-				MyTable.m_flLastRunBehaviourCall = f
-			end
-			MyTable.m_flFrameTime = CurTime() - f
+			local flNow = CurTime()
+			local flLast = MyTable.m_flLastRunBehaviourCall || flNow
+			local flFrameTime = flNow - flLast
+			MyTable.m_flLastRunBehaviourCall = flNow
+			MyTable.m_flFrameTime = flFrameTime
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
 			local f = MyTable.fCallMeInRunBehaviour
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
-			local f = CEntity_Health( self )
+			MyTable.CalcCombatState( self, MyTable ) // Important to call this before the lwoer thing, as it calculates flSquadHealth
 			if CurTime() > MyTable.flSuppressionRecoverTime then
-				MyTable.GAME_flSuppression = math_Approach( math_Clamp( MyTable.GAME_flSuppression, 0, f * MyTable.flSuppressionMax ), 0, f * MyTable.flSuppressionRec * FrameTime() )
+				MyTable.GAME_flSuppression = Lerp( math_min( flFrameTime * 2, 1 ), MyTable.GAME_flSuppression, 0 )
 			end
-			MyTable.flCombatStateSuppression = math_Approach( math_Clamp( MyTable.flCombatStateSuppression, 0, f * MyTable.flCombatStateSuppressionMax ), 0, f * MyTable.flCombatStateSuppressionRec * FrameTime() )
+			if CurTime() > MyTable.flCombatStateSuppressionRecoverTime then
+				MyTable.flCombatStateSuppression = Lerp( math_min( flFrameTime * .1, 1 ), MyTable.flCombatStateSuppression, 0 )
+			end
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )
-			MyTable.CalcCombatState( self, MyTable )
 			MyTable.Behaviour( self, MyTable )
 			coroutine_yield()
 		end

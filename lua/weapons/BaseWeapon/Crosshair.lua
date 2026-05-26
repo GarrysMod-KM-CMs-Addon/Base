@@ -372,7 +372,7 @@ function SWEP:DoDrawCrosshair()
 			MyTable.flCrosshairAlpha = Lerp( math_min( 1, flFrameTime * 5 ), MyTable.flCrosshairAlpha, 255 )
 		else
 			MyTable.flCrosshairAlpha = math_max( 0, 255 - 255 *
-			flRecoilPart / .05 / MyTable.Primary_flDelay / math_min( 15, self:GetMaxClip1() / 2 ) )
+			flRecoilPart ^ 1.1 / .04 / MyTable.Primary_flDelay / math_min( 15, self:GetMaxClip1() / 2 ) )
 		end
 	end
 	if MyTable.bSniper && flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then

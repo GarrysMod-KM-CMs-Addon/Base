@@ -12,6 +12,14 @@
 
 include "autorun/Director.lua"
 
+// Some weapon things that are too small to give them another file
+VIEWMODEL_CAMERA_ANIMATIONS = {}
+WPN_PISTOL = 0
+WPN_RIFLE = 1
+WPN_RIFLEUP = 2
+WPN_SNIPER = 3
+// End
+
 DIRECTOR_MUSIC_TENSION = 0
 DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
 

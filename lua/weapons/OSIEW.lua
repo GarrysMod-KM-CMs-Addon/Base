@@ -85,11 +85,3 @@ function SWEP:DoImpactEffect( tr, dt )
 	p:SetNormal( d )
 	util_Effect( "AR2Impact", p ) 
 end
-
-function SWEP:DoMuzzleFlash()
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 5 )
-	util_Effect( "MuzzleFlash", ed )
-end

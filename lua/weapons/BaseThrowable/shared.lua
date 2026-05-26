@@ -10,7 +10,8 @@ SWEP.Secondary.ClipSize = 1
 SWEP.Secondary.DefaultClip = 1
 SWEP.Secondary.Automatic = true
 
-SWEP.sAnimationSet = "Pistol"
+SWEP.WPN_SPRINT = WPN_PISTOL
+// SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.Slot = 4
 
 SWEP.bNoReloads = true

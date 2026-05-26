@@ -208,4 +208,5 @@ SWEP.flViewModelX = 30
 SWEP.flViewModelY = 16
 SWEP.flViewModelZ = -6
 
-SWEP.sAnimationSet = "Pistol"
+SWEP.WPN_SPRINT = WPN_PISTOL
+// SWEP.WPN_SHOOT = WPN_PISTOL

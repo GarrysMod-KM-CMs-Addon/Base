@@ -1,4 +1,4 @@
-VELOCITY = 3072
+local VELOCITY = 3072
 
 function EFFECT:Init( pData )
 	local vEnd = pData:GetOrigin()
@@ -43,10 +43,10 @@ function EFFECT:Render()
 	local vPos = self:GetPos()
 	local dDirection = self.dDirection
 	render_SetMaterial( mMaterial )
-	local l = VELOCITY * .05
+	local l = 20
 	for i = 0, l do
 		local f = i / l
-		render_DrawSprite( vPos - dDirection * l * ( i * -.002 ), 4 * f, 4 * f, COLOR )
+		render_DrawSprite( vPos - dDirection * l * ( i * -.02 ), 12 * f, 12 * f, COLOR )
 	end
 	// Tracer lights are messy as shit. Even though we don't have to worry
 	// about overriding ephemeral lights, we still override whatever is

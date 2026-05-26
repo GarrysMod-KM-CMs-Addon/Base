@@ -7,6 +7,14 @@ if SERVER then
 	end
 end
 
+ACCELERATION_NORMAL = 5
+GRAVITY_NORMAL = 800
+
+HUMAN_WALK_SPEED = 75
+HUMAN_RUN_SPEED = 250
+HUMAN_SPRINT_SPEED = 325
+HUMAN_JUMP_HEIGHT = 72
+
 // Weapon statuses and other complicated bullshit
 
 // At the hip facing leftwards (rifles) or at the hand (pistols)
@@ -317,8 +325,8 @@ function SetHumanPlayer( ply )
 	ply:SetNPCClass( CLASS_HUMAN )
 	ply:SetHealth( 100 )
 	ply:SetMaxHealth( 100 )
-	ply:SetRunSpeed( HUMAN_RUN_SPEED )
-	ply:SetWalkSpeed( HUMAN_PROWL_SPEED )
+	ply:SetRunSpeed( HUMAN_SPRINT_SPEED )
+	ply:SetWalkSpeed( HUMAN_RUN_SPEED )
 	ply:SetSlowWalkSpeed( HUMAN_WALK_SPEED )
 	ply:SetJumpPower( ( 2 * GetConVarNumber "sv_gravity" * HUMAN_JUMP_HEIGHT ) ^ .5 )
 	ply:SetDuckSpeed( .25 )

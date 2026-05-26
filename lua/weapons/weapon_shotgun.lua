@@ -37,7 +37,8 @@ SWEP.flRecoilGrowMin = .6
 SWEP.flRecoilGrowMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.flAimShoot = 2
-SWEP.sAnimationSet = "UpRun"
+SWEP.WPN_SPRINT = WPN_RIFLEUP
+SWEP.WPN_SHOOT = WPN_RIFLEUP
 
 SWEP.bSemi = true
 SWEP.bPumped = true
@@ -72,7 +73,9 @@ function SWEP:StartReload()
 	local owner = self:GetOwner()
 	if !IsValid( owner ) || owner.GetAmmoCount && owner:GetAmmoCount( self.Primary.Ammo ) <= 0 || self:Clip1() >= self.Primary.ClipSize || !self.bSemi && !self.bPumped then return end
 	self:SendWeaponAnim( ACT_SHOTGUN_RELOAD_START )
-	self:SetReloadTimer( CurTime() + self:SequenceDuration() )
+	local f = self:SequenceDuration()
+	self:SetReloadTimer( CurTime() + f )
+	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
 	self:SetReloading( true )
 	return true
 end
@@ -97,7 +100,9 @@ function SWEP:PerformReload()
 	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
 	self:SetClip1( self:Clip1() + 1 )
 	self:SendWeaponAnim( ACT_VM_RELOAD )
-	local t = CurTime() + self:SequenceDuration()
+	local f = self:SequenceDuration()
+	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
+	local t = CurTime() + f
 	self:SetNextPrimaryFire( t )
 	self:SetReloadTimer( t )
 	self.bPumped = true
@@ -106,7 +111,9 @@ end
 function SWEP:FinishReload()
 	self:SetReloading( false )
 	self:SendWeaponAnim( ACT_SHOTGUN_RELOAD_FINISH )
-	local t = CurTime() + self:SequenceDuration()
+	local f = self:SequenceDuration()
+	if self:GetOwner():IsPlayer() then self:CallOnClient( "ReloadTime", f ) end
+	local t = CurTime() + f
 	self:SetNextPrimaryFire( t )
 	self:SetReloadTimer( t )
 end
@@ -209,6 +216,46 @@ function SWEP:PrimaryAttack()
 	self.flLastShot = CurTime()
 	self:CallOnClient "LastShot"
 	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
+end
+
+if CLIENT then
+	local math_abs = math.abs
+	local math_sin = math.sin
+	local RealTime = RealTime
+	VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_shotgun.mdl" ] = {
+		// Raise
+		reload1 = function( pViewModel, vTarget, vTargetAngle )
+			local flCycle = pViewModel:GetCycle()
+			if flCycle < .4 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 1
+			elseif flCycle < .8 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+			end
+			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+		end,
+		// Insert shell
+		reload2 = function( pViewModel, vTarget, vTargetAngle )
+			local flCycle = pViewModel:GetCycle()
+			if flCycle < .33 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - .33
+			elseif flCycle < .66 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + .66
+			end
+			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+		end,
+		// Lower
+		reload3 = function( pViewModel, vTarget, vTargetAngle )
+			local flCycle = pViewModel:GetCycle()
+			if flCycle < .33 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			elseif flCycle < .66 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 2
+			end
+			if flCycle < .66 then
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+			end
+		end,
+	}
 end
 
 sound.Add {

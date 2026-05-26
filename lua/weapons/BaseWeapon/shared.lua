@@ -6,6 +6,13 @@
 //
 // Thank you, Buu.
 
+// TODO: For cover sequences and ADS, instead of just
+// vTarget = some value
+// vTargetAngle = some other value
+// use math.Approach and
+// vTarget = some value * approached value
+// vTargetAngle = some other value * approached value
+
 DEFINE_BASECLASS "weapon_base"
 
 function SWEP:PrimaryAttack() end
@@ -25,8 +32,6 @@ SWEP.__WEAPON__ = true
 
 SWEP.flReloadTime = 0
 SWEP.flLastShot = 0
-
-SWEP.sAnimationSet = "Rifle"
 
 local NOT_SPRINTING_OVERRIDES = {
 	[ ACT_HL2MP_IDLE_PISTOL ] = ACT_HL2MP_IDLE_REVOLVER,
@@ -49,6 +54,8 @@ local PISTOL_REVOLVER_ETC = { Pistol = true, Revolver = true, Melee = true, Slam
 
 function SWEP:TranslateActivity( EIntendedActivity )
 	local EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+	// Don't translate attack/reload, rifles don't magically reload like shotguns when held at the hip! xD
+	if EIntendedActivity >= 1011/*ACT_MP_ATTACK_STAND_PRIMARYFIRE*/ && EIntendedActivity <= 1143/*ACT_MP_ATTACK_AIRWALK_GRENADE_SECONDARY*/ then return EActivity end
 	local pOwner = self:GetOwner()
 	if IsValid( pOwner ) then
 		if pOwner:GetNW2Bool "CTRL_bSprinting" && GetVelocity( pOwner ):Length() > 10 then
@@ -139,7 +146,6 @@ if CLIENT then
 		if !IsValid( pOwner ) then return end
 		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + 1 / pOwner:GetNW2Float( "GAME_flRecoil", 1 )
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + 1 end
-		SHOOTING_MOTION_BLUR = SHOOTING_MOTION_BLUR + self.Primary_flDelay / math.min( 1 / 2, self:GetMaxClip1() / 60 )
 		table.insert( self.tShootAnimations, CurTime() )
 	end
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
@@ -160,11 +166,17 @@ function SWEP:FireAnimationEvent( pos, ang, EEvent )
 	return true
 end
 
+SWEP.m_flNextMuzzleFlash = 0
+local math_Clamp = math.Clamp
+local util_Effect = util.Effect
 function SWEP:DoMuzzleFlashInternal( pOwner )
-	pOwner = pOwner || self:GetOwner()
+	pOwner = IsValid( pOwner ) && pOwner || self:GetOwner()
 	if !IsValid( pOwner ) then return end
 	local f = pOwner.GetShootPos
 	if !f then return end
+	// Some models have multiple animation events fired in one tick
+	if CurTime() <= self.m_flNextMuzzleFlash then return end
+	self.m_flNextMuzzleFlash = CurTime() + self.Primary_flDelay * .5
 	local pEffectData = EffectData()
 	local v = f( pOwner )
 	pEffectData:SetOrigin( v )
@@ -174,7 +186,11 @@ function SWEP:DoMuzzleFlashInternal( pOwner )
 	pEffectData:SetNormal( a:Forward() )
 	pEffectData:SetAngles( a )
 	pEffectData:SetAttachment( 1 )
-	util.Effect( self:GetMuzzleFlash(), pEffectData )
+	pEffectData:SetMagnitude( 1 / math_Clamp( self.Primary_flDelay * .66, .02, .1 ) )
+	//	local b = !self.m_bMuzzleID
+	//	self.m_bMuzzleID = b
+	//	pEffectData:SetFlags( b && 1 || 0 )
+	util_Effect( self:GetMuzzleFlash(), pEffectData )
 end
 
 SWEP.m_bAllowOneInTheChamber = true
@@ -359,7 +375,7 @@ function SWEP:DoRecoil()
 	if game.SinglePlayer() && SERVER && pOwner:IsPlayer() then self:CallOnClient "DoRecoil" end
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
 	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
-	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil, 0 )
+	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil ) * .33
 	if pOwner:IsPlayer() then self:CallOnClient( "AddRecoil", flRecoil ) end
 	local f = pOwner.ViewPunch
 	if IsValid( pOwner ) && f then
@@ -372,13 +388,13 @@ function SWEP:DoRecoil()
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", 0, 1 )
 			if b then flYaw = -flYaw end
 			self.m_bFlipMyKickYaw = !b
-			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) )
+			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * .66 )
 		else
 			local flPitch = util_SharedRandom( "BaseWeaponViewPunchPitch", -1, 1 )
 			self.m_bFlipMyKickPitch = flPitch > 0
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", -1, 1 )
 			self.m_bFlipMyKickYaw = flYaw > 0
-			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) )
+			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * .66 )
 		end
 		self.m_flFlipMyKick = CurTime() + self.Primary_flDelay * 1.1
 	end
@@ -411,12 +427,13 @@ function SWEP:ShootEffects()
 			local iSequence = pViewModel:SelectWeightedSequence( iActivity )
 			if iSequence != -1 then
 				pViewModel:SendViewModelMatchingSequence( iSequence )
+				self:DoMuzzleFlashInternal( pOwner )
 			elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
 				self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
-			else self:DoMuzzleFlashInternal() end
+			else self:DoMuzzleFlashInternal( pOwner ) end
 		elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
 			self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
-		else self:DoMuzzleFlashInternal() end
+		else self:DoMuzzleFlashInternal( pOwner ) end
 	end
 	pOwner:SetAnimation( PLAYER_ATTACK1 )
 end
@@ -452,8 +469,8 @@ if CLIENT then
 	SWEP.flViewModelZ = 0
 	SWEP.vViewModelAim = false
 	SWEP.vViewModelAimAngle = false
-	SWEP.flSwayScale = 40
-	SWEP.flSway = 6
+	SWEP.flSwayScale = 50
+	SWEP.flSway = 4
 	SWEP.SwayScale = 0
 	SWEP.BobScale = 0
 
@@ -466,8 +483,8 @@ if CLIENT then
 	local WEAPON_SPRINT_RIFLEUP_DEFAULT = Vector( 0, 4, -3 )
 	local WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE = Vector( 2, 35, -10 )
 
-	local WEAPON_SPRINT_SNIPER_DEFAULT = Vector( 0, 4, -3 )
-	local WEAPON_SPRINT_SNIPER_DEFAULT_ANGLE = Vector( 2, 35, -10 )
+	local WEAPON_SPRINT_SNIPER_DEFAULT = Vector( -2, 4, -2 )
+	local WEAPON_SPRINT_SNIPER_DEFAULT_ANGLE = Vector( -10, 30, -30 )
 
 	SWEP.vPistolSprint = Vector( 0, 4, -2 )
 	SWEP.vPistolSprintAngle = Vector( -16, 0, 0 )
@@ -480,17 +497,16 @@ if CLIENT then
 	SNIPER_AIMING_SWAY_MULTIPLIER = .5
 	local SPRING_STIFFNESS, SPRING_DAMPING = 3, -15
 	local SPRING_STIFFNESS_CURRENT, SPRING_DAMPING_CURRENT = SPRING_STIFFNESS, SPRING_DAMPING
-	local SPRING_FORCE = 50
+	local SPRING_FORCE = 75
 	local SPRING_FORCE_CURRENT = SPRING_FORCE
 	local SPRING_CAMERA_STIFFNESS, SPRING_CAMERA_DAMPING = 3, -15
 	local SPRING_CAMERA_STIFFNESS_CURRENT, SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_STIFFNESS, SPRING_CAMERA_DAMPING
-	local SPRING_CAMERA_FORCE = 50
+	local SPRING_CAMERA_FORCE = 75
 	local SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE
 	local math_cos = math.cos
 	local math_sin = math.sin
 	local math_abs = math.abs
 	local math_exp = math.exp
-	local math_Clamp = math.Clamp
 	local math_AngleDifference = math.AngleDifference
 	local math_NormalizeAngle = math.NormalizeAngle
 	local CEntity_WaterLevel = CEntity.WaterLevel
@@ -500,7 +516,7 @@ if CLIENT then
 	local math_Remap = math.Remap
 	function SWEP:AdjustMouseSensitivity()
 		local MyTable = CEntity_GetTable( self )
-		local f = CurTime() <= ( ( MyTable.flLastShot || 0 ) + math.min( .5, MyTable.Primary_flDelay ) + ( MyTable.Primary.Automatic && 0 || .5 ) ) && .5 || 1
+		local f = CurTime() <= ( ( MyTable.flLastShot || 0 ) + math_min( .5, MyTable.Primary_flDelay ) + ( MyTable.Primary.Automatic && 0 || .2 ) ) && .33 || 1
 		local v = MyTable.flFoV
 		if v then return v / LocalPlayer():GetInfoNum( "fov_desired", UNIVERSAL_FOV ) * f end
 		return f
@@ -516,28 +532,28 @@ if CLIENT then
 	local util_TraceLine = util.TraceLine
 	local flLastCalcViewCall = 0
 	local SPRINT_ANIMATION_CAMERA = {
-		Pistol = function( f )
+		[ WPN_PISTOL ] = function( f )
 			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
 			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
 			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 4
 			local flBreathe = RealTime() * 18
 			vTargetAngle = vTargetAngle + Vector( math_cos( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
 		end,
-		Rifle = function( f )
+		[ WPN_RIFLE ] = function( f )
 			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
 			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
 			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 2
 			local flBreathe = RealTime() * 18
 			vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
 		end,
-		RifleUp = function( f )
+		[ WPN_RIFLEUP ] = function( f )
 			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
 			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
 			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 2
 			local flBreathe = RealTime() * 18
 			vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
 		end,
-		Sniper = function( f )
+		[ WPN_SNIPER ] = function( f )
 			SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS * 2
 			SPRING_CAMERA_DAMPING_CURRENT = SPRING_CAMERA_DAMPING * 2
 			SPRING_CAMERA_FORCE_CURRENT = SPRING_CAMERA_FORCE * 2
@@ -554,7 +570,10 @@ if CLIENT then
 		local f = SysTime()
 		local flFrameTime = f - flLastCalcViewCall
 		flLastCalcViewCall = f
-		vTarget, vTargetAngle = Vector(), Vector()
+		local aViewPunch = ply:GetViewPunchAngles() / MyTable.flRecoil * .2
+		local aViewPunch2Sub = aViewPunch * .1
+		ang:Sub( aViewPunch2Sub )
+		vTarget, vTargetAngle = Vector( 0, aViewPunch[ 2 ] * .15, -aViewPunch[ 1 ] * .15 ), Vector( -aViewPunch2Sub[ 1 ], aViewPunch2Sub[ 2 ] )
 		vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
 		if CEntity_IsOnGround( ply ) then
 			if CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) then
@@ -563,21 +582,15 @@ if CLIENT then
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if flVelocity > 10 then
 					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale * 2
-					local fFunction = SPRINT_ANIMATION_CAMERA[ MyTable.sAnimationSet ]
-					if fFunction then fFunction( f ) else SPRINT_ANIMATION_CAMERA.Rifle( f ) end
+					local fFunction = SPRINT_ANIMATION_CAMERA[ MyTable.WPN_SPRINT ]
+					if fFunction then fFunction( f ) else SPRINT_ANIMATION_CAMERA[ WPN_RIFLE ]( f ) end
 				end
 			else
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
-				//	if flVelocity > 10 then
-				//		local f = flVelocity / CPlayer_GetRunSpeed( ply ) * ( MyTable.flBobScale * 1.5 )
-				//		local flBreathe = RealTime() * 12
-				//		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
-				//	end
 				if flVelocity > 10 then
-					local flBreathe = RealTime() * 5
-					local f = flVelocity / CPlayer_GetWalkSpeed( ply )/* * MyTable.flAimMultiplier*/ * MyTable.flBobScale * .5
-					vTarget = vTarget - Vector( 0, -math_sin( flBreathe ), .5 - math_abs( math_cos( flBreathe ) ) ) * f
-					vTargetAngle = vTargetAngle + Vector( -math_abs( math_sin( flBreathe ) ), math_sin( flBreathe ) ) * f
+					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale
+					local flBreathe = RealTime() * 12
+					vTargetAngle:Add( Vector( math_cos( flBreathe ), 0, -math_cos( flBreathe * .5 ) * .5 ) * f )
 				end
 			end
 		end
@@ -590,20 +603,19 @@ if CLIENT then
 			vTargetAngle.z = vTargetAngle.z - 22.5
 		elseif p == COVER_BLINDFIRE_RIGHT then
 			vTargetAngle.z = vTargetAngle.z + 22.5
-		elseif CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) then
-			local p = CEntity_GetNW2Int( ply, "CTRL_Variants" )
-			if p == COVER_VARIANTS_LEFT then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - 2
-				vTarget[ 2 ] = vTarget[ 2 ] - self:OBBMaxs()[ 2 ] * .5
-			elseif p == COVER_VARIANTS_RIGHT then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 2 
-				vTarget[ 2 ] = vTarget[ 2 ] + self:OBBMaxs()[ 2 ] * .5
+		end
+		local pViewModel = ply:GetViewModel()
+		if IsValid( pViewModel ) then
+			local t = VIEWMODEL_CAMERA_ANIMATIONS[ pViewModel:GetModel() ]
+			if t then
+				local f = t[ pViewModel:GetSequenceName( pViewModel:GetSequence() ) ]
+				if f then
+					f( pViewModel, vTarget, vTargetAngle )
+				end
 			end
 		end
-		if CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
-			vViewTargetRatherQuick = vViewTargetRatherQuick + vBezier
-			vViewTargetRatherQuickAngle = vViewTargetRatherQuickAngle + vBezierAngle
-		end
+		vViewTargetRatherQuick:Add( vBezier )
+		vViewTargetRatherQuickAngle:Add( vBezierAngle )
 		vViewFinalVel = vViewFinalVel + ( vTarget - vViewFinal ) * SPRING_CAMERA_STIFFNESS_CURRENT * flFrameTime
 		vViewFinalVel = vViewFinalVel * math_exp( SPRING_CAMERA_DAMPING_CURRENT * flFrameTime )
 		vViewFinal = vViewFinal + vViewFinalVel * SPRING_CAMERA_FORCE_CURRENT * flFrameTime
@@ -673,47 +685,47 @@ if CLIENT then
 	SWEP.flAimTiltTime = 0
 	SWEP.flAimLastEyeYaw = 0
 	SWEP.flViewModelSprint = 0
-	SWEP.vBlindFireLeft = Vector( -1, -6, 2.5 )
+	SWEP.vBlindFireLeft = Vector( -1, -7, 1 )
 	SWEP.vBlindFireLeftAngle = Vector( 0, 0, -22.5 )
 	SWEP.vBlindFireRight = Vector( 1, .5, 1 )
-	SWEP.vBlindFireRightAngle = Vector( 0, 0, 0 )
+	SWEP.vBlindFireRightAngle = Vector( 0, 0, 22.5 )
 	SWEP.vBlindFireUp = Vector()
 	SWEP.vBlindFireUpAngle = Vector( 0, 0, -30 )
 	local flLastCalcViewModelViewCall = 0
 	local SPRINT_ANIMATION_VIEWMODEL = {
-		Pistol = function( MyTable, f, flViewModelSprint )
-			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
-			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
-			SPRING_FORCE_CURRENT = SPRING_FORCE * 4
+		[ WPN_PISTOL ] = function( MyTable, f, flViewModelSprint )
 			local flBreathe = RealTime() * 9
 			vTarget = vTarget + ( MyTable.vPistolSprint + Vector( 0, 0, math_cos( flBreathe ) * -2 ) ) * flViewModelSprint
 			vTargetAngle = vTargetAngle + ( MyTable.vPistolSprintAngle + Vector( math_cos( flBreathe ) * 22.5, 0, 0 ) ) * flViewModelSprint
 		end,
-		Rifle = function( MyTable, f, flViewModelSprint )
-			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
-			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
-			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
+		[ WPN_RIFLE ] = function( MyTable, f, flViewModelSprint )
 			local flBreathe = RealTime() * 18
 			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
 			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
 		end,
-		RifleUp = function( MyTable, f, flViewModelSprint )
-			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
-			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
-			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
+		[ WPN_RIFLEUP ] = function( MyTable, f, flViewModelSprint )
 			local flBreathe = RealTime() * 18
 			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
 			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
 		end,
-		Sniper = function( MyTable, f, flViewModelSprint )
-			SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS * 2
-			SPRING_DAMPING_CURRENT = SPRING_DAMPING * 2
-			SPRING_FORCE_CURRENT = SPRING_FORCE * 2
+		[ WPN_SNIPER ] = function( MyTable, f, flViewModelSprint )
 			local flBreathe = RealTime() * 18
 			vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_SNIPER_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
 			vTargetAngle = vTargetAngle + ( ( MyTable.vSprint || WEAPON_SPRINT_SNIPER_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
 		end
 	}
+
+	local COVER_CENTER = Vector( -20, 0, -8 )
+	local COVER_CENTER_ANGLE = Vector( 70, 5, 10 )
+
+	local COVER_LEFT = Vector( -20, 6.5, -8 )
+	local COVER_LEFT_ANGLE = Vector( 70, 5, 25 )
+
+	local COVER_RIGHT = Vector( -20, -8, -8 )
+	local COVER_RIGHT_ANGLE = Vector( 70, 0, -10 )
+
+	local math_max = math.max
+
 	function SWEP:CalcViewModelView( _, pos, ang )
 		SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS
 		SPRING_DAMPING_CURRENT = SPRING_DAMPING
@@ -740,40 +752,31 @@ if CLIENT then
 				local vAimAngle = MyTable.vViewModelAimAngle
 				vTargetAngle = vAimAngle && Vector( vAimAngle ) || Vector()
 			else bZoom = nil end
-		else
-			if CurTime() > self:GetNextPrimaryFire() then
-				vTarget = Vector( 0, math_cos( flBreathe * .5 ) * .0625, math_sin( flBreathe / 3 ) * .0625 )
-				vTargetAngle = Vector( math_sin( flBreathe / 3 ) * .25, math_cos( flBreathe * .5 ) * .25 )
-			end
-		end
+		else vTarget, vTargetAngle = Vector(), Vector() end
 		vInstantTarget, vInstantTargetAngle = Vector(), Vector()
 		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
 		vInstantTarget = vInstantTarget - Vector( MyTable.flViewModelY, 0, MyTable.flViewModelZ ) * MyTable.flViewModelSprint
 		if !MyTable.bCoverNotAnimated && bInCover then
 			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
-			if MyTable.__VIEWMODEL_FULLY_MODELED__ then
-				local f = CEntity_GetNW2Int( ply, "CTRL_Variants" )
-				if f == COVER_VARIANTS_LEFT then
-					vTargetAngle.x = vTargetAngle.x + 45
-					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
-					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX + ( MyTable.flCoverX || 0 )
-					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 ) - self:OBBMaxs()[ 2 ] * .5 + 6
-				elseif f == COVER_VARIANTS_RIGHT then
-					vTargetAngle.x = vTargetAngle.x + 45
-					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
-					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX + ( MyTable.flCoverX || 0 )
-					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 ) + self:OBBMaxs()[ 2 ] * .5 - 6
+			if CurTime() > MyTable.flReloadTime then
+				if MyTable.__VIEWMODEL_FULLY_MODELED__ then
+					local f = CEntity_GetNW2Int( ply, "CTRL_Variants" )
+					if f == COVER_VARIANTS_LEFT then
+						vTarget:Add( COVER_LEFT )
+						vTargetAngle:Add( COVER_LEFT_ANGLE )
+					elseif f == COVER_VARIANTS_RIGHT then
+						vTarget:Add( COVER_RIGHT )
+						vTargetAngle:Add( COVER_RIGHT_ANGLE )
+					else
+						vTarget:Add( COVER_CENTER )
+						vTargetAngle:Add( COVER_CENTER_ANGLE )
+					end
 				else
 					vTargetAngle.x = vTargetAngle.x + 45
-					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && MyTable.vViewModelAim[ 2 ] || 2 )
-					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX + ( MyTable.flCoverX || 0 )
+					vTarget.y = vTarget.y + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 )
+					vTarget.x = vTarget.x - 10 - MyTable.flViewModelX + ( MyTable.flCoverY || 0 )
 					vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 				end
-			else
-				vTargetAngle.x = vTargetAngle.x + 45
-				vTarget.y = vTarget.y + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 )
-				vTarget.x = vTarget.x - 10 - MyTable.flViewModelX + ( MyTable.flCoverY || 0 )
-				vTarget.z = vTarget.z - 10 - MyTable.flViewModelZ
 			end
 		else
 			local p, b = CEntity_GetNW2Int( ply, "CTRL_Peek" )
@@ -801,7 +804,7 @@ if CLIENT then
 			elseif p == COVER_BLINDFIRE_RIGHT then
 				vTargetAngle.z = vTargetAngle.z + 45
 			end
-			local bOnGround = CEntity_IsOnGround( ply )
+			local bOnGround, bWantsToSprint = CEntity_IsOnGround( ply )
 			if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
 				bOnGroundLast = true
@@ -809,13 +812,12 @@ if CLIENT then
 				if !b && CPlayer_Crouching( ply ) && !bZoom then vTarget = vTarget + Vector( -1, -1, .5 ) end
 				bOnGroundLast = true
 				if !bSliding && bSprinting && !MyTable.bSprintNotAnimated then
-					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 1 )
+					bWantsToSprint = true
 					local flSprint = MyTable.flViewModelSprint
 					local f = math_min( .5, CEntity_GetVelocity( ply ):Length() / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale
-					local fFunction = SPRINT_ANIMATION_VIEWMODEL[ MyTable.sAnimationSet ]
-					if fFunction then fFunction( MyTable, f, MyTable.flViewModelSprint ) else SPRINT_ANIMATION_VIEWMODEL.Rifle( MyTable, f, MyTable.flViewModelSprint ) end
+					local fFunction = SPRINT_ANIMATION_VIEWMODEL[ MyTable.WPN_SPRINT ]
+					if fFunction then fFunction( MyTable, f, MyTable.flViewModelSprint ) else SPRINT_ANIMATION_VIEWMODEL[ WPN_RIFLE ]( MyTable, f, flSprint ) end
 				else
-					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
 					local flVelocity = CEntity_GetVelocity( ply ):Length()
 					if !bZoom then
 						if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
@@ -824,11 +826,12 @@ if CLIENT then
 							vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
 						end
 					end
-					//	if flVelocity > 10 then
-					//		local flBreathe = RealTime() * 12
-					//		local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
-					//		vTarget = vTarget + Vector( 0, -math_sin( flBreathe * .5 ), .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * f
-					//	end
+					if flVelocity > 10 then
+						local flBreathe = RealTime() * 12
+						local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
+						vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .5, ( .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * -1 ) * f )
+						vTargetAngle:Add( Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f )
+					end
 				end
 			else
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
@@ -849,58 +852,64 @@ if CLIENT then
 					local pt = BezierY( f, 0, -4.36, 10 )
 					local yw = xx
 					local rl = BezierY( f, 0, -10.82, -5 )
-					vBezier = Vector( yy, xx, zz )
-					vBezierAngle = Vector( pt, yw )
+					vBezier = Vector( yy, xx, zz * .5 )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
 						vTargetRatherQuick:Add( vBezier * 2 )
-						vTargetRatherQuickAngle:Add( vBezierAngle )
-						vTargetRatherQuickAngle:Add( Vector( pt, yw, rl ) )
+						vTargetRatherQuickAngle:Add( Vector( pt * .2, yw, rl ) )
 					end
-					vBezierAngle = Vector( pt, ( yw + 1 ) * 4, ( yw + 1 ) * 2 )
+					vBezierAngle = Vector( ( yw + 1 ) * -1, ( yw + 1 ) * 4, ( yw + 1 ) * 2 )
 				elseif !bOnGround then
 					SPRING_FORCE_CURRENT = SPRING_FORCE * 1.5
 					local flBreathe = RealTime() * 30
-					vBezier = Vector( 0, math_cos( flBreathe * .5 ) * .0625, -5 + ( math_sin( flBreathe / 3 ) * .0625 ) )
-					vBezierAngle = Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25 )
+					vBezier = Vector( 0, math_cos( flBreathe * .5 ) * .0625, ( math_sin( flBreathe / 3 ) * .0625 ) )
+					vBezierAngle = Vector( ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25 )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
-						vTargetRatherQuick:Add( vBezier * 2 )
-						vTargetRatherQuickAngle:Add( vBezierAngle )
-						vTargetRatherQuickAngle:Add( Vector( 10 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25, -5 ) )
+						vTargetRatherQuick:Add( Vector( 0, math_cos( flBreathe * .5 ) * .0625, -5 * .2 + ( math_sin( flBreathe / 3 ) * .0625 ) ) )
+						vTargetRatherQuickAngle:Add( Vector( 10 * .2 - ( math_sin( flBreathe / 3 ) * .25 ), math_cos( flBreathe * .5 ) * .25, -5 ) )
 					end
 				elseif RealTime() <= flLandTime then
+					if bWantsToSprint then
+						MyTable.flViewModelSprint = Lerp( math_min( 1, 2 * flFrameTime ), MyTable.flViewModelSprint, 1 )
+					end
 					SPRING_FORCE_CURRENT = SPRING_FORCE * 1.5
 					local f = flLandTime - RealTime()
 					local xx = BezierY( f, 0, -4, 0 )
 					local yy = 0
-					local zz = BezierY( f, 0, -2, -5 )
-					local pt = BezierY( f, 0, -4.36, 10 )
+					local zz = BezierY( f, 0, 2, -5 )
+					local pt = BezierY( f, 0, -34.88, 10 )
 					local yw = xx
-					local rl = BezierY( f, 0, -10.82, -5 )
-					vBezier = Vector( yy, xx, zz )
-					vBezierAngle = Vector( pt, yw )
+					local rl = 0 // BezierY( f, 0, -10.82, -5 )
+					vBezier = Vector( yy, xx, zz * .5 )
 					if !MyTable.bJumpingNotAnimated && CurTime() > self:GetNextPrimaryFire() + .1 && !CPlayer_KeyDown( ply, IN_ZOOM ) then
 						vTargetRatherQuick:Add( vBezier * 2 )
-						vTargetRatherQuickAngle:Add( vBezierAngle )
-						vTargetRatherQuickAngle:Add( Vector( pt, yw, rl ) )
+						vTargetRatherQuickAngle:Add( Vector( pt * .2, yw, rl ) )
 					end
-					vBezierAngle = Vector( pt, ( yw + 1 ) * 4, ( yw + 1 ) * 2 )
+					vBezierAngle = Vector( ( yw + 1 ) * -1, ( yw + 1 ) * 4, ( yw + 1 ) * 2 )
+				elseif bWantsToSprint then
+					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 1 )
+				else
+					MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
 				end
+			elseif bWantsToSprint then
+				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 1 )
+			else
+				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
 			end
 		end
 		local f
 		if MyTable.Primary.Automatic then
 			f = .66 / MyTable.Primary_flDelay
-			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
+			MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		else
-			f =.66 / ( MyTable.Primary_flDelay + .1 )
-			MyTable.flCurrentRecoilForGap = math.max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
+			f = .66 / ( MyTable.Primary_flDelay + .1 )
+			MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
 		flAimTiltTime = Lerp( math_min( 1, 10 * flFrameTime ), flAimTiltTime, bZoom && flRoll || 0 )
 		local flTime = ( -( flAimTiltTime - ( flRoll * .5 ) ) ^ 2 + ( flRoll * .5 ) ^ 2 ) / ( flRoll * .5 )
 		MyTable.flAimTiltTime = flAimTiltTime
-		vTargetAngle = vTargetAngle + ( bZoom && Vector( -flTime / ( flRoll / 3 ), 0, -flTime ) || Vector( 3 * flTime / flRoll, 0, flTime ) )
+		vTargetAngle:Add( bZoom && Vector( -flTime / ( flRoll / 3 ), 0, -flTime ) || Vector( 3 * flTime / flRoll, 0, flTime ) )
 		if MyTable.aLastEyePosition == nil then MyTable.aLastEyePosition = Angle( 0, 0, 0 ) end
 		local eye = ply:EyeAngles()
 		MyTable.aLastEyePosition[ 1 ] = math_AngleDifference( aAim[ 1 ], eye[ 1 ] )
@@ -931,33 +940,33 @@ if CLIENT then
 			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_AngleDifference( ang[ 1 ], SLIDE_ANGLE )
 		end
 		local flYawTurn, flPitchTurn = 0, 0
-		if MyTable.sAnimationSet == "Pistol" then
+		if MyTable.WPN_SHOOT == WPN_PISTOL then
 			local tShootAnimations = {}
-			local flDelay = math_min( .1, MyTable.Primary_flDelay )
-			local flDelayLong = flDelay
-			local flDelayLongEnd = flDelay + flDelayLong
-			local flDelayVeryLong = flDelay
+			local flDelay = math_min( .1, MyTable.Primary_flDelay ) * .1
+			local flDelayLong = flDelay * 8
+			local flDelayLongEnd = flDelayLong + flDelay
+			local flDelayVeryLong = flDelay * 8
 			local flDelayVeryLongEnd = flDelayLongEnd + flDelayVeryLong
-			local flDelayVeryVeryLong = flDelay
+			local flDelayVeryVeryLong = flDelay * 8
 			local flDelayVeryVeryLongEnd = flDelayVeryLongEnd + flDelayVeryVeryLong
 			for _, flBegin in ipairs( MyTable.tShootAnimations ) do
 				if CurTime() <= flBegin + flDelay then
-					local f = ( 1 - ( flBegin + flDelay - CurTime() ) / flDelay )
+					local f = ( 1 - ( flBegin + flDelay - CurTime() ) / flDelay ) ^ 1.1
 					ang[ 1 ] = ang[ 1 ] - f * 5.625
 					pos = pos - ang:Forward() * f * 2
 					table.insert( tShootAnimations, flBegin )
 				elseif CurTime() <= flBegin + flDelayLongEnd then
-					local f = ( flBegin + flDelayLongEnd - CurTime() ) / flDelayLong
+					local f = ( ( flBegin + flDelayLongEnd - CurTime() ) / flDelayLong ) ^ 1.1
 					ang[ 1 ] = ang[ 1 ] - f * 5.625
 					pos = pos - ang:Forward() * f * 2
 					table.insert( tShootAnimations, flBegin )
 				elseif CurTime() <= flBegin + flDelayVeryLongEnd then
-					local f = ( 1 - ( flBegin + flDelayVeryLongEnd - CurTime() ) / flDelayVeryLong )
+					local f = ( ( 1 - ( flBegin + flDelayVeryLongEnd - CurTime() ) / flDelayVeryLong ) ) ^ 1.1
 					ang[ 1 ] = ang[ 1 ] - f * .5
 					pos = pos - ang:Up() * f * .5
 					table.insert( tShootAnimations, flBegin )
 				elseif CurTime() <= flBegin + flDelayVeryVeryLongEnd then
-					local f = ( flBegin + flDelayVeryVeryLongEnd - CurTime() ) / flDelayVeryVeryLong
+					local f = ( ( flBegin + flDelayVeryVeryLongEnd - CurTime() ) / flDelayVeryVeryLong ) ^ 1.1
 					ang[ 1 ] = ang[ 1 ] - f * .5
 					pos = pos - ang:Up() * f * .5
 					table.insert( tShootAnimations, flBegin )
@@ -967,8 +976,6 @@ if CLIENT then
 		else
 			// TODO: Better rifle shoot animation
 			MyTable.tShootAnimations = {}
-			local a = ply:GetViewPunchAngles()
-			flYawTurn, flPitchTurn = a[ 2 ] * .5, a[ 1 ] * .5
 			local flAimShoot = MyTable.flAimShoot
 			if flAimShoot then
 				local flDelay = math_Clamp( MyTable.Primary_flDelay, 0, .2 )
@@ -988,7 +995,7 @@ if CLIENT then
 				pos = pos - ang:Forward() * f * flAimShoot
 			end
 		end
-		vInstantTarget = vInstantTarget + Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ )
+		vInstantTarget:Add( Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ ) )
 		vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 		vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinal = vFinal + vFinalVel * SPRING_FORCE_CURRENT * flFrameTime
@@ -1024,14 +1031,11 @@ if CLIENT then
 		local flSwayVector = flSway * MyTable.flSwayStabilizer
 		local flSwayVectorNeg = -flSwayVector
 		if MyTable.__VIEWMODEL_FULLY_MODELED__ then flMultiplier = MyTable.flAimMultiplier end
-		ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale )
-		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1 - flMultiplier, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale ) * ang:Right()
-		ang:RotateAroundAxis( ang:Forward(), flSway * MyTable.aLastEyePosition.y / MyTable.flSwayScale * 2 * flMultiplier )
-		pos = pos + math_Clamp( ( flSwayVector * MyTable.aLastEyePosition.y / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Up() * .4 * flMultiplier
+		ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale )
+		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flYawTurn ) / MyTable.flSwayScale ) * ang:Right()
 		MyTable.aLastEyePosition[ 1 ] = math_Clamp( MyTable.aLastEyePosition[ 1 ], -MyTable.flSwayScale, MyTable.flSwayScale )
 		ang:RotateAroundAxis( ang:Right(), flSway * ( MyTable.aLastEyePosition[ 1 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flPitchTurn ) / MyTable.flSwayScale )
 		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 1 ] * Either( MyTable.__VIEWMODEL_FULLY_MODELED__, 1, flMultiplier ) + flPitchTurn ) / MyTable.flSwayScale ) * ang:Up()
-		pos = pos + ( flSwayVector * MyTable.aLastEyePosition[ 2 ] / MyTable.flSwayScale ) * ang:Right() * flMultiplier
 		return pos, ang
 	end
 	include "Crosshair.lua"

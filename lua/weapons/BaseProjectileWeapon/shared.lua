@@ -24,14 +24,6 @@ local CurTime = CurTime
 
 function SWEP:Initialize() CWeapon_SetHoldType( self, CEntity_GetTable( self ).sHoldType ) end
 
-function SWEP:DoMuzzleFlash()
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util_Effect( "MuzzleFlash", ed )
-end
-
 // Handle launch velocity here
 // NOTE: vDirection is not normalized. However, feel free
 // to use Normalize (in place) instead of GetNormalized,

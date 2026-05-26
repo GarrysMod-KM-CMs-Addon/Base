@@ -20,17 +20,41 @@ SWEP.Secondary.Ammo = ""
 SWEP.Spawnable = true
 SWEP.Slot = 4
 SWEP.ViewModelFOV = 54
+SWEP.flCoverY = -4
 SWEP.Crosshair = "Open"
 SWEP.flRecoil = 14
-SWEP.flViewModelX = -5
+SWEP.flViewModelX = -9
 SWEP.flViewModelY = -5
 SWEP.vSprint = Vector( -12, 1.358, -4 )
 SWEP.vViewModelAim = Vector( -15, -17 - SWEP.flViewModelY, -3.1 )
-SWEP.flCoverY = -8
 SWEP.Primary_flSpreadX = .05
 SWEP.Primary_flSpreadY = .05
 SWEP.bSpecial = true
 SWEP.bAllowReloadingDuringPrimaryFire = true
+
+if CLIENT then
+	local math_abs = math.abs
+	local math_sin = math.sin
+	local RealTime = RealTime
+	VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_rpg.mdl" ] = {
+		reload = function( pViewModel, vTarget, vTargetAngle )
+			local flCycle = pViewModel:GetCycle()
+			if flCycle < .25 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			elseif flCycle < .5 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+			elseif flCycle > .5 && flCycle < .8 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			end
+			if flCycle > .64 && flCycle < .74 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			end
+			if flCycle < .66 then
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+			end
+		end
+	}
+end
 
 sound.Add {
 	name = "RPG_Shot",

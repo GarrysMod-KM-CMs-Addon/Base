@@ -150,8 +150,6 @@ local ANALYZATION_STEP = 22.5 / 4
 
 local mDepthOfField = Material "pp/dof"
 
-SHOOTING_MOTION_BLUR = 0
-
 local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
 
@@ -174,8 +172,6 @@ local tDrawColorModify = {
 local RealTime = RealTime
 
 local vColor, flColorSum, flColor = Vector(), 0, 0
-
-local flTotalMotionBlur = 0
 
 local bBleedingBlur
 local flBleedingBlur = 0
@@ -228,8 +224,6 @@ hook.Add( "Tick", "Graphics", function()
 	end
 	vColor:Div( iPasses )
 	flColorSum = VectorSum( vColor )
-	SHOOTING_MOTION_BLUR = math_Clamp( SHOOTING_MOTION_BLUR - flFrameTime, 0, 1 )
-	flTotalMotionBlur = .66 - SHOOTING_MOTION_BLUR * .2
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .33
@@ -299,7 +293,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( flBleedingBlur )
 		DrawMotionBlur( flBleedingMotionBlurAdd, flBleedingMotionBlurDraw, 0 )
 	end
-	DrawMotionBlur( flTotalMotionBlur, 1, 0 )
+	DrawMotionBlur( .66, 1, 0 )
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
 		5, // Size X
@@ -509,6 +503,7 @@ surface.CreateFont( "ReinforcementsBar", {
 } )
 local flProgress = 0
 local MARKER_SIZE = 20
+local MARKER_SIZE_OUTLINE = MARKER_SIZE * 1.01
 local surface_SetDrawColor = surface.SetDrawColor
 local surface_DrawLine = surface.DrawLine
 local math_abs = math.abs
@@ -522,10 +517,10 @@ hook.Add( "HUDPaint", "Graphics", function()
 	if !IsValid( ply ) then return end
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
 	local i = 1
-	surface_SetDrawColor( 255, 0, 0, 128 )
 	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
 	while true do
-		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. tostring( i ) )
+		local sI = tostring( i )
+		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. sI )
 		if v == vector_origin then break end
 		i = i + 1
 		//	local ToScreen = v:ToScreen()
@@ -535,17 +530,50 @@ hook.Add( "HUDPaint", "Graphics", function()
 		//		x - flCenterX
 		//	) )
 		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
-		for i = 0, 2, .5 do
+		surface_SetDrawColor( 0, 0, 0, 255 )
+		for i = -1, 1, .5 do
+			local flScale = flOff + i
+			local flSegmentDistance = PRECOMPUTED / flScale
+			for a = f - MARKER_SIZE_OUTLINE, f + MARKER_SIZE_OUTLINE - flSegmentDistance, flSegmentDistance do
+				local flDelta = math_abs( a - f ) / MARKER_SIZE_OUTLINE
+				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .5
+				if flDelta <= .15 then
+					s = s + math_abs( flDelta - .15 ) * 80
+				end
+				s = s + 1
+				local flCurveInward = flDelta ^ 2 * 5
+				local flCurrentRadius = flScale - flCurveInward
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 5
+				local flNextRadius = flScale - flCurveInwardNext
+				surface_DrawLine(
+					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
+					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
+					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
+					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
+				)
+			end
+		end
+		if ply:GetNW2Bool( "GAME_b3DThreat" .. sI ) then
+			surface_SetDrawColor( 255, 0, 0, 255 )
+		else surface_SetDrawColor( 255, 255, 255, 255 ) end
+		for i = 0, 1, .5 do
 			local flScale = flOff + i
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
-				local s = 1 - math_abs( a - f ) / MARKER_SIZE
-				s = ( flThickness + s ^ 5 ) * flSize
+				local flDelta = math_abs( a - f ) / MARKER_SIZE
+				local s = MARKER_SIZE * ( 1 - flDelta ) * .5
+				if flDelta <= .15 then
+					s = s + math_abs( flDelta - .15 ) * 80
+				end
+				local flCurveInward = flDelta ^ 2 * 5
+				local flCurrentRadius = flScale - flCurveInward
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 5
+				local flNextRadius = flScale - flCurveInwardNext
 				surface_DrawLine(
-					flCenterX + math_cos( math_rad( a ) ) * ( flScale + s ),
-					flCenterY - math_sin( math_rad( a ) ) * ( flScale + s ),
-					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flScale,
-					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flScale
+					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
+					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
+					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
+					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
 				)
 			end
 		end

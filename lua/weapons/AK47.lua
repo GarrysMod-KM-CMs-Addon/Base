@@ -32,7 +32,6 @@ SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.sHoldType = "AR2"
 
 if IsMounted "left4dead2" then
-	SWEP.sAnimationSet = "AK"
 	SWEP.flAimShoot = 6
 	SWEP.ViewModel = Model "models/v_models/v_rifle_ak47.mdl"
 	function SWEP:GetDrawActivity() return ACT_VM_DEPLOY end

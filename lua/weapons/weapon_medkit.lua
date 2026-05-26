@@ -24,7 +24,8 @@ SWEP.flFailDelay = .5
 SWEP.flHeal = SWEP.Primary.ClipSize
 SWEP.flReFillRate = 1
 SWEP.flReFillAmount = 128
-SWEP.sAnimationSet = "Pistol"
+SWEP.WPN_SPRINT = WPN_PISTOL
+// SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.Crosshair = ""
 
 local CurTime = CurTime

@@ -28,22 +28,12 @@ local CurTime = CurTime
 
 function SWEP:Initialize() CWeapon_SetHoldType( self, CEntity_GetTable( self ).sHoldType ) end
 
-function SWEP:DoMuzzleFlash()
-	local ed = EffectData()
-	ed:SetEntity( self )
-	ed:SetAttachment( 1 )
-	ed:SetFlags( 1 )
-	util_Effect( self:GetMuzzleFlash(), ed )
-end
-
 function SWEP:FurtherModificationsToBulletTable( tBullets, MyTable ) end
 
 function SWEP:PrimaryAttack()
 	local MyTable = CEntity_GetTable( self )
 	if !MyTable.CanPrimaryAttack( self, MyTable ) then return end
 	local owner = CEntity_GetOwner( self )
-	if MyTable.bNoMuzzleFlash then MyTable.GAME_bNoMuzzleFlash = true
-	else MyTable.DoMuzzleFlash( self, MyTable ) end
 	local tBullets = {
 		Attacker = owner,
 		Src = owner:GetShootPos(),

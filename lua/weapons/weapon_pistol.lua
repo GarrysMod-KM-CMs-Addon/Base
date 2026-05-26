@@ -28,12 +28,54 @@ SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -5.51 - SWEP.flViewModelY,
 SWEP.flAimShoot = 6
 SWEP.Crosshair = "Pistol"
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
-SWEP.sAnimationSet = "Pistol"
+SWEP.WPN_SPRINT = WPN_PISTOL
+SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.flRecoil = 1.6
 SWEP.flSideWaysRecoilMin = -.28
 SWEP.flSideWaysRecoilMax = .28
 SWEP.flRecoilGrowMin = .5
 SWEP.flRecoilGrowMax = .9
+
+if CLIENT then
+	local math_abs = math.abs
+	local math_sin = math.sin
+	local RealTime = RealTime
+	VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_pistol.mdl" ] = {
+		reload = function( pViewModel, vTarget, vTargetAngle )
+			local flCycle = pViewModel:GetCycle()
+			if flCycle < .21 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			elseif flCycle < .4 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+			elseif flCycle > .4 && flCycle < .8 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			end
+			if flCycle > .68 && flCycle < .78 then
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+			end
+			if flCycle < .66 then
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+			end
+		end
+	}
+
+	function SWEP:ReloadSoundInternal() self:EmitSound "USPMatchReload" end
+end
+
+local IsValid = IsValid
+
+function SWEP:ReloadEffects()
+	local pOwner = self:GetOwner()
+	if IsValid( pOwner ) && pOwner:IsPlayer() then self:CallOnClient "ReloadSoundInternal" end
+end
+
+sound.Add {
+	name = "USPMatchReload",
+	channel = CHAN_ITEM,
+	level = 60,
+	pitch = 100,
+	sound = "weapons/pistol/pistol_reload1.wav"
+}
 
 sound.Add {
 	name = "USPMatchShot",

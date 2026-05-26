@@ -57,8 +57,8 @@ function ENT:MoveAlongPathToCover( Path, tFilter )
 	self:MoveAlongPath( Path, self.flTopSpeed, 1, tFilter, true )
 end
 
-ENT.flTopSpeed = HUMAN_RUN_SPEED
-ENT.flRunSpeed = HUMAN_PROWL_SPEED
+ENT.flTopSpeed = HUMAN_SPRINT_SPEED
+ENT.flRunSpeed = HUMAN_RUN_SPEED
 ENT.flWalkSpeed = HUMAN_WALK_SPEED
 
 function ENT:BodyUpdate() self:BodyMoveXY() end

@@ -192,7 +192,7 @@ hook.Add( "Tick", "Director", function()
 				if f then
 					f = f( pEntity )
 					if IsValid( f ) && f == ply then
-						table.insert( tThreatDirections, pEntity:GetPos() + pEntity:OBBCenter() )
+						table.insert( tThreatDirections, pEntity )
 					end
 				end
 			end
@@ -213,13 +213,19 @@ hook.Add( "Tick", "Director", function()
 		end
 		local i = 1
 		while true do
-			local s = "GAME_v3DThreat" .. tostring( i )
+			local sI = tostring( i )
+			local s = "GAME_v3DThreat" .. sI
 			local v = ply:GetNW2Vector( s )
 			if v == vector_origin then break end
 			ply:SetNW2Vector( s )
+			ply:SetNW2Bool( "GAME_b3DThreat" .. sI )
 			i = i + 1
 		end
-		for i, v in ipairs( tThreatDirections ) do ply:SetNW2Vector( "GAME_v3DThreat" .. tostring( i ), v ) end
+		for i, pEntity in ipairs( tThreatDirections ) do
+			local sI = tostring( i )
+			ply:SetNW2Vector( "GAME_v3DThreat" .. sI, pEntity:GetPos() + pEntity:OBBCenter() )
+			ply:SetNW2Bool( "GAME_b3DThreat" .. sI, pEntity.GAME_bHurtEnemy )
+		end
 		local tNewSpotted = {}
 		for pEntity, flTime in pairs( tSpotted ) do
 			if !IsValid( pEntity ) then continue end

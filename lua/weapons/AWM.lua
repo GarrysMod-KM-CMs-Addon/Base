@@ -31,7 +31,8 @@ SWEP.vViewModelAim = Vector( -13.5, -7.45, 2.3 )
 SWEP.bSniper = true
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.flRecoil = 10
-SWEP.sAnimationSet = "UpRun"
+SWEP.WPN_SPRINT = WPN_RIFLEUP
+SWEP.WPN_SHOOT = WPN_RIFLEUP
 
 function SWEP:FreezeMovement()
 	local owner = self:GetOwner()

@@ -5,15 +5,12 @@ concommand.Add( "-drop", function( ply )
 	ply:DropWeapon()
 end )
 
-ACCELERATION_NORMAL = 5
-
-HUMAN_RUN_SPEED, HUMAN_PROWL_SPEED, HUMAN_WALK_SPEED, HUMAN_JUMP_HEIGHT = 300, 200, 75, 52
+include "autorun/Improvements.lua"
 
 local RunConsoleCommand = RunConsoleCommand
 RunConsoleCommand( "sv_accelerate", ACCELERATION_NORMAL )
 RunConsoleCommand( "sv_friction", ACCELERATION_NORMAL )
 
-GRAVITY_NORMAL = 800
 RunConsoleCommand( "sv_gravity", GRAVITY_NORMAL )
 
 HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
@@ -226,7 +223,7 @@ hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 end )
 
 // This is very crude and might break things, but whatever, it's worth enough
-MODEL_SIZE_GENERAL_MULTIPLIER = 1.228
+MODEL_SIZE_GENERAL_MULTIPLIER = 1 / .75
 
 local cCorrectScale = CreateConVar(
 	"bCorrectScale",
@@ -313,18 +310,6 @@ local math_max = math.max
 hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, flDamage )
 	ply:SetNW2Float( "GAME_flBleeding", ply:GetNW2Float( "GAME_flBleeding", 0 ) +
 	flDamage / ( math_max( ply:Health(), ply:GetMaxHealth() ) * 112 ) )
-	local b = true
-	local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	if v then
-		v = v.Hurt
-		if v then if v( ply, pAttacker, flHealth, flDamage ) then b = nil end end
-	end
-	if b then
-		b = !ply.GAME_bSecondHurtViewPunch
-		ply.GAME_bSecondHurtViewPunch = b
-		local f = ply:GetMaxHealth()
-		ply:ViewPunch( Angle( 0, 0, flDamage * ( flHealth > f && .08 || math.Remap( flHealth, 0, f, .4, .04 ) ) * ( b && 1 || -1 ) ) )
-	end
 end )
 
 hook.Add( "PlayerCanHearPlayersVoice", "GameImprovements", function( pListener, pSpeaker )
@@ -373,6 +358,16 @@ local cSGT = CreateConVar(
 	0, 1
 )
 
+local math_random = math.random
+
+local net_Start = net.Start
+local net_WriteFloat = net.WriteFloat
+local net_WriteVector = net.WriteVector
+local net_WriteUInt = net.WriteUInt
+local net_Broadcast = net.Broadcast
+
+local function fViolentAssRandom() return 1 - .9 * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() end
+
 hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if _Comp then return end
 	hook.Run( "EntityFireBullets", ent, Data, true )
@@ -418,13 +413,13 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		t = pTarget.OnBulletImpact
 		if t then t( pTarget, dDamage ) end
 		if bMuzzleFlash then
-			net.Start "EphemeralLight"
-				net.WriteFloat( col[ 4 ] * .003 ) // Brightness
-				net.WriteFloat( 128 ) // Size
-				net.WriteFloat( 2 ) // Existence length
-				net.WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
-				net.WriteUInt( col[ 1 ], 8 ) net.WriteUInt( col[ 2 ], 8 ) net.WriteUInt( col[ 3 ], 8 ) // R, G, B
-			net.Broadcast()
+			net_Start "EphemeralLight"
+				net_WriteFloat( col[ 4 ] * .003 * fViolentAssRandom() ) // Brightness
+				net_WriteFloat( 384 * fViolentAssRandom() ) // Size
+				net_WriteFloat( .33 * fViolentAssRandom() ) // Existence length
+				net_WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
+				net_WriteUInt( col[ 1 ], 8 ) net_WriteUInt( col[ 2 ], 8 ) net_WriteUInt( col[ 3 ], 8 ) // R, G, B
+			net_Broadcast()
 		end
 		// local pt = ents.Create "env_projectedtexture"
 		// pt:SetPos( tr.StartPos )
@@ -477,7 +472,7 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( ent, dDamage )
 				v = v.OnHurtSomething
 				if v then if v( at, ent, dDamage ) then b = nil end end
 			end
-		end
+		elseif at.GetEnemy then at.GAME_bHurtEnemy = true end
 		local f = at.GAME_OnHurtSomething
 		if f then f( at, ent, dDamage ) end
 	end
@@ -687,6 +682,11 @@ hook.Add( "Think", "GameImprovements", function()
 		end
 	end
 	for _, ent in ents_Iterator() do
+		local fGetEnemy = ent.GetEnemy
+		if fGetEnemy then
+			local pEnemy = fGetEnemy( ent )
+			if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !ent:Visible( pEnemy ) then ent.GAME_bHurtEnemy = nil end
+		end
 		if ent:GetClass() == "light_environment" then ent:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" ) end
 		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 		if ent.GAME_Think then ent:GAME_Think() end
@@ -875,9 +875,8 @@ hook.Add( "Think", "GameImprovements", function()
 	end
 end )
 
-COVER_BOUND_SIZE = 3
+COVER_BOUND_SIZE = 2
 
-// IF YOU EDIT THIS, BE SURE TO EDIT ControlsPrediction.lua TOO!
 local CEntity_IsOnGround = CEntity.IsOnGround
 local CEntity_WaterLevel = CEntity.WaterLevel
 local CEntity_Remove = CEntity.Remove

@@ -3,8 +3,19 @@ DEFINE_BASECLASS "BaseBulletWeapon"
 SWEP.Category = "Shotguns"
 SWEP.PrintName = "#BenelliM4Super90"
 SWEP.Instructions = "Primary to shoot."
-SWEP.Purpose = "Benelli M4 Super 90, a.k.a XM1014."
-SWEP.ViewModel = Model "models/weapons/cstrike/c_shot_xm1014.mdl"
+SWEP.Purpose = "Benelli M4 Super 90."
+if IsMounted "left4dead2" then
+	function SWEP:GetDrawActivity() return ACT_VM_DEPLOY end
+	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
+	SWEP.ViewModel = Model "models/v_models/v_autoshotgun.mdl"
+	// I know I'm not supposed to do this (it's one of my core philosophies to never
+	// touch FoV and instead use flViewModelX), but oh well, this looks way better
+	SWEP.ViewModelFOV = 51
+else
+	SWEP.flViewModelY = -4
+	SWEP.flViewModelZ = .5
+	SWEP.ViewModel = Model "models/weapons/cstrike/c_shot_xm1014.mdl"
+end
 SWEP.UseHands = true
 SWEP.WorldModel = Model "models/weapons/w_shot_xm1014.mdl"
 SWEP.Primary.ClipSize = 8
@@ -25,15 +36,12 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 3
 SWEP.DrawAmmo = true
-SWEP.Crosshair = "Shotgun"
+SWEP.Crosshair = "Rifle"
 SWEP.flRecoil = 6.8
 SWEP.flSideWaysRecoilMin = -.45
 SWEP.flSideWaysRecoilMax = .45
 SWEP.flRecoilGrowMin = .6
 SWEP.flRecoilGrowMax = 1
-
-SWEP.flViewModelY = -4
-SWEP.flViewModelZ = .5
 
 function SWEP:SetupDataTables()
 	self:NetworkVar( "Bool", 0, "Reloading" )
@@ -51,8 +59,12 @@ function SWEP:StartReload()
 	if self:GetReloading() then return end
 	local owner = self:GetOwner()
 	if !IsValid( owner ) || owner.GetAmmoCount && owner:GetAmmoCount( self.Primary.Ammo ) <= 0 || self:Clip1() >= self.Primary.ClipSize then return end
-	self:SendWeaponAnim( ACT_SHOTGUN_RELOAD_START )
-	self:SetReloadTimer( CurTime() + self:SequenceDuration() )
+	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
+	self:SetClip1( self:Clip1() + 1 )
+	self:SendWeaponAnim( ACT_VM_RELOAD )
+	local f = self:SequenceDuration()
+	self:SetReloadTimer( CurTime() + f )
+	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
 	self:SetReloading( true )
 	return true
 end
@@ -63,16 +75,20 @@ function SWEP:PerformReload()
 	if self:Clip1() >= self.Primary.ClipSize then return end
 	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
 	self:SetClip1( self:Clip1() + 1 )
-	self:SendWeaponAnim( ACT_VM_RELOAD )
-	local t = CurTime() + self:SequenceDuration()
+	self:SendWeaponAnim( 2047 )
+	local f = self:SequenceDuration()
+	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
+	local t = CurTime() + f
 	self:SetNextPrimaryFire( t )
 	self:SetReloadTimer( t )
 end
 
 function SWEP:FinishReload()
 	self:SetReloading( false )
-	self:SendWeaponAnim( ACT_SHOTGUN_RELOAD_FINISH )
-	local t = CurTime() + self:SequenceDuration()
+	self:SendWeaponAnim( ACT_VM_RELOAD_END )
+	local f = self:SequenceDuration()
+	if self:GetOwner():IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
+	local t = CurTime() + f
 	self:SetNextPrimaryFire( t )
 	self:SetReloadTimer( t )
 end
@@ -108,8 +124,58 @@ sound.Add {
 	name = "BenelliM4Super90Shot",
 	channel = CHAN_WEAPON,
 	level = 150,
-	pitch = { 90, 110 },
+	pitch = 100,
 	sound = "^BenelliM4Super90Shot.wav"
 }
 
 SWEP.sSound = "BenelliM4Super90Shot"
+
+sound.Add {
+	name = "BenelliM4Super90ShotAuto",
+	channel = CHAN_AUTO,
+	level = 150,
+	pitch = 100,
+	sound = "^BenelliM4Super90Shot.wav"
+}
+
+SWEP.sSoundAuto = "BenelliM4Super90ShotAuto"
+
+if SERVER then return end
+
+local math_abs = math.abs
+local math_sin = math.sin
+local RealTime = RealTime
+VIEWMODEL_CAMERA_ANIMATIONS[ "models/v_models/v_autoshotgun.mdl" ] = {
+	// Raise and load a shell
+	reload = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .4 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 1
+		elseif flCycle < .8 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+		end
+		vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+	end,
+	// Insert shell
+	reload_loop = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .33 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - .33
+		elseif flCycle < .66 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + .66
+		end
+		vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+	end,
+	// Lower
+	reload_end = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .33 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+		elseif flCycle < .66 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 2
+		end
+		if flCycle < .66 then
+			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+		end
+	end,
+}

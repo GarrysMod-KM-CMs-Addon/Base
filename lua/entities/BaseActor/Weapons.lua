@@ -157,7 +157,9 @@ function ENT:WeaponPrimaryAttack( MyTable )
 	local WeaponTable = CEntity_GetTable( pWeapon )
 	WeaponTable.PrimaryAttack( pWeapon )
 	// Nuh uh!
-	// self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
+	//	self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
+	// ^ Yes uh!
+	self:RestartGesture( MyTable.TranslateActivity( self, MyTable.Crouching( self, MyTable ) && ACT_MP_ATTACK_CROUCH_PRIMARYFIRE || ACT_MP_ATTACK_STAND_PRIMARYFIRE, MyTable ) )
 	return true
 end
 

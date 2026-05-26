@@ -24,7 +24,8 @@ SWEP.flViewModelZ = .5
 SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -5.51 - SWEP.flViewModelY, 3.145 - SWEP.flViewModelZ )
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.Crosshair = "Pistol"
-SWEP.sAnimationSet = "Pistol"
+SWEP.WPN_SPRINT = WPN_PISTOL
+SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.Primary_flDelay = 1
 
 sound.Add {
