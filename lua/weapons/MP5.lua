@@ -53,6 +53,18 @@ if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
 		soundlevel = 80,
 		sound = "MP5/Bolt.wav"
 	}
+	function SWEP:DrawWorldModel()
+		self:DrewWorldModelAndUsedRenderOverrides()
+		local pOwner = self:GetOwner()
+		if !IsValid( pOwner ) then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) self:DrawModel() return end
+		local tHand = pOwner:GetAttachment( pOwner:LookupAttachment "anim_attachment_rh" )
+		local ang = tHand.Ang
+		local vOffset = ang:Right() * 1 + ang:Forward() * 0 + ang:Up() * 2
+		ang:RotateAroundAxis( ang:Up(), 180 )
+		self:SetRenderOrigin( tHand.Pos + vOffset )
+		self:SetRenderAngles( ang )
+		self:DrawModel()
+	end
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_smg_mp5.mdl"
 	SWEP.WorldModel = Model "models/weapons/w_smg_mp5.mdl"

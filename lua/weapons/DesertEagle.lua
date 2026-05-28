@@ -54,6 +54,18 @@ if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 		soundlevel = 80,
 		sound = "DesertEagle/Bolt.wav"
 	}
+	function SWEP:DrawWorldModel()
+		self:DrewWorldModelAndUsedRenderOverrides()
+		local pOwner = self:GetOwner()
+		if !IsValid( pOwner ) then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) self:DrawModel() return end
+		local tHand = pOwner:GetAttachment( pOwner:LookupAttachment "anim_attachment_rh" )
+		local ang = tHand.Ang
+		local vOffset = ang:Right() * .55 + ang:Forward() * -2 + ang:Up() * -.5
+		ang:RotateAroundAxis( ang:Forward(), 10 )
+		self:SetRenderOrigin( tHand.Pos + vOffset )
+		self:SetRenderAngles( ang )
+		self:DrawModel()
+	end
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_pist_deagle.mdl"
 	SWEP.WorldModel = Model "models/weapons/w_pist_deagle.mdl"

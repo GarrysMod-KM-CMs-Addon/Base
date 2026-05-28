@@ -375,7 +375,7 @@ function SWEP:DoRecoil()
 	if game.SinglePlayer() && SERVER && pOwner:IsPlayer() then self:CallOnClient "DoRecoil" end
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
 	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
-	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil ) * .33
+	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil )
 	if pOwner:IsPlayer() then self:CallOnClient( "AddRecoil", flRecoil ) end
 	local f = pOwner.ViewPunch
 	if IsValid( pOwner ) && f then
@@ -388,13 +388,13 @@ function SWEP:DoRecoil()
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", 0, 1 )
 			if b then flYaw = -flYaw end
 			self.m_bFlipMyKickYaw = !b
-			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * .66 )
+			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) )
 		else
 			local flPitch = util_SharedRandom( "BaseWeaponViewPunchPitch", -1, 1 )
 			self.m_bFlipMyKickPitch = flPitch > 0
 			local flYaw = util_SharedRandom( "BaseWeaponViewPunchYaw", -1, 1 )
 			self.m_bFlipMyKickYaw = flYaw > 0
-			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) * .66 )
+			f( pOwner, Angle( flPitch * flRecoil, flYaw * flRecoil, 0 ) )
 		end
 		self.m_flFlipMyKick = CurTime() + self.Primary_flDelay * 1.1
 	end
