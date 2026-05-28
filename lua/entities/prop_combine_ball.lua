@@ -138,6 +138,7 @@ function ENT:PhysicsCollide( tData )
 			net.WriteFloat( 4 ) // Brightness
 			net.WriteFloat( self:BoundingRadius() * ( self:Health() / self:GetMaxHealth() ) * 8 ) // Size
 			net.WriteFloat( 16 ) // Existence length
+			net.WriteFloat( 16 ) // Fade time
 			net.WriteVector( tData.HitPos ) // Position
 			net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) // R, G, B
 		net.Broadcast()
