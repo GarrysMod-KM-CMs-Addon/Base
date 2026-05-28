@@ -22,6 +22,7 @@ net.Start "EphemeralLight"
 	net.WriteFloat( 1 ) // Brightness
 	net.WriteFloat( 1 ) // Size
 	net.WriteFloat( 1 ) // Existence length
+	net.WriteFloat( 1 ) // Fade time
 	net.WriteVector( vector_origin ) // Position
 	net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) // R, G, B
 net.Broadcast()
@@ -49,9 +50,8 @@ net.Receive( "EphemeralLight", function()
 	if pLight then
 		pLight.brightness = net_ReadFloat()
 		pLight.size = net_ReadFloat()
-		local f = net_ReadFloat()
-		pLight.decay = 1000 / f
-		pLight.dietime = CurTime() + f
+		pLight.dietime = CurTime() + net_ReadFloat()
+		pLight.decay = 1000 / net_ReadFloat()
 		pLight.pos = net_ReadVector()
 		pLight.r = net_ReadUInt( 8 )
 		pLight.g = net_ReadUInt( 8 )
@@ -512,6 +512,9 @@ local math_max = math.max
 local math_cos = math.cos
 local math_sin = math.sin
 local math_rad = math.rad
+local draw_NoTexture = draw.NoTexture
+local surface_DrawRect = surface.DrawRect
+local draw_DrawText = draw.DrawText
 hook.Add( "HUDPaint", "Graphics", function()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
@@ -536,10 +539,8 @@ hook.Add( "HUDPaint", "Graphics", function()
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE_OUTLINE, f + MARKER_SIZE_OUTLINE - flSegmentDistance, flSegmentDistance do
 				local flDelta = math_abs( a - f ) / MARKER_SIZE_OUTLINE
-				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .5
-				if flDelta <= .15 then
-					s = s + math_abs( flDelta - .15 ) * 80
-				end
+				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .6
+				if flDelta <= .166 then s = s + math_abs( flDelta - .166 ) * 66 end
 				s = s + 1
 				local flCurveInward = flDelta ^ 2 * 5
 				local flCurrentRadius = flScale - flCurveInward
@@ -561,10 +562,8 @@ hook.Add( "HUDPaint", "Graphics", function()
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
 				local flDelta = math_abs( a - f ) / MARKER_SIZE
-				local s = MARKER_SIZE * ( 1 - flDelta ) * .5
-				if flDelta <= .15 then
-					s = s + math_abs( flDelta - .15 ) * 80
-				end
+				local s = MARKER_SIZE * ( 1 - flDelta ) * .6
+				if flDelta <= .166 then s = s + math_abs( flDelta - .166 ) * 66 end
 				local flCurveInward = flDelta ^ 2 * 5
 				local flCurrentRadius = flScale - flCurveInward
 				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 5
@@ -581,16 +580,16 @@ hook.Add( "HUDPaint", "Graphics", function()
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
 	if f <= 0 then flProgress = 0 return end
 	flProgress = Lerp( math.min( 1, RealFrameTime() ), flProgress, f )
-	draw.NoTexture()
+	draw_NoTexture()
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05
-	surface.SetDrawColor( 0, 0, 0 )
-	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * .033, flLabelWidth, flLabelHeight )
-	draw.DrawText( language.GetPhrase "ReinforcementsBar", "ReinforcementsBar", flWidth * .5, flHeight * .033, Color( 255, 255, 255, 255 ), TEXT_ALIGN_CENTER )
-	surface.SetDrawColor( 64, 64, 64 )
+	surface_SetDrawColor( 0, 0, 0 )
+	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * .033, flLabelWidth, flLabelHeight )
+	draw_DrawText( language.GetPhrase "ReinforcementsBar", "ReinforcementsBar", flWidth * .5, flHeight * .033, Color( 255, 255, 255, 255 ), TEXT_ALIGN_CENTER )
+	surface_SetDrawColor( 64, 64, 64 )
 	flLabelWidth = flLabelWidth * .9
-	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flLabelWidth, flHeight * .008 )
+	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flLabelWidth, flHeight * .008 )
 	// The flashing is only activated when the true lerped progress is less than a half, not the smoothened one
-	surface.SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
-	surface.DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
+	surface_SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
+	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
 end )

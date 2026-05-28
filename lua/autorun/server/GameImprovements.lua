@@ -313,13 +313,13 @@ hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, 
 end )
 
 hook.Add( "PlayerCanHearPlayersVoice", "GameImprovements", function( pListener, pSpeaker )
-	if pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) > ( pListener.GAME_flSpeakDistanceSqr || 13249600/*3640*/ ) then return false end
+	if pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) > ( pSpeaker.GAME_flSpeakDistanceSqr || 13249600/*3640*/ ) then return false end
 	return true, true
 end )
 
 hook.Add( "PlayerCanSeePlayersChat", "GameImprovements", function( _/*sText*/, _/*bTeamOnly*/, pListener, pSpeaker )
 	if !IsValid( pSpeaker ) then return true end
-	return pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) <= ( pListener.GAME_flSpeakDistanceSqr || 13249600/*3640*/ )
+	return pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) <= ( pSpeaker.GAME_flSpeakDistanceSqr || 13249600/*3640*/ )
 end )
 
 hook.Add( "GetFallDamage", "GameImprovements", function( ply, flSpeed )
@@ -390,6 +390,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		v[ 2 ] = v[ 2 ] * 4
 		Data.Damage = Data.Damage * .125
 	end
+	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math.Rand( .25, .75 ), 0, .2 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
@@ -414,31 +415,14 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		if t then t( pTarget, dDamage ) end
 		if bMuzzleFlash then
 			net_Start "EphemeralLight"
-				net_WriteFloat( col[ 4 ] * .003 * fViolentAssRandom() ) // Brightness
-				net_WriteFloat( 384 * fViolentAssRandom() ) // Size
-				net_WriteFloat( .33 * fViolentAssRandom() ) // Existence length
+				net_WriteFloat( col[ 4 ] * .002 * fViolentAssRandom() ) // Brightness
+				net_WriteFloat( 512 * fViolentAssRandom() ) // Size
+				net_WriteFloat( flMuzzleFlashTime * fViolentAssRandom() ) // Existence length
+				net_WriteFloat( 512 ) // Fade time - just keep this a huge number, muzzleflashes fade out instantly on dietime instead of this
 				net_WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
 				net_WriteUInt( col[ 1 ], 8 ) net_WriteUInt( col[ 2 ], 8 ) net_WriteUInt( col[ 3 ], 8 ) // R, G, B
 			net_Broadcast()
 		end
-		// local pt = ents.Create "env_projectedtexture"
-		// pt:SetPos( tr.StartPos )
-		// pt:SetAngles( ( tr.HitPos - tr.StartPos ):GetNormalized():Angle() )
-		// pt:SetKeyValue( "lightfov", "110" )
-		// pt:SetKeyValue( "lightcolor", table.concat( col, " " ) )
-		// pt:SetKeyValue( "farz", "256" )
-		// pt:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
-		// pt:SetOwner( GetOwner( ent ) )
-		// pt:Spawn()
-		// timer.Simple( .1, function() if IsValid( pt ) then pt:Remove() end end )
-		// As cool as this looks sometimes, bullets don't do this in real life!
-		//	net.Start "EphemeralLight"
-		//		net.WriteFloat( col[ 4 ] * .006 ) // Brightness
-		//		net.WriteFloat( 32 ) // Size
-		//		net.WriteFloat( 4 ) // Existence length
-		//		net.WriteVector( tr.HitPos ) // Position
-		//		net.WriteUInt( col[ 1 ], 8 ) net.WriteUInt( col[ 2 ], 8 ) net.WriteUInt( col[ 3 ], 8 ) // R, G, B
-		//	net.Broadcast()
 		return { damage = false, effects = true }
 	end
 	return true
@@ -1519,7 +1503,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
 		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
 		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
-		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE || Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
 		// The more gunfire is going on, the less the break between the shots and adrenaline will be,
 		// and if there's too much shit going on, start the music without waiting for a break! (Internally break becomes 0)
 		local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
@@ -1541,7 +1525,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 				if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
 				else ply.DR_flVoDangerousWait = t end
 			end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .001, 0, DIRECTOR_MUSIC_VO_WAIT )
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .033, 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end
@@ -1552,7 +1536,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			ply.DR_flIAmAlreadyInDangerForSomeTime = t
 			if f <= 0 then ply.DR_flVoWait = RealTime()
 			else ply.DR_flVoWait = t end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .001, math.Clamp( SoundDuration( Data.SoundName ), .2, 8 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .033, 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end

@@ -423,22 +423,23 @@ function DIRECTOR_CLIENT_TICK()
 	elseif DIRECTOR_MUSIC_IN_VO && ( !DIRECTOR_TRANSITION || !DIRECTOR_TRANSITION.m_bIntroOfATrack ) then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
-			local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable
-			local f = t.CheckIntro
-			if f && f "HoldFire" then
-				DIRECTOR_MUSIC_IN_VO = nil
-				DIRECTOR_TRANSITION = Director_Music_Container()
-				DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
-				DIRECTOR_TRANSITION.m_flVolume = 1
-				DIRECTOR_TRANSITION.m_bToCombat = true
-				DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
-				DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
-				DIRECTOR_TRANSITION.m_bIntroOfATrack = true
-				DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
-				net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-				LAST_DIRECTOR_CLIENT_TICK = SysTime()
-				return
-			end
+			// Doesn't work like that anymore!
+			//	local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable
+			//	local f = t.CheckIntro
+			//	if f && f "HoldFire" then
+			//		DIRECTOR_MUSIC_IN_VO = nil
+			//		DIRECTOR_TRANSITION = Director_Music_Container()
+			//		DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
+			//		DIRECTOR_TRANSITION.m_flVolume = 1
+			//		DIRECTOR_TRANSITION.m_bToCombat = true
+			//		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
+			//		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
+			//		DIRECTOR_TRANSITION.m_bIntroOfATrack = true
+			//		DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
+			//		net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
+			//		LAST_DIRECTOR_CLIENT_TICK = SysTime()
+			//		return
+			//	end
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
 			if RealTime() <= DIRECTOR_MUSIC_VO_TIME then
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -450,7 +451,27 @@ function DIRECTOR_CLIENT_TICK()
 						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 					end
 				end
-			else DIRECTOR_MUSIC_IN_VO = nil end
+			else
+				local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
+				local t = pSource.m_pTable
+				local f = t.CheckIntro
+				if f && f "HoldFire" then
+					DIRECTOR_MUSIC_IN_VO = nil
+					DIRECTOR_TRANSITION = Director_Music_Container()
+					DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
+					DIRECTOR_TRANSITION.m_pSource = pSource
+					DIRECTOR_TRANSITION.m_flVolume = 1
+					DIRECTOR_TRANSITION.m_bToCombat = true
+					DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
+					DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
+					DIRECTOR_TRANSITION.m_bIntroOfATrack = true
+					DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
+					net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
+					LAST_DIRECTOR_CLIENT_TICK = SysTime()
+					return
+				end
+				DIRECTOR_MUSIC_IN_VO = nil
+			end
 		else
 			if RealTime() > DIRECTOR_MUSIC_VO_TIME then
 				DIRECTOR_MUSIC_IN_VO = nil
@@ -518,23 +539,24 @@ function DIRECTOR_CLIENT_TICK()
 		return
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
-		local t = pSource.m_pTable
-		local f = t.CheckIntro
-		if f && f "HoldFire" then
-			DIRECTOR_TRANSITION = Director_Music_Container()
-			DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
-			DIRECTOR_TRANSITION.m_pSource = pSource
-			DIRECTOR_TRANSITION.m_flVolume = 1
-			DIRECTOR_TRANSITION.m_bToCombat = true
-			DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
-			DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
-			DIRECTOR_TRANSITION.m_bIntroOfATrack = true
-			DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
-			DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
-			net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-			LAST_DIRECTOR_CLIENT_TICK = SysTime()
-			return
-		end
+		// Doesn't work like that anymore!
+		//	local t = pSource.m_pTable
+		//	local f = t.CheckIntro
+		//	if f && f "HoldFire" then
+		//		DIRECTOR_TRANSITION = Director_Music_Container()
+		//		DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
+		//		DIRECTOR_TRANSITION.m_pSource = pSource
+		//		DIRECTOR_TRANSITION.m_flVolume = 1
+		//		DIRECTOR_TRANSITION.m_bToCombat = true
+		//		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
+		//		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
+		//		DIRECTOR_TRANSITION.m_bIntroOfATrack = true
+		//		DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
+		//		DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
+		//		net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
+		//		LAST_DIRECTOR_CLIENT_TICK = SysTime()
+		//		return
+		//	end
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
 			if pContainer then

@@ -371,15 +371,6 @@ hook.Add( "TranslateActivity", "Improvements", function( ply, ... )
 	end
 end )
 
-hook.Add( "GetFallDamage", "Improvements", function( ply, ... )
-	local c = ply:GetModel()
-	local v = __PLAYER_MODEL__[ c ]
-	if v then
-		v = v.GetFallDamage
-		if v then return v( ply, ... ) end
-	end
-end )
-
 hook.Add( "CalcView", "Improvements", function( ply, ... )
 	local c = ply:GetModel()
 	local v = __PLAYER_MODEL__[ c ]

@@ -102,9 +102,7 @@ hook.Add( "Tick", "Director", function()
 		end
 		ply:SetNW2Float( "ALARM_flHostileReinforcements", flReinforcements || 0 )
 		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 30 )
-		if CurTime() > ( PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME || 0 ) then
-			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", math.Clamp( Lerp( math.min( 1, 5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
-		end
+		ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", math.Clamp( Lerp( math.min( 1, .5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
 		if ply:Alive() then
 			local o = ply:GetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", -1 ) )
 			if o == 0 then
