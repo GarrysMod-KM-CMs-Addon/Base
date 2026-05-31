@@ -1,5 +1,9 @@
 local VELOCITY = 3072
 
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+
+local CurTime = CurTime
+
 function EFFECT:Init( pData )
 	local vEnd = pData:GetOrigin()
 	local v = pData:GetStart()
@@ -16,23 +20,20 @@ function EFFECT:Init( pData )
 			end
 		end
 	end
-	self.vStart = v
-	self.vEnd = vEnd
+	local MyTable = CEntity_GetTable( self )
+	MyTable.vStart = v
+	MyTable.vEnd = vEnd
 	local dDirection = vEnd - v
 	local flDistance = dDirection:Length()
-	self.flDistance = flDistance
+	MyTable.flDistance = flDistance
 	dDirection:Normalize()
-	self.dDirection = dDirection
+	MyTable.dDirection = dDirection
 	local flLifeTime = flDistance / VELOCITY
-	self.flLifeTime = flLifeTime
-	self.flDieTime = CurTime() + flLifeTime
+	MyTable.flLifeTime = flLifeTime
+	MyTable.flDieTime = CurTime() + flLifeTime
 end
 
-function EFFECT:Think()
-	local flLifeTime = self.flLifeTime
-	self:SetPos( self.vStart + ( self.dDirection * ( self.flDistance * ( flLifeTime - ( self.flDieTime - CurTime() ) ) / flLifeTime ) ) )
-	return CurTime() < self.flDieTime
-end
+function EFFECT:Think() return CurTime() < self.flDieTime end
 
 local mMaterial = Material "effects/ar2_altfire1b"
 local render_SetMaterial = render.SetMaterial
@@ -40,14 +41,13 @@ local render_DrawSprite = render.DrawSprite
 local DynamicLight = DynamicLight
 local COLOR = Color( 255, 128, 64 )
 function EFFECT:Render()
+	local MyTable = CEntity_GetTable( self )
+	local flLifeTime = MyTable.flLifeTime
+	self:SetPos( MyTable.vStart + ( MyTable.dDirection * ( MyTable.flDistance * ( flLifeTime - ( MyTable.flDieTime - CurTime() ) ) / flLifeTime ) ) )
 	local vPos = self:GetPos()
 	local dDirection = self.dDirection
 	render_SetMaterial( mMaterial )
-	local l = 20
-	for i = 0, l do
-		local f = i / l
-		render_DrawSprite( vPos - dDirection * l * ( i * -.02 ), 12 * f, 12 * f, COLOR )
-	end
+	for i = 0, 40 do render_DrawSprite( vPos - dDirection * ( i * -1 ), 12, 12, COLOR ) end
 	// Tracer lights are messy as shit. Even though we don't have to worry
 	// about overriding ephemeral lights, we still override whatever is
 	// at the owner's entity index, including other tracers, and this system

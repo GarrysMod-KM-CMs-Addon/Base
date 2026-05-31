@@ -368,6 +368,8 @@ local net_Broadcast = net.Broadcast
 
 local function fViolentAssRandom() return 1 - .9 * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() * math_random() end
 
+local math_Rand = math.Rand
+
 hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if _Comp then return end
 	hook.Run( "EntityFireBullets", ent, Data, true )
@@ -388,9 +390,9 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		local v = Data.Spread
 		v[ 1 ] = v[ 1 ] * 4
 		v[ 2 ] = v[ 2 ] * 4
-		Data.Damage = Data.Damage * .125
+		Data.Damage = Data.Damage * .1
 	end
-	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math.Rand( .25, .75 ), 0, .2 )
+	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .33, .66 ), 0, .2 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
@@ -415,7 +417,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		if t then t( pTarget, dDamage ) end
 		if bMuzzleFlash then
 			net_Start "EphemeralLight"
-				net_WriteFloat( col[ 4 ] * .002 * fViolentAssRandom() ) // Brightness
+				net_WriteFloat( col[ 4 ] * .001 * fViolentAssRandom() ) // Brightness
 				net_WriteFloat( 512 * fViolentAssRandom() ) // Size
 				net_WriteFloat( flMuzzleFlashTime * fViolentAssRandom() ) // Existence length
 				net_WriteFloat( 512 ) // Fade time - just keep this a huge number, muzzleflashes fade out instantly on dietime instead of this
@@ -967,7 +969,7 @@ function GameImprovements_StartCommand( ply, cmd )
 			else
 				cmd:SetForwardMove( CPlayer_GetRunSpeed( ply ) )
 				cmd:SetSideMove( math.Clamp( cmd:GetSideMove(), -cmd:GetForwardMove(), cmd:GetForwardMove() ) )
-				local b = ply:GetVelocity():Length() > ply:GetWalkSpeed()
+				local b = ply:GetVelocity():Length() > 10
 				ply:SetNW2Bool( "CTRL_bSprinting", b )
 				if b then
 					if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then

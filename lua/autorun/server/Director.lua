@@ -158,7 +158,7 @@ hook.Add( "Tick", "Director", function()
 		ply:SetViewOffsetDucked( Vector( 0, 0, 40 ) * f )
 		ply:SetCanZoom( false )
 		local h = ply:Health() / ply:GetMaxHealth()
-		ply:SetDSP( h <= .165 && 16 || h <= .33 && 15 || h <= .66 && 14 || 1 )
+		ply:SetDSP( h <= .3 && 16 || h <= .4 && 15 || h <= .5 && 14 || 1 )
 		PlyTable.GAME_flSuppression = math.Approach( PlyTable.GAME_flSuppression || 0, 0, math.max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
 		local EThreat = DIRECTOR_THREAT_NULL
 		local tMusicEntities = PlyTable.DR_tMusicEntities || {}

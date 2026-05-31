@@ -12,13 +12,14 @@
 
 include "autorun/Director.lua"
 
-// Some weapon things that are too small to give them another file
+// Here are some weapon things that are too small to give them another file
 VIEWMODEL_CAMERA_ANIMATIONS = {}
-WPN_PISTOL = 0
-WPN_RIFLE = 1
-WPN_RIFLEUP = 2
-WPN_SNIPER = 3
-// End
+
+WPN_PISTOL = 1
+WPN_RIFLE = 2
+WPN_RIFLEUP = 3
+WPN_SHOTGUN = 4
+WPN_SNIPER = 5
 
 DIRECTOR_MUSIC_TENSION = 0
 DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
@@ -48,10 +49,6 @@ end
 
 local math_Rand = math.Rand
 
-// If you warm up the next sounds as soon as you get to a new music stage,
-// Source will waste time reading them, and the same kind of stitch as if
-// you never warmed up the current sound will appear. This function fixes
-// it, by being "generous", and warming up sounds a little later.
 function WarmUpSoundGenerous( sName )
 	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
 	timer.Simple( math_Rand( .05, .1 ), function()
@@ -71,7 +68,7 @@ DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES ||
 DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES || 0
 DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES || 0
 
-// The director will never play the same table pointer, for your convenience. However, there is still
+// The director will never play the same table pointer twice, for your convenience. However, there is still
 // one way to accidentally shoot yourself in the leg, and that is messing up your own pointers.
 // If you want a theme to play in multiple states, MAKE SURE THAT THE TABLE POINTER IS THE SAME,
 // to avoid it being in state A AND state B which would break it, as the director thinks they're different.
@@ -247,24 +244,47 @@ function Director_Music_UpdateInternal( self, ... )
 	t.Execute( self, flInterval, ... )
 	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
-	for Index, tData in pairs( tHandles ) do
-		local pSound = tData[ 1 ]
-		f = flVolume * tData[ 2 ]
-		if f <= SOUND_PATCH_ABSOLUTE_MINIMUM then
+	//	for Index, tData in pairs( tHandles ) do
+	//		local pSound = tData[ 1 ]
+	//		f = flVolume * tData[ 2 ]
+	//		if f <= SOUND_PATCH_ABSOLUTE_MINIMUM then
+	//			tData[ 5 ] = SysTime()
+	//			pSound:ChangeVolume( SOUND_PATCH_ABSOLUTE_MINIMUM )
+	//			pSound:ChangePitch( 0 )
+	//			continue
+	//		else
+	//			pSound:ChangeVolume( f )
+	//			pSound:ChangePitch( tData[ 3 ] )
+	//		end
+	//		local flPitch = pSound:GetPitch()
+	//		local f = 0
+	//		if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
+	//		if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
+	//		tData[ 4 ] = f
+	//		tData[ 5 ] = SysTime()
+	//	end
+	local ply = LocalPlayer()
+	local h = ply:Health() / ply:GetMaxHealth()
+	if flVolume <= SOUND_PATCH_ABSOLUTE_MINIMUM then
+		for Index, tData in pairs( tHandles ) do
+			local pSound = tData[ 1 ]
 			tData[ 5 ] = SysTime()
 			pSound:ChangeVolume( SOUND_PATCH_ABSOLUTE_MINIMUM )
 			pSound:ChangePitch( 0 )
-			continue
-		else
-			pSound:ChangeVolume( f )
-			pSound:ChangePitch( tData[ 3 ] )
 		end
-		local flPitch = pSound:GetPitch()
-		local f = 0
-		if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
-		if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
-		tData[ 4 ] = f
-		tData[ 5 ] = SysTime()
+	else
+		for Index, tData in pairs( tHandles ) do
+			local pSound = tData[ 1 ]
+			f = flVolume * tData[ 2 ]
+			pSound:ChangeVolume( math_max( f, SOUND_PATCH_ABSOLUTE_MINIMUM ) )
+			pSound:ChangePitch( tData[ 3 ] )
+			local flPitch = pSound:GetPitch()
+			local f = 0
+			if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
+			if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
+			tData[ 4 ] = f
+			tData[ 5 ] = SysTime()
+		end
 	end
 	return t.Execute( self, flInterval, ... )
 end

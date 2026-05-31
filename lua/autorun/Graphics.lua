@@ -234,7 +234,7 @@ hook.Add( "Tick", "Graphics", function()
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
 	local f = ( 1 - flDeath ) * 4
 	DrawSharpen( f, f )
-	tDrawColorModify[ "$pp_colour_colour" ] = math_Remap( flDeath, 1, 0, 1, 0 )
+	tDrawColorModify[ "$pp_colour_colour" ] = math_Clamp( math_Remap( flDeath, 1, .3, 1, 0 ), 0, 1 )
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		bBleedingBlur = true
@@ -265,9 +265,8 @@ hook.Add( "Tick", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulg" ] = flFogG * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
 	flBloom = Lerp( math_min( 1, FrameTime() * .5 ), flBloom || 0, 1 - flColor )
-	flBloom = math_Clamp( flBloom + flWaterBlur * .2, 0, 1 )
 	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 2, 3 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.5, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 	flDistance = Lerp(
@@ -296,9 +295,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	DrawMotionBlur( .66, 1, 0 )
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		5, // Size X
-		5, // Size Y
-		1, // Passes
+		2, // Size X
+		2, // Size Y
+		2, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
 	DrawColorModify( tDrawColorModify )
