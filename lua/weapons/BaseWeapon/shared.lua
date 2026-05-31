@@ -67,6 +67,7 @@ function SWEP:TranslateActivity( EIntendedActivity )
 				end
 			end
 		end
+		if self:GetHoldType() == "Normal" || self:GetHoldType() == "Melee" then return EActivity end
 		if pOwner:IsPlayer() then
 			if pOwner:KeyDown( IN_ZOOM ) then
 				if self:GetHoldType() == "Shotgun" then
@@ -941,34 +942,59 @@ if CLIENT then
 		end
 		local flYawTurn, flPitchTurn = 0, 0
 		if MyTable.WPN_SHOOT == WPN_PISTOL then
+			flYawTurn = ply:GetViewPunchAngles()[ 2 ] * .05 * MyTable.flSwayScale
 			local tShootAnimations = {}
-			local flDelay = math_min( .1, MyTable.Primary_flDelay ) * .1
+			local flDelay = math_min( .2, MyTable.Primary_flDelay ) * .2
 			local flDelayLong = flDelay * 8
 			local flDelayLongEnd = flDelayLong + flDelay
-			local flDelayVeryLong = flDelay * 8
-			local flDelayVeryLongEnd = flDelayLongEnd + flDelayVeryLong
-			local flDelayVeryVeryLong = flDelay * 8
-			local flDelayVeryVeryLongEnd = flDelayVeryLongEnd + flDelayVeryVeryLong
+			//	local flDelayVeryLong = flDelay * 8
+			//	local flDelayVeryLongEnd = flDelayLongEnd + flDelayVeryLong
+			//	local flDelayVeryVeryLong = flDelay * 8
+			//	local flDelayVeryVeryLongEnd = flDelayVeryLongEnd + flDelayVeryVeryLong
+			local flSwayScale = MyTable.flSwayScale
 			for _, flBegin in ipairs( MyTable.tShootAnimations ) do
 				if CurTime() <= flBegin + flDelay then
 					local f = ( 1 - ( flBegin + flDelay - CurTime() ) / flDelay ) ^ 1.1
-					ang[ 1 ] = ang[ 1 ] - f * 5.625
-					pos = pos - ang:Forward() * f * 2
+					flPitchTurn = flPitchTurn + 2 * flSwayScale * f
+					//	ang[ 1 ] = ang[ 1 ] - f * 5.625
+					pos = pos - ang:Forward() * f * 1.5
 					table.insert( tShootAnimations, flBegin )
 				elseif CurTime() <= flBegin + flDelayLongEnd then
 					local f = ( ( flBegin + flDelayLongEnd - CurTime() ) / flDelayLong ) ^ 1.1
-					ang[ 1 ] = ang[ 1 ] - f * 5.625
-					pos = pos - ang:Forward() * f * 2
+					flPitchTurn = flPitchTurn + 2 * flSwayScale * f
+					//	ang[ 1 ] = ang[ 1 ] - f * 5.625
+					pos = pos - ang:Forward() * f * 1.5
 					table.insert( tShootAnimations, flBegin )
-				elseif CurTime() <= flBegin + flDelayVeryLongEnd then
-					local f = ( ( 1 - ( flBegin + flDelayVeryLongEnd - CurTime() ) / flDelayVeryLong ) ) ^ 1.1
-					ang[ 1 ] = ang[ 1 ] - f * .5
-					pos = pos - ang:Up() * f * .5
+				//	elseif CurTime() <= flBegin + flDelayVeryLongEnd then
+				//		local f = ( ( 1 - ( flBegin + flDelayVeryLongEnd - CurTime() ) / flDelayVeryLong ) ) ^ 1.1
+				//		ang[ 1 ] = ang[ 1 ] - f * .5
+				//		pos = pos - ang:Up() * f * .5
+				//		table.insert( tShootAnimations, flBegin )
+				//	elseif CurTime() <= flBegin + flDelayVeryVeryLongEnd then
+				//		local f = ( ( flBegin + flDelayVeryVeryLongEnd - CurTime() ) / flDelayVeryVeryLong ) ^ 1.1
+				//		ang[ 1 ] = ang[ 1 ] - f * .5
+				//		pos = pos - ang:Up() * f * .5
+				//		table.insert( tShootAnimations, flBegin )
+				end
+			end
+			MyTable.tShootAnimations = tShootAnimations
+		elseif MyTable.WPN_SHOOT == WPN_SHOTGUN then
+			flYawTurn = ply:GetViewPunchAngles()[ 2 ] * 1.5
+			local tShootAnimations = {}
+			local flDelay = math_min( .2, MyTable.Primary_flDelay ) * .2
+			local flDelayLong = flDelay * 8
+			local flDelayLongEnd = flDelayLong + flDelay
+			local flSwayScale = MyTable.flSwayScale
+			for _, flBegin in ipairs( MyTable.tShootAnimations ) do
+				if CurTime() <= flBegin + flDelay then
+					local f = ( 1 - ( flBegin + flDelay - CurTime() ) / flDelay ) ^ 1.1
+					flPitchTurn = flPitchTurn + .5 * MyTable.flSwayScale * f
+					pos = pos - ang:Forward() * f * 3
 					table.insert( tShootAnimations, flBegin )
-				elseif CurTime() <= flBegin + flDelayVeryVeryLongEnd then
-					local f = ( ( flBegin + flDelayVeryVeryLongEnd - CurTime() ) / flDelayVeryVeryLong ) ^ 1.1
-					ang[ 1 ] = ang[ 1 ] - f * .5
-					pos = pos - ang:Up() * f * .5
+				elseif CurTime() <= flBegin + flDelayLongEnd then
+					local f = ( ( flBegin + flDelayLongEnd - CurTime() ) / flDelayLong ) ^ 1.1
+					flPitchTurn = flPitchTurn + .5 * MyTable.flSwayScale * f
+					pos = pos - ang:Forward() * f * 3
 					table.insert( tShootAnimations, flBegin )
 				end
 			end

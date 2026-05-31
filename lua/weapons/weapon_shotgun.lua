@@ -36,9 +36,9 @@ SWEP.flSideWaysRecoilMax = .45
 SWEP.flRecoilGrowMin = .6
 SWEP.flRecoilGrowMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
-SWEP.flAimShoot = 2
-SWEP.WPN_SPRINT = WPN_RIFLEUP
-SWEP.WPN_SHOOT = WPN_RIFLEUP
+SWEP.flAimShoot = 4
+SWEP.WPN_SPRINT = WPN_RIFLE
+SWEP.WPN_SHOOT = WPN_SHOTGUN
 
 SWEP.bSemi = true
 SWEP.bPumped = true

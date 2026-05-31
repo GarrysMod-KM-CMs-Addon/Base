@@ -42,6 +42,7 @@ SWEP.flSideWaysRecoilMin = -.45
 SWEP.flSideWaysRecoilMax = .45
 SWEP.flRecoilGrowMin = .6
 SWEP.flRecoilGrowMax = 1
+SWEP.WPN_SHOOT = WPN_SHOTGUN
 
 function SWEP:SetupDataTables()
 	self:NetworkVar( "Bool", 0, "Reloading" )
