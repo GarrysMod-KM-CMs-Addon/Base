@@ -58,12 +58,19 @@ function ENT:AddRelationship( sRelationship )
 		self.tSpecialRelationships[ ent ] = Relationship
 		bNotFound = nil
 	end
-	// Classname-based relationships are only semi-supported since we're using a completely new relationship system to VALVe's
-	if bNotFound then for _, ent in ipairs( ents.FindByClass( sClass ) ) do self.tSpecialRelationships[ ent ] = Relationship end end
+	// HAHA, NOT ANYMORE!
+	//	// Classname-based relationships are only semi-supported since we're using a completely new relationship system to VALVe's
+	//	if bNotFound then for _, ent in ipairs( ents.FindByClass( sClass ) ) do self.tSpecialRelationships[ ent ] = Relationship end end
 end
 
 local ai_ignoreplayers = GetConVar "ai_ignoreplayers"
+local D_LI = D_LI
+local D_NU = D_NU
+local D_HT = D_HT
+// Never used
+//	local D_FR = D_FR
 function ENT:Disposition( ent )
+	if ent == self then return D_LI end
 	if !IsValid( ent ) || ent.__ALARM__ || ent.__PROJECTILE__ then return D_NU end
 	if ent.__ACTOR_BULLSEYE__ then return ent.Owner == self && D_HT || D_NU end
 	if !ent.Classify || ent:IsPlayer() && ai_ignoreplayers:GetInt() == 1 then return D_NU end

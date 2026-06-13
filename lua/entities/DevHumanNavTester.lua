@@ -27,7 +27,7 @@ end
 
 ENT.flDefaultJumpHeight = 99999
 
-Actor_RegisterSchedule( "DevHumanNavTester", function( self, sched )
+RegisterSchedule( "DevHumanNavTester", function( self, sched )
 	local pEnemy = self.Enemy
 	if !IsValid( pEnemy ) then return end
 	local pPath = sched.pPath

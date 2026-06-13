@@ -42,11 +42,11 @@ function ENT:DLG_Suppressing( enemy ) end
 
 // These are only said once per take cover/retreat
 function ENT:DLG_State_TakeCover() end
-function ENT:DLG_State_Retreat() end // “GET THE HELL OUTTA HERE!! GET BACK TO COVER!!!” *Burst of gunfire.*
+function ENT:DLG_State_Retreat() end // "GET THE HELL OUTTA HERE!! GET BACK TO COVER!!!" *gunfire*
 
 ENT.flLastAttackCombatState = 1
 
-Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
+RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
 	MyTable.vActualCover = MyTable.vCover
 	MyTable.vActualTarget = sched.vFrom
@@ -145,6 +145,7 @@ Actor_RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 		local flHealth = enemy:Health()
 		local ws, w = 0 // Weapon Strength
 		for wep in pairs( MyTable.tWeapons ) do
+			if wep.bSpecial then continue end
 			local t = wep.Primary_flDelay || 0
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0

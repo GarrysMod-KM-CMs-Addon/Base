@@ -40,28 +40,28 @@ for a = 5.625, 22.5, 5.625 do
 	table.insert( ACTOR_PITCH_ANGLES_RIGHT, -a )
 end
 
-local STEP = 11.25
+local STEP = 5.625
 
 ACTOR_PITCH_ANGLES_SHORT_UP = { 0 }
-for a = STEP, 45, STEP do
+for a = STEP, 22.5, STEP do
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_UP, a )
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_UP, -a )
 end
 
 ACTOR_PITCH_ANGLES_SHORT_DOWN = { 0 }
-for a = STEP, 45, STEP do
+for a = STEP, 22.5, STEP do
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_DOWN, -a )
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_DOWN, a )
 end
 
 ACTOR_PITCH_ANGLES_SHORT_LEFT = { 0 }
-for a = STEP, 45, STEP do
+for a = STEP, 22.5, STEP do
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_LEFT, -a )
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_LEFT, a )
 end
 
 ACTOR_PITCH_ANGLES_SHORT_RIGHT = { 0 }
-for a = STEP, 45, STEP do
+for a = STEP, 22.5, STEP do
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_RIGHT, a )
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_RIGHT, -a )
 end
@@ -90,7 +90,7 @@ ENT.flPathStabilizer = 16
 
 function ENT:DLG_Charge() end
 
-Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
+RegisterSchedule( "Combat", function( self, sched, MyTable )
 	// Remind me of this when we actually get cover animations lmao
 	MyTable.WEAPON_STANCE = CurTime() <= ( sched.flSweep || 0 ) && WEAPON_STANCE_AIMING || WEAPON_STANCE_PASSIVE
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -544,7 +544,6 @@ Actor_RegisterSchedule( "Combat", function( self, sched, MyTable )
 							maxs = vMaxs,
 							filter = self
 						} ).Hit then continue end
-						//	debugoverlay.Line(v,v + dDirection * vMaxs[ 1 ] * COVER_BOUND_SIZE,5,Color(255,0,0),true)
 						local v = vCover + Vector( 0, 0, vMaxs[ 3 ] )
 						if !util_TraceLine( {
 							start = v,

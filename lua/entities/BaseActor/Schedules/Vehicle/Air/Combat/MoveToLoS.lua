@@ -1,4 +1,4 @@
-Actor_RegisterSchedule( "VehicleAirMoveToLoS", function( self, sched, MyTable )
+RegisterSchedule( "VehicleAirMoveToLoS", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy

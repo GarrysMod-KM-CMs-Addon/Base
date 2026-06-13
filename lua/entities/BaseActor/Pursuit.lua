@@ -4,7 +4,8 @@
 
 ACTOR_PURSUIT_DATA = {}
 
-function ENT:UpdatePursuitSenses( pEnemy, pKey )
+function ENT:UpdatePursuitSenses( pEnemy, pKey /*aka pTrueEnemy*/ )
+	if !IsValid( pKey ) || !pKey:IsPlayer() /* dirty HACK */ then return end
 	local PURSUIT_DATA = ACTOR_PURSUIT_DATA[ self:Classify() ] || {}
 	for pEnemy, tData in pairs( PURSUIT_DATA ) do
 		if IsValid( pEnemy ) && ( SysTime() - tData.flTime ) <= 1 then PURSUIT_DATA[ pEnemy ] = tData end

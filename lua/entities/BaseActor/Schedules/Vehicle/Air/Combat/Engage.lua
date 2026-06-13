@@ -1,6 +1,6 @@
 include "MoveToLoS.lua"
 
-Actor_RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
+RegisterSchedule( "VehicleAirEngage", function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy

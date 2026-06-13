@@ -6,7 +6,7 @@ end
 // Startled BY NOISE. Do NOT confuse with DLG_Startle for combat!
 function ENT:DLG_Startled() end
 
-Actor_RegisterSchedule( "StartleNoise", function( self, sched )
+RegisterSchedule( "StartleNoise", function( self, sched )
 	if !table.IsEmpty( self.tEnemies ) then return {} end
 	if !sched.bDidNoise then
 		self:DLG_Startled()

@@ -4,7 +4,6 @@ function ENT:SetAimVector( v ) self.vAim = v end
 function ENT:GetAimVector() return self.vAim || self:GetForward() end
 
 ENT.flTurnRate = 128
-ENT.flBodyTensity = 1 // 1 means as fast as possible, lower values make us turn slower to face smaller angles
 
 local math_AngleDifference = math.AngleDifference
 local math_Clamp = math.Clamp

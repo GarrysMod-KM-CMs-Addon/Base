@@ -3,7 +3,7 @@
 // The alarm we are trying to pull
 ENT.tPreScheduleResetVariables.pAlarm = false
 
-Actor_RegisterSchedule( "PullAlarm", function( self, sched, MyTable )
+RegisterSchedule( "PullAlarm", function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
 	if Either( sched.bOff, !table.IsEmpty( MyTable.tEnemies ), table.IsEmpty( MyTable.tEnemies ) ) then return {} end
 	if !self:CanExpose() then self:SetSchedule "TakeCover" return end

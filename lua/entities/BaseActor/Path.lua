@@ -280,45 +280,41 @@ local util_TraceLine = util.TraceLine
 local math_min = math.min
 
 // Tries to jump to vTarget
-function ENT:Jump( vTarget, MyTable )
+function ENT:Jump( vTarget, bJumpGap, MyTable )
 	local flGravity = sv_gravity:GetFloat()
-	local vVelocity = self.loco:GetVelocity()
-	local flOriginal = self.loco:GetJumpHeight() // NOT flJumpHeight!!!
-	// TODO: Go back and try to jump again like a real human would
-	if vVelocity:Length() < self.flWalkSpeed * .5 then return end
+	local loco = self.loco
+	local vVelocity = loco:GetVelocity()
+	local flOriginal // NOT flJumpHeight!!!
+	= loco:GetJumpHeight()
 	local vStart = self:GetPos()
 	local vMiddle = LerpVector( .5, vStart, vTarget )
-	local flZ = vStart.z
+	local flZ = vStart[ 3 ]
+	local vOriginal = Vector( 0, 0, flOriginal )
 	local flJumpHeight = flOriginal * math_min( util_TraceLine( {
 		start = vStart,
-		endpos = vStart + Vector( 0, 0, flOriginal ),
+		endpos = vStart + vOriginal,
 		mask = MASK_SOLID,
 		filter = self
-	} ).HitPos.z - flZ, util_TraceLine( {
+	} ).HitPos[ 3 ] - flZ, util_TraceLine( {
 		start = vMiddle,
-		endpos = vMiddle + Vector( 0, 0, flOriginal ),
+		endpos = vMiddle + vOriginal,
 		mask = MASK_SOLID,
 		filter = self
-	} ).HitPos.z - flZ, util_TraceLine( {
+	} ).HitPos[ 3 ] - flZ, util_TraceLine( {
 		start = vTarget,
-		endpos = vTarget + Vector( 0, 0, flOriginal ),
+		endpos = vTarget + vOriginal,
 		mask = MASK_SOLID,
 		filter = self
-	} ).HitPos.z - flZ )
+	} ).HitPos[ 3 ] - flZ )
+	local flDelta = math.abs( vTarget[ 1 ] - vStart[ 1 ] )
+	if flDelta > flJumpHeight then return end
 	local flJumpLength = vVelocity:Length() * ( 2 * flGravity * flJumpHeight ) ^ .5 / flGravity
-	local dVelocityFlat = Vector( vVelocity )
-	dVelocityFlat.z = 0
-	dVelocityFlat:Normalize()
-	local dTargetFlat = vTarget - self:GetPos()
-	dTargetFlat.z = 0
-	dTargetFlat:Normalize()
+	if vStart:Distance2D( vTarget ) > flJumpLength then return end
 	local flDistance = vStart:Distance( vTarget )
-	local flDifference = ( 1 - math_max( 0, dVelocityFlat:Dot( dTargetFlat ) ) ) * flDistance
-	if flDifference > self:OBBMaxs()[ 1 ] then return end
-	if flDistance > flJumpLength then return end
-	self.loco:SetJumpHeight( math_Clamp( ( ( ( flDifference + flDistance ) / vVelocity:Length() ) * .5 * flGravity ) ^ 2 / ( 2 * flGravity ), 0, flOriginal ) )
-	self.loco:JumpAcrossGap( vTarget, self:GetForward() )
-	self.loco:SetJumpHeight( flOriginal )
+	local flDifference = math_max( 0, vVelocity:GetNormalized():Dot( ( vTarget - vStart ):GetNormalized() ) )
+	loco:SetJumpHeight( math_Clamp( flDelta + ( ( flDistance - flDifference * vVelocity:Length() ) * 2 * flGravity ) ^ 2 / ( 2 * flGravity ), 0, flOriginal ) )
+	loco:JumpAcrossGap( vTarget, self:GetForward() )
+	loco:SetJumpHeight( flOriginal )
 	self.m_flJumpStartTime = CurTime()
 	self.m_bJumping = true
 end

@@ -2,12 +2,17 @@ local table_IsEmpty = table.IsEmpty
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
-Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
+
+local math_max = math.max
+
+function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * .5 + .5 ) end
+
+RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
-	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
@@ -17,6 +22,10 @@ Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 	if !pEnemyPath then pEnemyPath = Path "Follow" sched.pEnemyPath = pEnemyPath end
 	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy, MyTable ) end
 	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
+	if MyTable.UpdatePursuitSenses( self, pEnemy, pTrueEnemy, MyTable ) then
+		MyTable.SetSchedule( self, "FreeMovementPursuit", MyTable )
+		return
+	end
 	local tFilter = pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
 	local vPos = self:GetPos()
@@ -129,7 +138,7 @@ Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 		if MyTable.CanAttackHelper( self, vSuppressionPoint, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 	else
 		// Suppression searches are relatively light, especially when we use SHORT angles
-		if LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
+		if !LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
 		vPos = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
 		pPath:MoveCursorToClosestPosition( self:GetPos() )
 		local iCursor = pPath:GetCursorPosition()
@@ -165,12 +174,12 @@ Actor_RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 	end
 end )
 
-Actor_RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
+RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
-	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
@@ -274,7 +283,7 @@ Actor_RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 			MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable )
 		end
-		if LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
+		if !LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
 		vPos = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
 		pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
 		local iCursor = pEnemyPath:GetCursorPosition()
@@ -306,12 +315,12 @@ Actor_RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 	end
 end )
 
-Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
+RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
-	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > self:Health() * 2 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
@@ -327,7 +336,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 	local vEnemy = pEnemy:GetPos()
 	local vTarget = vEnemy + pEnemy:OBBCenter()
 	ACTOR_QUEUE( function()
-		if !IsValid( self ) || MyTable.Schedule != sched then return true end
+		if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != sched then return true end
 		local pIterator = MyTable.SearchNodes( self, nil, function( vNew, flCurrentDistance, flAdditionalDistance )
 			pEnemyPath:MoveCursorToClosestPosition( vNew )
 			return flCurrentDistance + flAdditionalDistance - pEnemyPath:GetCursorPosition() + pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ):Distance( vNew )
@@ -465,7 +474,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 				start = vPointDuck,
 				endpos = util_TraceLine( {
 					start = vTarget,
-					endpos = vTarget + ( vTarget - vPointDuck ):Angle():Right() * self:BoundingRadius() * .5,
+					endpos = vTarget + ( vTarget - vPointDuck ):Angle():Right() * self:BoundingRadius(),
 					mask = MASK_SHOT_HULL,
 					filter = tFilter
 				} ).HitPos,
@@ -475,7 +484,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 				start = vPointDuck,
 				endpos = util_TraceLine( {
 					start = vTarget,
-					endpos = vTarget - ( vTarget - vPointDuck ):Angle():Right() * self:BoundingRadius() * .5,
+					endpos = vTarget - ( vTarget - vPointDuck ):Angle():Right() * self:BoundingRadius(),
 					mask = MASK_SHOT_HULL,
 					filter = tFilter
 				} ).HitPos,
@@ -490,7 +499,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 				start = vPointStand,
 				endpos = util_TraceLine( {
 					start = vTarget,
-					endpos = vTarget + ( vTarget - vPointStand ):Angle():Right() * self:BoundingRadius() * .5,
+					endpos = vTarget + ( vTarget - vPointStand ):Angle():Right() * self:BoundingRadius(),
 					mask = MASK_SHOT_HULL,
 					filter = tFilter
 				} ).HitPos,
@@ -500,7 +509,7 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 				start = vPointStand,
 				endpos = util_TraceLine( {
 					start = vTarget,
-					endpos = vTarget - ( vTarget - vPointStand ):Angle():Right() * self:BoundingRadius() * .5,
+					endpos = vTarget - ( vTarget - vPointStand ):Angle():Right() * self:BoundingRadius(),
 					mask = MASK_SHOT_HULL,
 					filter = tFilter
 				} ).HitPos,
@@ -538,4 +547,128 @@ Actor_RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 			coroutine.yield()
 		end
 	end )
+end )
+
+RegisterSchedule( "FreeMovementPursuit", function( self, sched, MyTable )
+	MyTable.vCover = nil
+	MyTable.tCover = nil
+	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	if table_IsEmpty( tEnemies ) then return true end
+	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+	local pEnemy = MyTable.Enemy
+	if !IsValid( pEnemy ) then return true end
+	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
+	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
+	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
+	local pEnemyPath = MyTable.pEnemyPath
+	if !pEnemyPath then pEnemyPath = Path "Follow" sched.pEnemyPath = pEnemyPath end
+	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy, MyTable ) end
+	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
+	if !MyTable.UpdatePursuitSenses( self, pEnemy, pTrueEnemy, MyTable ) then
+		MyTable.SetSchedule( self, "FreeMovementSearch", MyTable ).bGotALineOfSightBefore = true
+		return
+	end
+	local tFilter = pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
+	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
+	local pPath = pEnemyPath
+	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
+	local tFilter = pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
+	MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
+	local vPos = self:GetPos()
+	local vEnemyCenter = pEnemy:GetPos() + pEnemy:OBBCenter()
+	local trStandToCenter, trDuckToCenter = util_TraceLine {
+		start = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] ),
+		endpos = vEnemyCenter,
+		mask = MASK_SHOT_HULL,
+		filter = tFilter
+	}, util_TraceLine {
+		start = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] ),
+		endpos = vEnemyCenter,
+		mask = MASK_SHOT_HULL,
+		filter = tFilter
+	}
+	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
+		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
+		MyTable.CenterTarget( self, vTarget, MyTable )
+		local pWeapon = MyTable.Weapon
+		if !IsValid( pWeapon ) then return false end
+		local flRecoil = pWeapon.flRecoil
+		if flRecoil then
+			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( vTarget )
+			if flRecoil <= 0 || flDistance < 1792 / flRecoil then
+				MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
+				MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
+				MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+			end
+		end
+		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+		return
+	end
+	local pEnemyPath = MyTable.pEnemyPath
+	if !pEnemyPath then
+		pEnemyPath = Path "Follow"
+		MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy, MyTable )
+		MyTable.pEnemyPath = pEnemyPath
+	end
+	local flDistSqr = math.max( 512, math.Remap( vPos:Distance( pEnemy:GetPos() ), 0, 4096, 512, 1024 ) ) / MyTable.flCombatState
+	flDistSqr = flDistSqr * flDistSqr
+	local vSuppressionPoint = sched.vSuppressionPoint
+	// TODO: Validate the point, duh xD
+	if vSuppressionPoint then
+		local trStandToCenter, trDuckToCenter = util_TraceLine {
+			start = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] ),
+			endpos = vSuppressionPoint,
+			mask = MASK_SHOT_HULL,
+			filter = tFilter
+		}, util_TraceLine {
+			start = vPos + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] ),
+			endpos = vSuppressionPoint,
+			mask = MASK_SHOT_HULL,
+			filter = tFilter
+		}
+		if trStandToCenter.Hit && trDuckToCenter.Hit then sched.vSuppressionPoint = nil return end
+		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		MyTable.CenterTarget( self, vSuppressionPoint, MyTable )
+		local pWeapon = MyTable.Weapon
+		if !IsValid( pWeapon ) then return false end
+		if MyTable.CanAttackHelper( self, vSuppressionPoint, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+	else
+		MyTable.MoveAlongPath( self, pPath, MyTable.flTopSpeed )
+		local tGoal = pPath:GetCurrentGoal()
+		if tGoal then
+			MyTable.vaAimTargetBody = ( tGoal.pos - self:GetPos() ):Angle()
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1, MyTable )
+		end
+		if !LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
+		vPos = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
+		pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
+		local iCursor = pEnemyPath:GetCursorPosition()
+		local aDirection = pEnemyPath:GetPositionOnPath( iCursor )
+		pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
+		aDirection = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - aDirection
+		aDirection = aDirection:Angle()
+		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
+		for _, flGlobalAnglePitch in ipairs( self:GetPos()[ 1 ] > pEnemy:GetPos()[ 1 ] && ACTOR_PITCH_ANGLES_SHORT_UP || ACTOR_PITCH_ANGLES_SHORT_DOWN ) do
+			for _, flGlobalAngleYaw in ipairs( math.random( 2 ) == 1 && ACTOR_PITCH_ANGLES_SHORT_LEFT || ACTOR_PITCH_ANGLES_SHORT_RIGHT ) do
+				local aAim = aDirection + Angle( flGlobalAnglePitch, flGlobalAngleYaw )
+				local vAim = aAim:Forward()
+				local tr = util_TraceLine {
+					start = vPos,
+					endpos = vPos + vAim * 999999,
+					mask = MASK_SHOT_HULL,
+					filter = tFilter
+				}
+				local _, vPoint = util.DistanceToLine( vPos, tr.HitPos, vTarget )
+				if util_TraceLine( {
+					start = vPoint,
+					endpos = vTarget,
+					mask = MASK_SHOT_HULL,
+					filter = tFilter
+				} ).Hit || vPoint:DistToSqr( vTarget ) > flDistSqr then continue end
+				sched.vSuppressionPoint = vPoint
+			end
+		end
+	end
 end )

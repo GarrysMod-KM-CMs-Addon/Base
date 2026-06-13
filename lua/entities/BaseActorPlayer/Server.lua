@@ -43,34 +43,34 @@ function ENT:PreScheduleResetVariables( MyTable )
 	self:SetNW2Int( "WEAPON_STANCE", MyTable.WEAPON_STANCE || WEAPON_STANCE_DEFAULT )
 end
 
-function ENT:MoveAlongPathToCover( Path, tFilter )
+function ENT:MoveAlongPathToCover( pPath, tFilter )
 	if self:GetNW2Bool "CTRL_bSliding" then
 		// HACK: Rapidly decelerate
 		local f = self.flPathTolerance
 		f = f * f
-		if self:GetPos():DistToSqr( Path:GetEnd() ) <= ( self:GetSlideLength() * .2 ) then
+		if self:GetPos():DistToSqr( pPath:GetEnd() ) <= ( self:GetSlideLength() * .2 ) then
 			f = self:GetNW2Float( "CTRL_flSlideSpeed", 0 )
 			self:SetNW2Float( "CTRL_flSlideSpeed", f - ( self.GAME_flSlideSpeed || self:GetRunSpeed() * 1.5 ) * ( self.CTRL_flSlideSpeedDecay || .8 ) * FrameTime() )
 		end
 		self.loco:SetDesiredSpeed( 0 )
 		self.loco:SetAcceleration( 0 )
 		self.loco:SetDeceleration( 0 )
-		self:HandleJumpingAlongPath( Path, self.flTopSpeed, tFilter )
+		self:HandleJumpingAlongPath( pPath, self.flTopSpeed, tFilter )
 		return
 	end
 	if self.bCanSlide && QuickSlide_Can( self ) then
-		Path:MoveCursorToClosestPosition( self:GetPos() )
-		local f, n = math.abs( Path:GetLength() - Path:GetCursorPosition() ), self:GetSlideLength()
+		pPath:MoveCursorToClosestPosition( self:GetPos() )
+		local f, n = math.abs( pPath:GetLength() - pPath:GetCursorPosition() ), self:GetSlideLength()
 		if f > n * .2 && f <= n then
 			QuickSlide_Start( self )
 			self.loco:SetDesiredSpeed( 0 )
 			self.loco:SetAcceleration( 0 )
 			self.loco:SetDeceleration( 0 )
-			Path:Update( self )
+			pPath:Update( self )
 			return
 		end
 	end
-	self:MoveAlongPath( Path, self.flTopSpeed, 1, tFilter, true )
+	self:MoveAlongPath( pPath, self.flTopSpeed, 1, tFilter, true )
 end
 
 ENT.flTopSpeed = HUMAN_SPRINT_SPEED

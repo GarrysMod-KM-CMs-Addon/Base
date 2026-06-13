@@ -13,6 +13,7 @@ include "Interaction.lua"
 include "Animation.lua"
 include "Mind.lua"
 include "Pursuit.lua"
+include "Sentence.lua"
 
 ENT.GAME_flThrowForce = 1024
 
@@ -177,9 +178,22 @@ ENT.ELastHitGroup = HITGROUP_GENERIC
 function ENT:LastHitGroup() return self.ELastHitGroup end
 function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
 
+local util_Decal = util.Decal
+local EffectData = EffectData
+local util_Effect = util.Effect
+function ENT:BloodSplatter( dDamage )
+	local MyTable = CEntity_GetTable( self )
+	//	util_Decal( "Blood", dDamage:GetDamagePosition(), dDamage:GetDamagePosition() )
+	//	local pEffectData = EffectData()
+	//	pEffectData:SetOrigin( dDamage:GetDamagePosition() )
+	//	util_Effect( "BloodImpact", pEffectData )
+end
+
 function ENT:OnTakeDamage( dDamage )
 	local MyTable = CEntity_GetTable( self )
 	hook.Run( "ScalePlayerDamage", self, MyTable.ELastHitGroup, dDamage )
+	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) +
+	dDamage:GetDamage() / ( math.max( self:Health(), self:GetMaxHealth() ) * 112 ) )
 	MyTable.ELastHitGroup = HITGROUP_GENERIC
 	MyTable.bHoldFire = nil
 end
@@ -297,10 +311,10 @@ function ENT:HandleKeyValue( Key, Value ) end
 
 function ENT:GAME_OnRangeAttacked( _, _, _, flDamage )
 	local MyTable = CEntity_GetTable( self )
-	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage / 3
-	MyTable.flSuppressionRecoverTime = CurTime() + .5
-	MyTable.flCombatStateSuppressionRecoverTime = CurTime() + 5
-	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage / 3
+	MyTable.GAME_flSuppression = MyTable.GAME_flSuppression + flDamage
+	MyTable.flSuppressionRecoverTime = CurTime() + 3
+	MyTable.flCombatStateSuppressionRecoverTime = CurTime() + 6
+	MyTable.flCombatStateSuppression = MyTable.flCombatStateSuppression + flDamage
 end
 
 local ProtectedCall = ProtectedCall
@@ -314,14 +328,16 @@ local FrameTime = FrameTime
 local CEntity_Health = CEntity.Health
 local CEntity_GetPoseParameter = CEntity.GetPoseParameter
 local CEntity_SetPoseParameter = CEntity.SetPoseParameter
-local CEntity_LookupPoseParameter = CEntity.LookupPoseParameter
+local CEntity_GetRight = CEntity.GetRight
 local Angle = Angle
+local math_exp = math.exp
+local math_abs = math.abs
 ENT.m_sPitchPoseParameter = "aim_pitch"
 ENT.m_sYawPoseParameter = "aim_yaw"
+ENT.flYawVelocity = 0
+ENT.vAimVelocity = Vector()
 function ENT:HandleTurning( MyTable )
-	local sPitch = MyTable.m_sPitchPoseParameter
-	local sYaw = MyTable.m_sYawPoseParameter
-	local ppAimPitch = CEntity_LookupPoseParameter( self, sPitch )
+	local flFrameTime = MyTable.m_flFrameTime
 	local Angles = CEntity_GetAngles( self )
 	local aAim = Angle( Angles )
 	local v = MyTable.vaAimTargetPose
@@ -333,32 +349,36 @@ function ENT:HandleTurning( MyTable )
 	local flTurnRate = MyTable.flTurnRate
 	local f = MyTable.flOverrideTurnRateThisTick
 	if f then flTurnRate = f MyTable.flOverrideTurnRateThisTick = nil end
-	if ppAimPitch != -1 then
-		local p = CEntity_GetPoseParameter( self, sPitch )
-		local des = math_AngleDifference( aDesAim.p, Angles.p + p )
-		local t = MyTable.flBodyTensity
-		local f = flTurnRate / t * FrameTime()
-		CEntity_SetPoseParameter( self, sPitch, p + math_Clamp( des * t, -f, f ) )
-		aAim.p = aAim.p + CEntity_GetPoseParameter( self, sPitch )
-	end
-	local ppAimYaw = CEntity_LookupPoseParameter( self, sYaw )
-	if ppAimYaw != -1 then
-		local p = CEntity_GetPoseParameter( self, sYaw )
-		local des = math_AngleDifference( aDesAim.y, Angles.y + p )
-		local t = MyTable.flBodyTensity
-		local f = flTurnRate / t * FrameTime()
-		CEntity_SetPoseParameter( self, sYaw, p + math_Clamp( des * t, -f, f ) )
-		aAim.y = aAim.y + CEntity_GetPoseParameter( self, sYaw )
-	end
+	local vAimVelocity = MyTable.vAimVelocity
+	local sPitch = MyTable.m_sPitchPoseParameter
+	local sYaw = MyTable.m_sYawPoseParameter
+	local flPitch = CEntity_GetPoseParameter( self, sPitch )
+	local flYaw = CEntity_GetPoseParameter( self, sYaw )
+	vAimVelocity:Add( Vector(
+		math_AngleDifference( aDesAim[ 1 ], Angles[ 1 ] + flPitch ),
+		math_AngleDifference( aDesAim[ 2 ], Angles[ 2 ] + flYaw )
+	) * 24 * flFrameTime )
+	vAimVelocity:Mul( math_exp( -2 * flFrameTime ) )
+	MyTable.vAimVelocity = vAimVelocity
+	flPitch = flPitch + ( vAimVelocity[ 1 ] * flFrameTime )
+	CEntity_SetPoseParameter( self, sPitch, flPitch )
+	aAim[ 1 ] = aAim[ 1 ] + flPitch
+	flYaw = flYaw + ( vAimVelocity[ 2 ] * flFrameTime )
+	CEntity_SetPoseParameter( self, sYaw, flYaw )
+	aAim[ 2 ] = aAim[ 2 ] + flYaw
 	MyTable.aAim = aAim
 	MyTable.vAim = aAim:Forward()
 	if MyTable.bCantTurnBody then return end
-	local loco = MyTable.loco
-	loco:SetMaxYawRate( flTurnRate * math_Clamp( math_abs( math_AngleDifference( aDesAim.y, Angles.y ) ), 0, 90 ) * .01111111111 )
 	local v = MyTable.vaAimTargetBody || CEntity_GetAngles( self )
 	if isangle( v ) then v = v:Forward() else v = ( v - self:GetShootPos() ):GetNormalized() end
-	v = CEntity_GetPos( self ) + v
-	for _ = 1, 8 do loco:FaceTowards( v ) end
+	local flYawVelocity = MyTable.flYawVelocity
+	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * 14 /*STIFFNESS*/ * flFrameTime ) * math_exp( -12 /*DAMPING*/ * flFrameTime )
+	MyTable.flYawVelocity = flYawVelocity
+	local loco = MyTable.loco
+	loco:SetMaxYawRate( math_abs( MyTable.flYawVelocity ) )
+	v = CEntity_GetPos( self ) + Angle( 0, Angles[ 2 ] + MyTable.flYawVelocity, 0 ):Forward() * 128
+	local fFaceTowards = loco.FaceTowards
+	for _ = 1, 8 do fFaceTowards( loco, v ) end
 end
 
 ENT.flSuppressionRecoverTime = 0
@@ -379,13 +399,14 @@ function ENT:RunBehaviour( MyTable )
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
 			local f = MyTable.fCallMeInRunBehaviour
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
-			MyTable.CalcCombatState( self, MyTable ) // Important to call this before the lwoer thing, as it calculates flSquadHealth
+			MyTable.CalcCombatState( self, MyTable ) // Important to call this before the lower thing, as it calculates flSquadHealth
 			if CurTime() > MyTable.flSuppressionRecoverTime then
 				MyTable.GAME_flSuppression = Lerp( math_min( flFrameTime * 2, 1 ), MyTable.GAME_flSuppression, 0 )
 			end
 			if CurTime() > MyTable.flCombatStateSuppressionRecoverTime then
 				MyTable.flCombatStateSuppression = Lerp( math_min( flFrameTime * .1, 1 ), MyTable.flCombatStateSuppression, 0 )
 			end
+			MyTable.HandleSentences( self, MyTable )
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )
 			MyTable.Behaviour( self, MyTable )

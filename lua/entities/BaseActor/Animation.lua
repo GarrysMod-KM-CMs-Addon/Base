@@ -10,8 +10,13 @@ function ENT:PlaySequenceAndWait( sName, flSpeed )
 end
 
 ENT.tSequences = {}
+ENT.tSequenceEvents = {}
 ENT.tPromoteSequences = {}
 ENT.tInstantlyPromote = {}
+
+ENT.m_tSequenceEvents = {}
+
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 function ENT:PromoteSequence( seq, flSpeed )
 	if isnumber( seq ) then seq = self:GetSequenceName( seq ) end
@@ -28,8 +33,12 @@ function ENT:PromoteMotionSequence( Sequence )
 	self.tPromoteSequences[ Sequence ] = GetVelocity( self ):Length() / self:GetSequenceGroundSpeed( self:LookupSequence( Sequence ) )
 end
 
-function ENT:AnimationSystemTick()
-	local tPromote, tInstant, tSequences = self.tPromoteSequences, self.tInstantlyPromote, self.tSequences
+local Lerp = Lerp
+local math_min = math.min
+
+function ENT:AnimationSystemTick( MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+	local tPromote, tInstant, tSequences = MyTable.tPromoteSequences, MyTable.tInstantlyPromote, MyTable.tSequences
 	local s = self.m_sIdleSequence
 	if s && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then tPromote = { [ s ] = ( self.m_flIdleSequenceSpeed || 1 ) } end
 	for seq in pairs( tInstant ) do
@@ -46,10 +55,24 @@ function ENT:AnimationSystemTick()
 			tSequences[ seq ] = lay
 		end
 	end
-	local flFrameTime, bReached = self.m_flFrameTime
+	local flFrameTime, tSequenceEvents, tCurrentSequenceEvents, bReached = self.m_flFrameTime, self.tSequenceEvents, self.m_tSequenceEvents
 	for sSequence, iLayer in pairs( tSequences ) do
 		local s = self:LookupSequence( sSequence )
 		if self:GetLayerSequence( iLayer ) != s then self:SetLayerSequence( iLayer, s ) end
+		local flCycle = self:GetLayerCycle( iLayer )
+		local tData = tSequenceEvents[ sSequence ]
+		if tData then
+			local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
+			for flTime, fFunction in pairs( tData ) do
+				// Normal progression, passing the event time
+				if flCycle > flTime && flLastCycle <= flTime ||
+				// Already passed the event time in the new loop
+				flCycle < flLastCycle && flCycle >= flTime ||
+				// The event was at the very end of the last loop
+				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self ) end
+			end
+			tCurrentSequenceEvents[ sSequence ] = flCycle
+		end
 		local f = tInstant[ sSequence ]
 		if f then
 			bReached = true
@@ -59,29 +82,28 @@ function ENT:AnimationSystemTick()
 		end
 		local f = tPromote[ sSequence ]
 		if f then
-			f = math.Clamp( self:GetLayerWeight( iLayer ) + flFrameTime * 2, 0, 1 )
+			f = Lerp( math_min( flFrameTime * 5, 1 ), self:GetLayerWeight( iLayer ), 1 )
 			self:SetLayerWeight( iLayer, f )
-			if f >= 1 then bReached = true end
+			if f >= .95 then bReached = true end
 		end
 	end
 	if bReached then
 		for sSequence, iLayer in pairs( tSequences ) do
 			local f = tPromote[ sSequence ]
 			if !f then
-				if self:GetLayerWeight( iLayer ) <= 0 then
+				if self:GetLayerWeight( iLayer ) <= .05 then
 					self:RemoveLayer( iLayer )
 					tSequences[ sSequence ] = nil
 					continue
 				end
-				self:SetLayerWeight( iLayer, math.Clamp( self:GetLayerWeight( iLayer ) - flFrameTime * 2, 0, 1 ) )
+				f = Lerp( math_min( flFrameTime * 5, 1 ), self:GetLayerWeight( iLayer ), 0 )
+				self:SetLayerWeight( iLayer, f )
 			end
 		end
 	end
-	table.Empty( tPromote )
-	table.Empty( tInstant )
+	MyTable.tPromoteSequences = {}
+	MyTable.tInstantlyPromote = {}
 end
-
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 function ENT:AnimationSystemHalt( MyTable )
 	for seq, lay in pairs( ( MyTable || CEntity_GetTable( self ) ).tSequences ) do
@@ -97,10 +119,12 @@ local math_AngleDifference = math.AngleDifference
 
 function ENT:CenterTarget( vTarget, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+	local iYawPoseParameter = self:LookupPoseParameter( MyTable.m_sYawPoseParameter )
+	if iYawPoseParameter == -1 then return end
 	local vVelocity = GetVelocity( self )
 	local aAlongPath = vVelocity:Angle()
 	local vPos = self:GetPos() + self:OBBCenter()
-	local flYawComfortableMin, flYawComfortableMax = self:GetPoseParameterRange( self:LookupPoseParameter( MyTable.m_sYawPoseParameter ) )
+	local flYawComfortableMin, flYawComfortableMax = self:GetPoseParameterRange( iYawPoseParameter )
 	flYawComfortableMin = math_max( flYawComfortableMin, -45 )
 	flYawComfortableMax = math_min( flYawComfortableMax, 45 )
 	local flDelta = math_AngleDifference( aAlongPath[ 2 ], ( vTarget - vPos ):Angle()[ 2 ] )

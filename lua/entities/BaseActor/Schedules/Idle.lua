@@ -1,7 +1,7 @@
 ENT.flIdleStandTimeMin = 0
 ENT.flIdleStandTimeMax = 4
 
-Actor_RegisterSchedule( "Idle", function( self, sched )
+RegisterSchedule( "Idle", function( self, sched )
 	if !table.IsEmpty( self.tEnemies ) then return false end
 	self.WEAPON_STANCE = WEAPON_STANCE_PASSIVE
 	if CurTime() > self.flWeaponReloadTime then

@@ -40,12 +40,9 @@ ENT.flLastEnemy = 0
 
 ENT.bCantSeeUnderWater = true
 ENT.bVisNot360 = true
-// ENT.flVisionYaw = 99
-// ENT.flVisionPitch = 33 // Rougly 99 * ( 6 / 19 ). 31 would be More Exact But 33 Looks Cooler
 // Must be half of the actual value, since it's calculated as an absolute difference
-local f = UNIVERSAL_FOV * .5
-ENT.flVisionYaw = f
-ENT.flVisionPitch = f * ( 9 / 16 )
+ENT.flVisionYaw = 53.13
+ENT.flVisionPitch = 31.72
 function ENT:CanSee( vec, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	local veh, ent
@@ -100,6 +97,8 @@ function ENT:UpdateEnemyMemory( enemy, vec, ang ) self:SetupBullseye( enemy, vec
 
 local EntityUniqueIdentifier = EntityUniqueIdentifier
 
+local math_min = math.min
+
 function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 	if !vec then vec = enemy:GetPos() + enemy:OBBCenter() end
 	if !ang then ang = ( enemy.GetAimVector && enemy:GetAimVector() || enemy:GetForward() ):Angle() end
@@ -118,6 +117,11 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 	BullseyeTable.flTime = CurTime()
 	BullseyeTable.Enemy = ent
 	BullseyeTable.Owner = self
+	local v = GetVelocity( enemy )
+	local l = v:Length()
+	v:Normalize()
+	v:Mul( math_min( l, self:BoundingRadius() ) )
+	vec:Add( v )
 	beye:SetPos( vec )
 	beye:SetAngles( ang )
 	BullseyeTable.GAME_BoundMins = ent:OBBMins()
@@ -383,7 +387,7 @@ function ENT:Look( MyTable )
 	MyTable.tEnemies = tEnemies
 	MyTable.flLastLookTime = CurTime()
 	MyTable.tVisionStrength = tVisionStrength
-	if bClear && IsValid( ne ) then MyTable.OnAcquireEnemy( self, MyTable ) end
+	if bClear && IsValid( ne ) then MyTable.OnAcquireEnemy( self, ne, MyTable ) end
 	local t = {}
 	for ent, flTime in pairs( MyTable.tNextWeaponCheck ) do if IsValid( ent ) then t[ ent ] = flTime end end
 	MyTable.tNextWeaponCheck = t
