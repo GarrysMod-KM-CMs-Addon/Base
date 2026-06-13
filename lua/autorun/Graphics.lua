@@ -226,7 +226,7 @@ hook.Add( "Tick", "Graphics", function()
 	flColorSum = VectorSum( vColor )
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
-		local f = flOxygenLimit * .33
+		local f = flOxygenLimit * .5
 		if flOxygen <= f then
 			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
 		else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
@@ -266,7 +266,7 @@ hook.Add( "Tick", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
 	flBloom = Lerp( math_min( 1, FrameTime() * .5 ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.5, 3 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 	flDistance = Lerp(
@@ -280,7 +280,8 @@ hook.Add( "Tick", "Graphics", function()
 		} ).HitPos:Distance( EyePos() ), 0, 6144 )
 	)
 	flDepthOfField = flDistance * 1.5
-	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
+	//	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
+	flFogDensityMul = ( 1 - flBrightness ) * ( flFogDensityMul || 0 )
 end )
 
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
@@ -295,9 +296,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	DrawMotionBlur( .66, 1, 0 )
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		2, // Size X
-		2, // Size Y
-		2, // Passes
+		6, // Size X
+		6, // Size Y
+		1, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
 	DrawColorModify( tDrawColorModify )
@@ -539,11 +540,11 @@ hook.Add( "HUDPaint", "Graphics", function()
 			for a = f - MARKER_SIZE_OUTLINE, f + MARKER_SIZE_OUTLINE - flSegmentDistance, flSegmentDistance do
 				local flDelta = math_abs( a - f ) / MARKER_SIZE_OUTLINE
 				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .6
-				if flDelta <= .166 then s = s + math_abs( flDelta - .166 ) * 66 end
+				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
 				s = s + 1
-				local flCurveInward = flDelta ^ 2 * 5
+				local flCurveInward = flDelta ^ 2 * 4
 				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 5
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 4
 				local flNextRadius = flScale - flCurveInwardNext
 				surface_DrawLine(
 					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
@@ -553,20 +554,21 @@ hook.Add( "HUDPaint", "Graphics", function()
 				)
 			end
 		end
-		if ply:GetNW2Bool( "GAME_b3DThreat" .. sI ) then
-			surface_SetDrawColor( 255, 0, 0, 255 )
-		else surface_SetDrawColor( 255, 255, 255, 255 ) end
+		local bThreat = ply:GetNW2Bool( "GAME_b3DThreat" .. sI )
 		for i = 0, 1, .5 do
 			local flScale = flOff + i
 			local flSegmentDistance = PRECOMPUTED / flScale
 			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
 				local flDelta = math_abs( a - f ) / MARKER_SIZE
 				local s = MARKER_SIZE * ( 1 - flDelta ) * .6
-				if flDelta <= .166 then s = s + math_abs( flDelta - .166 ) * 66 end
-				local flCurveInward = flDelta ^ 2 * 5
+				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
+				local flCurveInward = flDelta ^ 2 * 4
 				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 5
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 4
 				local flNextRadius = flScale - flCurveInwardNext
+				local flValue = 1 - flDelta ^ 3 * .5
+				if bThreat then surface_SetDrawColor( flValue * 255, 0, 0, 255 )
+				else surface_SetDrawColor( flValue * 255, flValue * 255, flValue * 255, 255 ) end
 				surface_DrawLine(
 					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
 					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),

@@ -28,8 +28,7 @@ SWEP.flRecoil = 10
 SWEP.flSideWaysRecoilMin = -.2
 SWEP.flSideWaysRecoilMax = .2
 SWEP.flRecoilGrowMin = .4
-SWEP.flRecoilGrowMax = .85
-SWEP.flAimShoot = 3
+SWEP.flRecoilGrowMax = .85
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 
 sound.Add {

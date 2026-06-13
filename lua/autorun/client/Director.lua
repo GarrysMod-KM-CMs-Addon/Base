@@ -1,3 +1,5 @@
+// TODO: Outros. I already have special outros, but not normal outros yet.
+
 // NOTE: Heat and Alert might get better code sometime.
 // Don't set something to both just 'cause "it should play during both in the game".
 // Alert should get code that makes it transition into Heat if no one's aggressively searching.
@@ -39,25 +41,28 @@ end
 
 ENGINE_READ_SOUND = {}
 
-function WarmUpSound( sName )
-	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
-	local pSound = CreateSound( LocalPlayer(), sName )
-	pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
-	timer.Simple( math_Rand( .05, .1 ), function() pSound:Stop() end )
-	ENGINE_READ_SOUND[ sName ] = true
-end
+local timer_Simple = timer.Simple
+
+local CreateSound = CreateSound
+
+local LocalPlayer = LocalPlayer
 
 local math_Rand = math.Rand
 
+function WarmUpSound( sName )
+	local ply = LocalPlayer()
+	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
+	local pSound = CreateSound( ply, sName )
+	pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
+	timer_Simple( math_Rand( .05, .1 ), function() pSound:Stop() end )
+	ENGINE_READ_SOUND[ sName ] = true
+end
+
+local WarmUpSound = WarmUpSound
+
 function WarmUpSoundGenerous( sName )
 	if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
-	timer.Simple( math_Rand( .05, .1 ), function()
-		if !IsValid( LocalPlayer() ) || ENGINE_READ_SOUND[ sName ] then return end
-		local pSound = CreateSound( LocalPlayer(), sName )
-		pSound:PlayEx( SOUND_PATCH_ABSOLUTE_MINIMUM, 100 )
-		timer.Simple( math_Rand( .05, .1 ), function() pSound:Stop() end )
-		ENGINE_READ_SOUND[ sName ] = true
-	end )
+	timer_Simple( math_Rand( .05, .1 ), function() WarmUpSound( sName ) end )
 end
 
 // DO NOT!!! Touch any of these manually!
@@ -87,35 +92,55 @@ DIRECTOR_ALLOCATE_ALERT_THEME( "DIRECTOR_TRACK_ALERT_MyDoubleTrack", t )
 */
 
 function DIRECTOR_ALLOCATE_HEAT_THEME( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HEAT ][ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_HEAT_THEMES = DIRECTOR_NUM_HEAT_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_HEAT_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HEAT ][ DIRECTOR_NUM_HEAT_THEMES ] = tTable
 end
 
 function DIRECTOR_ALLOCATE_ALERT_THEME( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_ALERT ][ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_ALERT_THEMES = DIRECTOR_NUM_ALERT_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_ALERT_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_ALERT ][ DIRECTOR_NUM_ALERT_THEMES ] = tTable
 end
 
 function DIRECTOR_ALLOCATE_AGGRESSIVE_SEARCH_THEME( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ][ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ][ DIRECTOR_NUM_AGGRESSIVE_SEARCH_THEMES ] = tTable
 end
 
 function DIRECTOR_ALLOCATE_HOLD_FIRE_THEME( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HOLD_FIRE ][ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_HOLD_FIRE_THEMES = DIRECTOR_NUM_HOLD_FIRE_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_HOLD_FIRE_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_HOLD_FIRE ][ DIRECTOR_NUM_HOLD_FIRE_THEMES ] = tTable
 end
 
 function DIRECTOR_ALLOCATE_COMBAT_THEME( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_COMBAT ][ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_COMBAT_THEMES = DIRECTOR_NUM_COMBAT_THEMES + 1
 	_G[ sName ] = DIRECTOR_NUM_COMBAT_THEMES
 	DIRECTOR_MUSIC_TABLE[ DIRECTOR_THREAT_COMBAT ][ DIRECTOR_NUM_COMBAT_THEMES ] = tTable
@@ -147,7 +172,6 @@ function Director_Music_Container()
 end
 
 local SysTime = SysTime
-local LocalPlayer = LocalPlayer
 // local game_GetWorld = game.GetWorld
 local table_insert = table.insert
 function Director_Music_Play( self, Index, sName, flVolume, flPitch )
@@ -178,13 +202,21 @@ DIRECTOR_NUM_TRANSITIONS_TO_COMBAT = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT || 0
 DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT || 0
 
 function DIRECTOR_ALLOCATE_TRANSITION_TO_COMBAT( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT[ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_TRANSITIONS_TO_COMBAT = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT + 1
 	_G[ sName ] = DIRECTOR_NUM_TRANSITIONS_TO_COMBAT
 	DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT[ DIRECTOR_NUM_TRANSITIONS_TO_COMBAT ] = tTable
 end
 function DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( sName, tTable )
-	if _G[ sName ] then return end
+	local ECurrent = _G[ sName ]
+	if ECurrent then
+		DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT[ ECurrent ] = tTable
+		return
+	end
 	DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT + 1
 	_G[ sName ] = DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT
 	DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT[ DIRECTOR_NUM_TRANSITIONS_FROM_COMBAT ] = tTable
@@ -291,19 +323,26 @@ end
 
 // FIXME: Until I implement support for m_pContainerFrom instead of
 // m_ELayerFrom, this is gonna break when one special changes to another
-function DIRECTOR_SPECIAL_BEGIN( pTable )
-	if DIRECTOR_SPECIAL then
-		if pTable == DIRECTOR_SPECIAL.m_pTable then return end
-	end
+function DIRECTOR_BEGIN_SPECIAL( pTable )
+	if DIRECTOR_SPECIAL then if pTable == DIRECTOR_SPECIAL.m_pTable then return end end
 	local p = Director_Music_Container()
 	p.m_pTable = pTable
 	DIRECTOR_SPECIAL = p
 end
 
 // FIXME: Properly implement this whole thing, including outros
-function DIRECTOR_SPECIAL_END()
-	DIRECTOR_SPECIAL = nil
-	DIRECTOR_SPECIAL_INTRO = nil
+function DIRECTOR_END_SPECIAL()
+	local t = DIRECTOR_SPECIAL.m_pTable
+	local f = t.CheckOutro
+	if f && f "Special" then
+		DIRECTOR_SPECIAL_OUTRO = Director_Music_Container()
+		DIRECTOR_SPECIAL_OUTRO.m_pTable = { Execute = t.Outro }
+		DIRECTOR_SPECIAL_OUTRO.m_pSource = DIRECTOR_SPECIAL
+		DIRECTOR_SPECIAL_OUTRO.m_flVolume = 1
+		DIRECTOR_SPECIAL_OUTRO.m_bFromCombat = true
+		DIRECTOR_SPECIAL_OUTRO.m_bOutroOfATrack = true
+		DIRECTOR_SPECIAL_OUTRO.m_ELayerTo = DIRECTOR_THREAT
+	else DIRECTOR_SPECIAL = nil DIRECTOR_SPECIAL_INTRO = nil DIRECTOR_SPECIAL_OUTRO = nil end
 end
 
 DIRECTOR_MUSIC_INTENSITY = 0 // Intensity right now
@@ -342,8 +381,11 @@ function Director_VoiceLineHookToCombat( flDuration )
 end
 
 hook.Add( "PostCleanupMap", "Director", function()
-	table.Empty( DIRECTOR_MUSIC )
+	DIRECTOR_MUSIC = {}
 	DIRECTOR_TRANSITION = nil
+	DIRECTOR_SPECIAL = nil
+	DIRECTOR_SPECIAL_INTRO = nil
+	DIRECTOR_SPECIAL_OUTRO = nil
 	DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_NULL
 end )
 
@@ -426,6 +468,32 @@ function DIRECTOR_CLIENT_TICK()
 				end
 			end
 			DIRECTOR_SPECIAL.m_flVolume = flVolumeB
+			Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
+			LAST_DIRECTOR_CLIENT_TICK = SysTime()
+			return
+		elseif DIRECTOR_SPECIAL_OUTRO then
+			local ELayerFrom, ELayerTo, flInitialVolumeA, flInitialVolumeB = DIRECTOR_SPECIAL_OUTRO.m_ELayerFrom, DIRECTOR_SPECIAL_OUTRO.m_ELayerTo, DIRECTOR_SPECIAL.m_flVolume
+			local bDone, flVolumeA, flVolumeB = Director_Music_UpdateInternal( DIRECTOR_SPECIAL_OUTRO, flInitialVolumeA || 0, DIRECTOR_SPECIAL.m_flVolume || 0, true )
+			DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom
+			flVolumeA = flVolumeA || 0
+			flVolumeB = flVolumeB || 1
+			if bDone then
+				DIRECTOR_SPECIAL = nil
+				DIRECTOR_SPECIAL_INTRO = nil
+				DIRECTOR_SPECIAL_OUTRO = nil
+				return
+			end
+			for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
+				if pContainer then
+					if ELayer == ELayerFrom then
+						pContainer.m_flVolume = flVolumeA
+					else
+						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+					end
+					Director_Music_UpdateInternal( pContainer )
+				end
+			end
+			DIRECTOR_SPECIAL.m_flVolume = flVolumeA
 			Director_Music_UpdateInternal( DIRECTOR_SPECIAL )
 			LAST_DIRECTOR_CLIENT_TICK = SysTime()
 			return

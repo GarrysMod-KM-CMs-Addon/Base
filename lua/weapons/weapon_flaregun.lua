@@ -26,7 +26,7 @@ SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.Crosshair = "Pistol"
 SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
-SWEP.Primary_flDelay = 1
+SWEP.Primary_flDelay = .2
 
 sound.Add {
 	name = "FlareShot",

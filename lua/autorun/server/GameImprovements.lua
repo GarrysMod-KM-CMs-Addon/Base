@@ -119,7 +119,7 @@ end
 
 local util_TraceLine = util.TraceLine
 
-// local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
+local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
 local util_ScreenShake, util_DistanceToLine = util.ScreenShake, util.DistanceToLine
 RANGE_ATTACK_SUPPRESSION_BOUND_SIZE = 512
 function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
@@ -129,37 +129,34 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 		if ent == Owner || Owner.Disposition && Owner:Disposition( ent ) == D_LI || ent.Disposition && ent:Disposition( Owner ) == D_LI then continue end
 		local p = ent:GetPos() + ent:OBBCenter()
 		local _, v = util_DistanceToLine( vStart, vEnd, p )
+		if ent:IsPlayer() then ent:SetNW2Float( "GAME_flShellShockShake", ent:GetNW2Float "GAME_flShellShockShake" + flDamage * .05 ) end
 		if util_TraceLine( {
 			start = v,
 			endpos = p,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilter( ent )
 		} ).Hit then continue end
+		if ent:IsPlayer() then ent:SetNW2Float( "GAME_flShellShockShake", ent:GetNW2Float "GAME_flShellShockShake" + flDamage * .2 ) end
 		if ent.GAME_tSuppressionAmount then
 			ent.GAME_tSuppressionAmount[ Owner ] = ( ent.GAME_tSuppressionAmount[ Owner ] || 0 ) + flDamage
 		else ent.GAME_tSuppressionAmount = { [ Owner ] = flDamage } end
 		local f = ent.GAME_OnRangeAttacked
 		if f == nil then ent.GAME_flSuppression = ( ent.GAME_flSuppression || 0 ) + flDamage else f( ent, Owner, vStart, vEnd, flDamage ) end
-		if ent.__ACTOR__ then
-			local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
-			if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
-				if !IsValid( ent.Enemy ) && table.IsEmpty( ent.tEnemies ) && table.IsEmpty( ent.tBullseyes ) then
-					timer.Simple( math.Rand( 0, 1 ), function()
-						if !IsValid( ent ) then return end
-						ent:DLG_Startle( Owner )
-					end )
-					ent.Enemy = ent:SetupBullseye( Owner, vStart, ang )
-				else ent:SetupBullseye( Owner, vStart, ang ) end
-			end
+	end
+	local ang = ( vEnd - vStart ):Angle()
+	for ent in pairs( __ACTOR_LIST__ ) do
+		if ent == Owner || Owner.Disposition && tIgnoreRangeAttackDisp[ Owner:Disposition( ent ) ] || ent.Disposition && tIgnoreRangeAttackDisp[ ent:Disposition( Owner ) ] then continue end
+		local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
+		if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
+			if !IsValid( ent.Enemy ) && table.IsEmpty( ent.tEnemies ) && table.IsEmpty( ent.tBullseyes ) then
+				timer.Simple( math.Rand( 0, 1 ), function()
+					if !IsValid( ent ) then return end
+					ent:DLG_Startle( Owner )
+				end )
+				ent.Enemy = ent:SetupBullseye( Owner, vStart, ang )
+			else ent:SetupBullseye( Owner, vStart, ang ) end
 		end
 	end
-	// Too cheaty - makes silencers almost completely useless!
-	//	local ang = ( vEnd - vStart ):Angle()
-	//	for ent in pairs( __ACTOR_LIST__ ) do
-	//		if ent == Owner || Owner.Disposition && tIgnoreRangeAttackDisp[ Owner:Disposition( ent ) ] || ent.Disposition && tIgnoreRangeAttackDisp[ ent:Disposition( Owner ) ] then continue end
-	//		local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
-	//		if ent:CanSee( v ) then ent:SetupBullseye( Owner, vStart, ang ) end
-	//	end
 end
 
 local function fOnKilled( pEntity, pAttacker )
@@ -223,7 +220,12 @@ hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 end )
 
 // This is very crude and might break things, but whatever, it's worth enough
-MODEL_SIZE_GENERAL_MULTIPLIER = 1 / .75
+MODEL_SIZE_GENERAL_MULTIPLIER = 10 / 7
+
+// NOTE: Removing the T O D O in the findable format because it's not necessary any longer.
+// Any sane campaign creator will scale their map correctly. This is for Sandbox now.
+// T O D O: Implement a system for ragdoll resizing...
+// probably something like https://steamcommunity.com/workshop/filedetails/?id=470366741
 
 local cCorrectScale = CreateConVar(
 	"bCorrectScale",
@@ -326,12 +328,22 @@ hook.Add( "GetFallDamage", "GameImprovements", function( ply, flSpeed )
 	local flRatio = flSpeed / ( ply:GetJumpPower() * 1.5 )
 	if flRatio <= 1 then return 0 end
 	Achievement_Miscellaneous( ply, "Fall" )
-	return flRatio * 32
+	return flRatio ^ 1.5 * 32
 end )
 
 hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll )
+	local f = pOwner.PreCreateRagdoll
+	if f then f( pOwner, pRagdoll ) end
 	local f = pOwner.OnBulletImpact
 	if f then pRagdoll.OnBulletImpact = f end
+	local f = pOwner.BloodSplatter
+	if f then pRagdoll.BloodSplatter = f end
+	local f = pOwner.OnCreateRagdoll
+	if f then f( pOwner, pRagdoll ) end
+	pRagdoll:SetNW2Float( "GAME_flBleeding", pOwner:GetNW2Float( "GAME_flBleeding", 0 ) )
+	local f = math.max( pOwner:Health(), pOwner:GetMaxHealth() )
+	if f <= 0 then f = 100 end
+	pRagdoll.GAME_flOldMaxHealth = f
 end )
 
 TRACER_COLOR = {
@@ -446,21 +458,26 @@ function PhysicsCollide( ent, Data )
 	end
 end
 
-// local math_max = math.max
-
-hook.Add( "EntityTakeDamage", "GameImprovements", function( ent, dDamage )
-	// Bloodloss works only on players for now, so see PlayerHurt for bloodloss code
+hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
+	// Bloodloss only works on players for now, so see PlayerHurt for bloodloss code
 	local at = dDamage:GetAttacker()
 	if IsValid( at ) then
 		if at:IsPlayer() then
 			local v = __PLAYER_MODEL__[ at:GetModel() ]
 			if v then
 				v = v.OnHurtSomething
-				if v then if v( at, ent, dDamage ) then b = nil end end
+				if v then if v( at, pEntity, dDamage ) then b = nil end end
 			end
 		elseif at.GetEnemy then at.GAME_bHurtEnemy = true end
 		local f = at.GAME_OnHurtSomething
-		if f then f( at, ent, dDamage ) end
+		if f then f( at, pEntity, dDamage ) end
+	end
+	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
+	local fBloodSplatter = pEntity.BloodSplatter
+	if fBloodSplatter then fBloodSplatter( pEntity, dDamage ) end
+	if pEntity:GetClass() == "prop_ragdoll" then
+		pEntity:SetNW2Float( "GAME_flBleeding", pEntity:GetNW2Float( "GAME_flBleeding", 0 ) +
+		dDamage:GetDamage() / ( pEntity.GAME_flOldMaxHealth * 112 ) )
 	end
 end )
 
@@ -470,7 +487,6 @@ local CEntity_Extinguish = CEntity.Extinguish
 file.CreateDir "Covers"
 file.CreateDir "Achievements"
 
-local ents = ents
 local ents_Iterator = ents.Iterator
 local cEvents = CreateConVar(
 	"bEvents",
@@ -600,15 +616,21 @@ end
 
 local cActorQueueCallsPerTick = CreateConVar(
 	"iActorQueueCallsPerTick",
-	4,
+	1,
 	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
-	"Complex calculations (such as finding nearest cover) are enqueued in a Circular Double Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
+	"Complex calculations (such as finding nearest cover) are enqueued in a Circular Doubly Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
 	1
 )
 
+local util_Decal = util.Decal
+
 local ACTOR_QUEUE_CURRENT = nil
+local flNextActorQueueCall = 0
 local coroutine_resume = coroutine.resume
 local coroutine_status = coroutine.status
+local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
+local math_Clamp = math.Clamp
+local engine_TickInterval = engine.TickInterval
 hook.Add( "Think", "GameImprovements", function()
 	if cEvents:GetBool() && __EVENTS_LENGTH__ > 0 && math.Rand( 0, cEventProbability:GetFloat() * FrameTime() ) <= 1 then
 		local iRemaining, tEncountered = __EVENTS_LENGTH__, {}
@@ -620,7 +642,7 @@ hook.Add( "Think", "GameImprovements", function()
 			iRemaining = iRemaining - 1
 		end
 	end
-	if ACTOR_QUEUE_LAST then
+	if ACTOR_QUEUE_LAST && SysTime() > flNextActorQueueCall then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
 		local iCalls = 0
 		local f = cActorQueueCallsPerTick:GetInt()
@@ -646,6 +668,7 @@ hook.Add( "Think", "GameImprovements", function()
 			end
 			if !ACTOR_QUEUE_LAST then break end
 		end
+		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 1000 - engine_TickInterval(), 0, 1 ) * 5
 	else ACTOR_QUEUE_CURRENT = nil end
 	if IsValid( CascadeShadowMapping ) then
 		if SUN_ANGLES then
@@ -668,12 +691,27 @@ hook.Add( "Think", "GameImprovements", function()
 		end
 	end
 	for _, ent in ents_Iterator() do
+		if ent:GetClass() == "light_environment" then ent:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" )
+		elseif ent:GetClass() == "prop_ragdoll" then
+			local flBlood = ent:GetNW2Float( "GAME_flBlood", 1 )
+			local f = ent:GetNW2Float( "GAME_flBleeding", 0 )
+			if flBlood > 0 && f > 0 && f > .0016 && CurTime() > ( ent.GAME_flNextBleed || 0 ) then
+				local v = ent:GetPos()
+				v:Add( ent:OBBCenter() )
+				util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent )
+				util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent )
+				ent.GAME_flNextBleed = CurTime() + math.Clamp( .033 / f, .5, 12 ) * math.Rand( .9, 1.1 )
+			end
+			// We cannot regenerate blood if we're dead!
+			//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
+			flBlood = math.Clamp( flBlood - f * FrameTime(), 0, 1 )
+			ent:SetNW2Float( "GAME_flBlood", flBlood )
+		end
 		local fGetEnemy = ent.GetEnemy
 		if fGetEnemy then
 			local pEnemy = fGetEnemy( ent )
 			if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !ent:Visible( pEnemy ) then ent.GAME_bHurtEnemy = nil end
 		end
-		if ent:GetClass() == "light_environment" then ent:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" ) end
 		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 		if ent.GAME_Think then ent:GAME_Think() end
 		if !ent.GAME_bPhysCollideHook then ent:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end ) ent.GAME_bPhysCollideHook = true end
@@ -1474,7 +1512,18 @@ NOT_A_VOICELINE[ "npc/zombie/moan_loop2.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop3.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop4.wav" ] = true
 
+local SoundDuration = SoundDuration
+local Format = Format
 local player_Iterator = player.Iterator
+
+util.AddNetworkString "CaptionSound"
+
+local net_Start = net.Start
+local net_WriteColor = net.WriteColor
+local net_WriteString = net.WriteString
+local net_WriteFloat = net.WriteFloat
+local net_Send = net.Send
+
 hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	if _Comp then
 		if _Comp.KM_CMs_Addon then return
@@ -1483,6 +1532,10 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
 	local ent = Data.Entity
 	local dent = GetOwner( ent )
+	local sSoundName = Data.SoundName
+	ent.GAME_sLastSoundPath = sSoundName
+	local flDuration = SoundDuration( Data.SoundName )
+	ent.GAME_flLastSoundDuration = flDuration
 	if Data.Volume <= .05 then return true end
 	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 1.95547 || 1.5 ), 5, 18000 )
 	local vPos = Data.Pos || ( ent:GetPos() + ent:OBBCenter() )
@@ -1492,22 +1545,23 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			act:OnHeardSomething( dent, Data )
 		end
 	end
-	local c, sColor = dent.GAME_cCaptionColor
-	if c then
-		sColor = Format( "%q", Format( "<clr:%d,%d,%d>", c.r, c.g, c.b ) )
-	elseif dent.GetPlayerColor then
-		local c = dent:GetPlayerColor() * 255
-		sColor = Format( "%q", Format( "<clr:%d,%d,%d>", c[ 1 ], c[ 2 ], c[ 3 ] ) )
-	else sColor = "\"\"" end
-	local sCaption = Format( "%q", Data.SoundName )
+	local cColor
+	local fCaptionColor = dent.CaptionColor
+	if fCaptionColor then
+		cColor = fCaptionColor( dent )
+	else
+		local fPlayerColor = dent.GetPlayerColor
+		if fPlayerColor then
+			cColor = fPlayerColor( dent ):ToColor()
+		else cColor = color_white end
+	end
 	local dts = dt * dt
+	local tCaptionPlayers = {}
 	for _, ply in player_Iterator() do
 		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
-		ply:SendLua( "CaptionSound(" .. sColor .. "," .. sCaption .. ")" )
+		table_insert( tCaptionPlayers, ply )
 		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
 		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
-		// The more gunfire is going on, the less the break between the shots and adrenaline will be,
-		// and if there's too much shit going on, start the music without waiting for a break! (Internally break becomes 0)
 		local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 		ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
 		local t = ply.DR_tSpotted
@@ -1543,6 +1597,13 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			continue
 		end
 	end
+	if !table_IsEmpty( tCaptionPlayers ) then
+		net_Start( "CaptionSound", false )
+			net_WriteColor( cColor, false )
+			net_WriteString( sSoundName )
+			net_WriteFloat( flDuration )
+		net_Send( tCaptionPlayers )
+	end
 	return true
 end )
 
@@ -1558,6 +1619,6 @@ end )
 
 if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end
 
-function CPlayer:GetNPCClass() return self.m_iClass || CLASS_HUMAN end
-function CPlayer:Classify() return self:GetNPCClass() end
-function CPlayer:SetNPCClass( i ) self.m_iClass = i end
+function CPlayer:GetNPCClass() return CEntity_GetTable( self ).m_iClass || CLASS_HUMAN end
+function CPlayer:Classify() return CEntity_GetTable( self ).m_iClass || CLASS_HUMAN end
+function CPlayer:SetNPCClass( i ) CEntity_GetTable( self ).m_iClass = i end

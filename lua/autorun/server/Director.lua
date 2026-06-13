@@ -101,7 +101,7 @@ hook.Add( "Tick", "Director", function()
 			end
 		end
 		ply:SetNW2Float( "ALARM_flHostileReinforcements", flReinforcements || 0 )
-		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 30 )
+		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 72 )
 		ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", math.Clamp( Lerp( math.min( 1, .5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
 		if ply:Alive() then
 			local o = ply:GetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", -1 ) )
@@ -115,8 +115,9 @@ hook.Add( "Tick", "Director", function()
 				ply:TakeDamageInfo( d )
 				continue
 			end
+			local flBlood = ply:GetNW2Float( "GAME_flBlood", 1 )
 			local f = ply:GetNW2Float( "GAME_flBleeding", 0 )
-			if f > 0 && f > .0016 && CurTime() > ( PlyTable.GAME_flNextBleed || 0 ) then
+			if flBlood > 0 && f > 0 && f > .0016 && CurTime() > ( PlyTable.GAME_flNextBleed || 0 ) then
 				ply:EmitSound "Bleed"
 				local v = ply:GetPos()
 				local f = ply:BoundingRadius()
@@ -137,7 +138,7 @@ hook.Add( "Tick", "Director", function()
 				util.Decal( "Blood", v, v + d * f, ply )
 				PlyTable.GAME_flNextBleed = CurTime() + math.Clamp( .033 / f, .5, 12 ) * math.Rand( .9, 1.1 )
 			end
-			local flBlood = math.Clamp( ply:GetNW2Float( "GAME_flBlood", 1 ) + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
+			flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 			ply:SetNW2Float( "GAME_flBlood", flBlood )
 			o = o - FrameTime()
 			ply:SetNW2Float( "GAME_flOxygen", math.Clamp(
@@ -154,7 +155,7 @@ hook.Add( "Tick", "Director", function()
 		end
 		// TODO: Allow others to change the view offsets
 		local f = ply:GetModelScale()
-		ply:SetViewOffset( Vector( 0, 0, 56 ) * f )
+		ply:SetViewOffset( Vector( 0, 0, 64 ) * f )
 		ply:SetViewOffsetDucked( Vector( 0, 0, 40 ) * f )
 		ply:SetCanZoom( false )
 		local h = ply:Health() / ply:GetMaxHealth()

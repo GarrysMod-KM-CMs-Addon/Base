@@ -23,8 +23,7 @@ SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.flSideWaysRecoilMin = -.33
 SWEP.flSideWaysRecoilMax = .33
-SWEP.flRecoil = 5
-SWEP.flAimShoot = 4
+SWEP.flRecoil = 5
 SWEP.sHoldType = "Pistol"
 
 if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then

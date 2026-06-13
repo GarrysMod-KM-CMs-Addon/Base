@@ -302,14 +302,14 @@ function SWEP:DrawSniperScope( MyTable )
 	surface_SetTexture( surface_GetTextureID( MyTable.sSniperTexture || "CrosshairScope1" ) )
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 )
+	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 ) * .9
 	surface_SetDrawColor( 255, 255, 255, 255 )
 	surface_DrawTexturedRect( flX - flSize * .5, flY - flSize * .5, flSize, flSize )
 	surface_SetDrawColor( 10, 10, 10, 255 )
 	surface_DrawRect( 0, 0, flX - flSize * .5 + 1, flHeight )
 	surface_DrawRect( flX + flSize * .5 - 1, 0, flWidth - flX, flHeight )
 	surface_DrawRect( flX - flSize * .5, 0, flSize, flY - flSize * .5 )
-	surface_DrawRect( flX - flSize * .5, flY + flSize * .5, flSize, flHeight - flY )
+	surface_DrawRect( flX - flSize * .5, flY + flSize * .5 - 1, flSize, flHeight - flY )
 	return true
 end
 

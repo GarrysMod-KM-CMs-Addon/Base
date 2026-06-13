@@ -11,8 +11,8 @@ ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 800
 
 HUMAN_WALK_SPEED = 75
-HUMAN_RUN_SPEED = 250
-HUMAN_SPRINT_SPEED = 325
+HUMAN_RUN_SPEED = 275
+HUMAN_SPRINT_SPEED = 350
 HUMAN_JUMP_HEIGHT = 72
 
 // Weapon statuses and other complicated bullshit
@@ -48,19 +48,36 @@ local CPlayer_KeyDown = FindMetaTable( "Player" ).KeyDown
 
 function QuickSlide_Can( ply, t ) if t == nil then t = CEntity_GetTable( ply ) end return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !Either( t.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, t.CTRL_bCantSlide ) && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9 ) end
 
+local IN_WALK = IN_WALK
+local IN_DUCK = IN_DUCK
+
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 		local ang = cmd:GetViewAngles()
 		local flBreathe = RealTime() * .5
-		local flForce = .5 * FrameTime()
+		local flForce = FrameTime() * .5
 		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
 		cmd:SetViewAngles( ang )
 	end
+	local flShake = ply:GetNW2Float( "GAME_flShellShockShake", 0 )
+	if flShake > 0 then
+		ply:SetNW2Float( "GAME_flShellShockShake", Lerp( math.min( 1, 2 * FrameTime() ), flShake, 0 ) )
+		flShake = math.min( flShake, 40 ) * ply:GetNW2Float( "GAME_flShellShockShakeScale", 1 )
+		local ang = cmd:GetViewAngles()
+		local flBreathe = RealTime() * flShake
+		local flForce = FrameTime() * flShake
+		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe * .5 ) * flForce
+		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe ) * flForce
+		cmd:SetViewAngles( ang )
+	end
 	if CLIENT then
+		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
+		elseif ply.GAME_bWalkPressed then ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk ply.GAME_bWalkPressed = nil end
+		if ply.GAME_bWantsToWalk then cmd:AddKey( IN_WALK ) end
 		if ply:GetNW2Bool "CTRL_bSliding" then
-			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bInDuckPressed = true
-			elseif ply.GAME_bInDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bInDuckPressed = nil end
+			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
+			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
 			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
 			//	if ply.GAME_bSprint then cmd:AddKey( IN_SPEED ) end
 			//	ply.GAME_bSlid = true
@@ -69,8 +86,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			//		ply.GAME_bSlid = nil
 			//		ply.GAME_bSprint = nil
 			//	else
-				if cmd:KeyDown( IN_DUCK ) then ply.GAME_bInDuckPressed = true
-				elseif ply.GAME_bInDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bInDuckPressed = nil end
+				if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
+				elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
 				if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
 			//	end
 			local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
@@ -88,7 +105,9 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			if !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
 				cmd:RemoveKey( IN_DUCK )
 				ply.GAME_bWantsToDuck = nil
-				ply.GAME_bInDuckPressed = nil
+				ply.GAME_bDuckPressed = nil
+				ply.GAME_bWantsToWalk = nil
+				ply.GAME_bWalkPressed = nil
 			end
 		end
 	end
@@ -160,18 +179,36 @@ else
 		6,
 		true,
 		true,
-		"How fast can you read, in characters per second?",
+		"How fast can you read? In characters per second.",
 		2.220446049250313e-16 // Epsilon to avoid division by zero
 	)
+	
+	local ReadSpeed = ReadSpeed
 
+	local table_concat = table.concat
+	local tBuffer = { "<I>", "", "", "<I>" }
 	local gui_AddCaption = gui.AddCaption
 	local language_GetPhrase = language.GetPhrase
-	function CaptionSound( sColor, sSound )
+	local string_gsub = string.gsub
+	local math_min = math.min
+	local Format = Format
+	
+	local net_ReadColor = net.ReadColor
+	local net_ReadString = net.ReadString
+	local net_ReadFloat = net.ReadFloat
+	
+	net.Receive( "CaptionSound", function()
+		local cColor = net_ReadColor( false )
+		local sSound = net_ReadString()
+		local flDuration = net_ReadFloat()
 		sSound = "Caption_" .. sSound
 		local sCaption = language_GetPhrase( sSound )
 		if sCaption == sSound then return end
-		gui_AddCaption( sColor .. sCaption, #select( 1, sCaption:gsub( "<.->", "" ) ) / ReadSpeed:GetFloat() )
-	end
+		tBuffer[ 2 ] = Format( "<clr:%d,%d,%d>", cColor.r, cColor.g, cColor.b )
+		tBuffer[ 3 ] = sCaption
+		local sLength = #string_gsub( sCaption, "<.->", "" ) // For measuring actual length
+		gui_AddCaption( table_concat( tBuffer ), math_min( flDuration, sLength / ReadSpeed:GetFloat() ) )
+	end )
 end
 
 local Vector = Vector
@@ -306,7 +343,7 @@ hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 end )
 
 hook.Add( "PlayerFootstep", "Improvements", function( ply, ... )
-	if ply:GetNW2Bool "CTRL_bSliding" then return true end
+	if ply:GetNW2Bool "CTRL_bSliding" || GetVelocity( ply ):Length() <= ply:GetSlowWalkSpeed() then return true end
 	if ply:WaterLevel() > 0 then
 		local pEffectData = EffectData()
 		pEffectData:SetOrigin( vec || ply:GetPos() )
@@ -336,6 +373,7 @@ function SetHumanPlayer( ply )
 	ply:SetViewOffsetDucked( Vector( 0, 0, 28 ) )
 	ply:SetHull( Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) )
 	ply:SetHullDuck( Vector( -16, -16, 0 ), Vector( 16, 16, 32 ) )
+	ply:SetModelScale( GetConVar( "bCorrectScale" ):GetBool() && MODEL_SIZE_GENERAL_MULTIPLIER || 1 )
 end
 
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
@@ -433,6 +471,19 @@ function SetVelocity( ent, vVelocity )
 		if SERVER && ent:IsNextBot() then EntTable.loco:SetVelocity( vVelocity ) return end
 		local phys = CEntity_GetPhysicsObject( ent )
 		if IsValid( phys ) then phys:SetVelocity( vVelocity ) end
+	end
+end
+function AddVelocity( ent, vVelocity )
+	local EntTable = CEntity_GetTable( ent )
+	v = EntTable.GAME_pVehicle
+	if IsValid( v ) && v != ent then SetVelocity( v, vVelocity ) end
+	if EntTable.__SetVelocity__ then EntTable.__SetVelocity__( ent, vVelocity, EntTable ) end
+	if ent:IsPlayer() then
+		CEntity_SetVelocity( ent, vVelocity )
+	elseif ent:IsNPC() then CEntity_SetVelocity( ent, CEntity_GetVelocity( ent ) + vVelocity ) else
+		if SERVER && ent:IsNextBot() then EntTable.loco:SetVelocity( EntTable.loco:GetVelocity() + vVelocity ) return end
+		local phys = CEntity_GetPhysicsObject( ent )
+		if IsValid( phys ) then phys:AddVelocity( vVelocity ) end
 	end
 end
 

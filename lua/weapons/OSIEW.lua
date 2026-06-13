@@ -63,6 +63,7 @@ function SWEP:Reload()
 		local pViewModel = pReloadOwner:GetViewModel()
 		if IsValid( pViewModel ) then pViewModel:SendViewModelMatchingSequence( 11 ) end
 		self:SetNextPrimaryFire( CurTime() + 3.1 )
+		self:CallOnClient( "ReloadTime", 3.1 )
 		timer.Simple( 1.3, function()
 			if IsValid( self ) then
 				local pOwner = self:GetOwner()
