@@ -100,6 +100,7 @@ local EntityUniqueIdentifier = EntityUniqueIdentifier
 local math_min = math.min
 
 function ENT:SetupBullseye( enemy, vec, ang, MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
 	if !vec then vec = enemy:GetPos() + enemy:OBBCenter() end
 	if !ang then ang = ( enemy.GetAimVector && enemy:GetAimVector() || enemy:GetForward() ):Angle() end
 	local ent = enemy
@@ -109,19 +110,22 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		end
 	end
 	local id = EntityUniqueIdentifier( ent )
-	local beye = self.tBullseyes[ id ]
+	local beye = MyTable.tBullseyes[ id ]
 	if beye then beye = beye[ 1 ] end
 	if !IsValid( beye ) then beye = ents.Create "BaseActorBullseye" beye:Spawn() end
-	( MyTable || CEntity_GetTable( self ) ).tBullseyes[ id ] = { beye, enemy, ent }
+	MyTable.tBullseyes[ id ] = { beye, enemy, ent }
 	local BullseyeTable = CEntity_GetTable( beye )
 	BullseyeTable.flTime = CurTime()
 	BullseyeTable.Enemy = ent
 	BullseyeTable.Owner = self
-	local v = GetVelocity( enemy )
-	local l = v:Length()
-	v:Normalize()
-	v:Mul( math_min( l, self:BoundingRadius() ) )
-	vec:Add( v )
+	// TODO: We should use a trace here. Why don't we? Simple. I'm lazy and don't wanna write it right now.
+	//	if !enemy.__ACTOR_BULLSEYE__ then
+	//		local v = GetVelocity( enemy )
+	//		local l = v:Length()
+	//		v:Normalize()
+	//		v:Mul( math_min( l, self:BoundingRadius() ) )
+	//		vec:Add( v )
+	//	end
 	beye:SetPos( vec )
 	beye:SetAngles( ang )
 	BullseyeTable.GAME_BoundMins = ent:OBBMins()
