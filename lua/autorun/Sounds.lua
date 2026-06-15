@@ -1,6 +1,4 @@
-local sound_Add = sound.Add
-
-sound_Add {
+sound.Add {
 	name = "Concrete.StepLeft",
 	channel = CHAN_STATIC,
 	volume = 1,
@@ -12,7 +10,7 @@ sound_Add {
 	}
 }
 
-sound_Add {
+sound.Add {
 	name = "Concrete.StepRight",
 	channel = CHAN_STATIC,
 	volume = 1,
@@ -33,7 +31,7 @@ sound.Add {
 	sound = "SilencedShot.wav"
 }
 
-sound_Add {
+sound.Add {
 	name = "Bleed",
 	channel = CHAN_STATIC,
 	volume = 1,
@@ -47,7 +45,7 @@ sound_Add {
 	}
 }
 
-sound_Add {
+sound.Add {
 	name = "FlashlightOn",
 	sound = "buttons/lightswitch2.wav",
 	level = 40,
@@ -55,7 +53,7 @@ sound_Add {
 	channel = CHAN_AUTO
 }
 
-sound_Add {
+sound.Add {
 	name = "FlashlightOff",
 	sound = "buttons/lightswitch2.wav",
 	level = 40,

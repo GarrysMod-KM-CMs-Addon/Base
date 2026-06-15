@@ -668,7 +668,7 @@ hook.Add( "Think", "GameImprovements", function()
 			end
 			if !ACTOR_QUEUE_LAST then break end
 		end
-		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 1000 - engine_TickInterval(), 0, 1 ) * 5
+		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 832 - engine_TickInterval(), 0, 1 ) * 5
 	else ACTOR_QUEUE_CURRENT = nil end
 	if IsValid( CascadeShadowMapping ) then
 		if SUN_ANGLES then
@@ -695,12 +695,14 @@ hook.Add( "Think", "GameImprovements", function()
 		elseif ent:GetClass() == "prop_ragdoll" then
 			local flBlood = ent:GetNW2Float( "GAME_flBlood", 1 )
 			local f = ent:GetNW2Float( "GAME_flBleeding", 0 )
-			if flBlood > 0 && f > 0 && f > .0016 && CurTime() > ( ent.GAME_flNextBleed || 0 ) then
-				local v = ent:GetPos()
-				v:Add( ent:OBBCenter() )
-				util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent )
-				util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent )
-				ent.GAME_flNextBleed = CurTime() + math.Clamp( .033 / f, .5, 12 ) * math.Rand( .9, 1.1 )
+			if flBlood > 0 && f > 0 && f > .0016 then
+				local flTimeLeft = ent.GAME_flBleedTimeLeft || 0
+				if flTimeLeft <= 0 then
+					local v = ent:GetPos()
+					v:Add( ent:OBBCenter() )
+					for i = 1, math.random( 3 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent ) end
+					ent.GAME_flBleedTimeLeft = 1
+				else ent.GAME_flBleedTimeLeft = flTimeLeft - f * 256 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
 			// We cannot regenerate blood if we're dead!
 			//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )

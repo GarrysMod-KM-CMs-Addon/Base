@@ -1,10 +1,36 @@
+local CEntity = FindMetaTable "Entity"
+local CEntity_GetTable = CEntity.GetTable
 local player_Iterator = player.Iterator
-
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
-
 local IsValid = IsValid
-
 local Vector = Vector
+local util_Decal = util.Decal
+local math_Rand = math.Rand
+local LerpVector = LerpVector
+local VECTOR_DOWN = Vector( 0, 0, -1 )
+local math_abs = math.abs
+local math_AngleDifference = math.AngleDifference
+local math_Approach = math.Approach
+local math_max = math.max
+local math_min = math.min
+local util_TraceLine = util.TraceLine
+local MASK_SHOT_HULL = MASK_SHOT_HULL
+local CEntity_SetNW2Int = CEntity.SetNW2Int
+local math_Clamp = math.Clamp
+local Lerp = Lerp
+local CEntity_SetNW2Float = CEntity.SetNW2Float
+local DamageInfo = DamageInfo
+local DMG_DROWN = DMG_DROWN
+local CurTime = CurTime
+local CEntity_GetNW2Float = CEntity.GetNW2Float
+local math_exp = math.exp
+local FrameTime = FrameTime
+local RealTime = RealTime
+local math_Rand = math.Rand
+local CEntity_SetNW2Vector = CEntity.SetNW2Vector
+local CEntity_SetNW2Bool = CEntity.SetNW2Bool
+local tostring = tostring
+local ents_FindInPVS = ents.FindInPVS
+local math_random = math.random
 
 include "autorun/Director.lua"
 
@@ -57,14 +83,19 @@ hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
 		local PlyTable = CEntity_GetTable( ply )
 		local pFlashlight = PlyTable.GAME_pFlashlight
+		local vEyePos = ply:EyePos()
+		local aAim = ply:EyeAngles()
+		local aViewPunch = ply:GetViewPunchAngles()
+		aAim:Add( aViewPunch )
+		local dAim = aAim:Forward()
 		if IsValid( pFlashlight ) then
-			local aAim = ply:EyeAngles() + ply:GetViewPunchAngles()
-			pFlashlight:SetPos( ply:EyePos() + aAim:Forward() * 32 )
-			pFlashlight:SetLocalAngles( ply:GetViewPunchAngles() )
+			pFlashlight:SetPos( vEyePos + dAim * 32 )
+			pFlashlight:SetLocalAngles( aViewPunch )
 		end
-		local trShoot = util.TraceLine {
-			start = ply:GetShootPos(),
-			endpos = ply:GetShootPos() + ( ply:GetAimVector():Angle() + ply:GetViewPunchAngles() ):Forward() * 1536,
+		local vShoot = ply:GetShootPos()
+		local trShoot = util_TraceLine {
+			start = vShoot,
+			endpos = vShoot + dAim * 1536,
 			filter = ply,
 			mask = MASK_SHOT_HULL
 		}
@@ -75,36 +106,36 @@ hook.Add( "Tick", "Director", function()
 			if f then
 				f = f( pEntity, ply )
 				if f == D_LI then
-					ply:SetNW2Int( "DR_EAimingAt", 2 )
+					CEntity_SetNW2Int( ply, "DR_EAimingAt", 2 )
 					b = nil
 				else
-					ply:SetNW2Int( "DR_EAimingAt", 1 )
+					CEntity_SetNW2Int( ply, "DR_EAimingAt", 1 )
 					b = nil
 				end
 			end
 		end
-		if b then ply:SetNW2Int( "DR_EAimingAt", nil ) end
+		if b then CEntity_SetNW2Int( ply, "DR_EAimingAt", nil ) end
 		local flReinforcements, bAlarm, bAlarmCoolDown
 		local b = !cVisibleHostileReinforcementCountDown:GetBool()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
 			if !IsValid( pEntity ) then continue end
-			if pEntity:NearestPoint( ply:EyePos() ):DistToSqr( ply:EyePos() ) > 16777216/*4096*/ then continue end
+			if pEntity:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 16777216/*4096*/ then continue end
 			bAlarm = true
 			if b then continue end
 			if pEntity:Classify() != ply:Classify() then
 				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
 				if flStart && flEnd then
-					flReinforcements = math.min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
+					flReinforcements = math_min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
 				end
 				local f = pEntity.flCoolDown
 				if f && CurTime() < f then bAlarmCoolDown = true end
 			end
 		end
-		ply:SetNW2Float( "ALARM_flHostileReinforcements", flReinforcements || 0 )
-		ply:SetNW2Float( "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 72 )
-		ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", math.Clamp( Lerp( math.min( 1, .5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
+		CEntity_SetNW2Float( ply, "ALARM_flHostileReinforcements", flReinforcements || 0 )
+		CEntity_SetNW2Float( ply, "DIRECTOR_MUSIC_VO_WAIT", math_Clamp( Lerp( math_min( 1, .5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
+		CEntity_SetNW2Float( ply, "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 72 )
 		if ply:Alive() then
-			local o = ply:GetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", -1 ) )
+			local o = CEntity_GetNW2Float( ply, "GAME_flOxygen", CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", -1 ) )
 			if o == 0 then
 				ply:SetHealth( 0 )
 				local d = DamageInfo()
@@ -115,43 +146,40 @@ hook.Add( "Tick", "Director", function()
 				ply:TakeDamageInfo( d )
 				continue
 			end
-			local flBlood = ply:GetNW2Float( "GAME_flBlood", 1 )
-			local f = ply:GetNW2Float( "GAME_flBleeding", 0 )
-			if flBlood > 0 && f > 0 && f > .0016 && CurTime() > ( PlyTable.GAME_flNextBleed || 0 ) then
-				ply:EmitSound "Bleed"
-				local v = ply:GetPos()
-				local f = ply:BoundingRadius()
-				util.Decal( "Blood", v, v + Vector( 0, 0, ply:OBBMins()[ 3 ] - f * 12 ), ply )
-				v = v + ply:OBBCenter()
-				f = f * 4
-				local d = ply:GetRight()
-				v = ply:NearestPoint( v + d * 999999 )
-				util.Decal( "Blood", v, v + d * f, ply )
-				local d = -d
-				v = ply:NearestPoint( v + d * 999999 )
-				util.Decal( "Blood", v, v + d * f, ply )
-				local d = ply:GetForward()
-				v = ply:NearestPoint( v + d * 999999 )
-				util.Decal( "Blood", v, v + d * f, ply )
-				local d = -d
-				v = ply:NearestPoint( v + d * 999999 )
-				util.Decal( "Blood", v, v + d * f, ply )
-				PlyTable.GAME_flNextBleed = CurTime() + math.Clamp( .033 / f, .5, 12 ) * math.Rand( .9, 1.1 )
+			local flBlood = CEntity_GetNW2Float( ply, "GAME_flBlood", 1 )
+			local f = CEntity_GetNW2Float( ply, "GAME_flBleeding", 0 )
+			if flBlood > 0 && f > 0 && f > .0016 then
+				local flTimeLeft = PlyTable.GAME_flBleedTimeLeft || 0
+				if flTimeLeft <= 0 then
+					ply:EmitSound "Bleed"
+					local v = ply:GetPos()
+					local f = ply:BoundingRadius()
+					util_Decal( "Blood", v, v + LerpVector( math_Rand( 0, .25 ), VECTOR_DOWN, VectorRand():GetNormalized() ):GetNormalized() * f * 12, ply )
+					v:Add( ply:OBBCenter() )
+					f = f * 4
+					for i = 1, math_random( 3 ) do
+						local d = VectorRand()
+						d:Normalize()
+						v = ply:NearestPoint( v + d * math_Rand( 0, f ) )
+						util_Decal( "Blood", v, v + d * f, ply )
+					end
+					PlyTable.GAME_flBleedTimeLeft = 1
+				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 256 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
-			flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
+			flBlood = math_Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 			ply:SetNW2Float( "GAME_flBlood", flBlood )
 			o = o - FrameTime()
-			ply:SetNW2Float( "GAME_flOxygen", math.Clamp(
+			ply:SetNW2Float( "GAME_flOxygen", math_Clamp(
 
 			o + ( ply:WaterLevel() >= 3 && 0 || (
-			1 / ( 1 + math.exp( -18 * ( flBlood - .55 ) ) ) * // Blood efficiency formula
-			( 1 + ( ply.GAME_flOxygenRegen || ( ply:GetNW2Float( "GAME_flOxygenLimit", 0 ) * .5 ) ) ) ) )
+			1 / ( 1 + math_exp( -18 * ( flBlood - .55 ) ) ) * // Blood efficiency formula
+			( 1 + ( PlyTable.GAME_flOxygenRegen || ( CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) * .5 ) ) ) ) )
 
-			* FrameTime(), 0, ply:GetNW2Float( "GAME_flOxygenLimit", 0 ) ) )
+			* FrameTime(), 0, CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) ) )
 		else
-			ply:SetNW2Float( "GAME_flOxygen", ply:GetNW2Float( "GAME_flOxygenLimit", 0 ) )
-			ply:SetNW2Float( "GAME_flBlood", 1 )
-			ply:SetNW2Float( "GAME_flBleeding", 0 )
+			CEntity_SetNW2Float( ply, "GAME_flOxygen", CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) )
+			CEntity_SetNW2Float( ply, "GAME_flBlood", 1 )
+			CEntity_SetNW2Float( ply, "GAME_flBleeding", 0 )
 		end
 		// TODO: Allow others to change the view offsets
 		local f = ply:GetModelScale()
@@ -160,22 +188,21 @@ hook.Add( "Tick", "Director", function()
 		ply:SetCanZoom( false )
 		local h = ply:Health() / ply:GetMaxHealth()
 		ply:SetDSP( h <= .3 && 16 || h <= .4 && 15 || h <= .5 && 14 || 1 )
-		PlyTable.GAME_flSuppression = math.Approach( PlyTable.GAME_flSuppression || 0, 0, math.max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
+		PlyTable.GAME_flSuppression = math_Approach( PlyTable.GAME_flSuppression || 0, 0, math_max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
 		local EThreat = DIRECTOR_THREAT_NULL
 		local tMusicEntities = PlyTable.DR_tMusicEntities || {}
-		local vEye = ply:EyePos()
 		if RealTime() > ( PlyTable.DR_flNextUpdate || 0 ) then
 			local aEye, flFoVHalf = ply:EyeAngles(), ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ) * .5
-			for _, pEntity in ipairs( ents.FindInPVS( ply ) ) do
+			for _, pEntity in ipairs( ents_FindInPVS( ply ) ) do
 				if !ply:Visible( pEntity ) then continue end
 				local ETheirThreat = Director_GetThreat( ply, pEntity )
 				if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
-				local a = ( pEntity:GetPos() + pEntity:OBBCenter() - vEye ):Angle()
-				if math.abs( math.AngleDifference( aEye[ 1 ], a[ 1 ] ) ) > flFoVHalf then continue end
-				if math.abs( math.AngleDifference( aEye[ 2 ], a[ 2 ] ) ) > flFoVHalf then continue end
+				local a = ( pEntity:GetPos() + pEntity:OBBCenter() - vEyePos ):Angle()
+				if math_abs( math_AngleDifference( aEye[ 1 ], a[ 1 ] ) ) > flFoVHalf then continue end
+				if math_abs( math_AngleDifference( aEye[ 2 ], a[ 2 ] ) ) > flFoVHalf then continue end
 				tMusicEntities[ pEntity ] = true
 			end
-			PlyTable.DR_flNextUpdate = RealTime() + math.Rand( .1, .2 )
+			PlyTable.DR_flNextUpdate = RealTime() + math_Rand( .1, .2 )
 		end
 		local tSpotted = PlyTable.DR_tSpotted || {}
 		local tNewMusicEntities = {}
@@ -196,7 +223,7 @@ hook.Add( "Tick", "Director", function()
 				end
 			end
 			// TODO: Improve this, dammit!
-			if pEntity:NearestPoint( vEye ):DistToSqr( vEye ) > 9437184/*3072*/ then
+			if pEntity:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 9437184/*3072*/ then
 				tNewMusicEntities[ pEntity ] = true
 				tSpotted[ pEntity ] = nil
 				continue
@@ -216,14 +243,14 @@ hook.Add( "Tick", "Director", function()
 			local s = "GAME_v3DThreat" .. sI
 			local v = ply:GetNW2Vector( s )
 			if v == vector_origin then break end
-			ply:SetNW2Vector( s )
-			ply:SetNW2Bool( "GAME_b3DThreat" .. sI )
+			CEntity_SetNW2Vector( ply, s )
+			CEntity_SetNW2Bool( ply, "GAME_b3DThreat" .. sI )
 			i = i + 1
 		end
 		for i, pEntity in ipairs( tThreatDirections ) do
 			local sI = tostring( i )
-			ply:SetNW2Vector( "GAME_v3DThreat" .. sI, pEntity:GetPos() + pEntity:OBBCenter() )
-			ply:SetNW2Bool( "GAME_b3DThreat" .. sI, pEntity.GAME_bHurtEnemy )
+			CEntity_SetNW2Vector( ply, "GAME_v3DThreat" .. sI, pEntity:GetPos() + pEntity:OBBCenter() )
+			CEntity_SetNW2Bool( ply, "GAME_b3DThreat" .. sI, pEntity.GAME_bHurtEnemy )
 		end
 		local tNewSpotted = {}
 		for pEntity, flTime in pairs( tSpotted ) do

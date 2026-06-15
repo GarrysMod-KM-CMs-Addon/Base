@@ -130,9 +130,7 @@ local math_abs = math.abs
 
 local function VectorSum( v ) return math_abs( v[ 1 ] ) + math_abs( v[ 2 ] ) + math_abs( v[ 3 ] ) end
 
-local render = render
-local render_ComputeLighting = render.ComputeLighting
-local render_ComputeDynamicLighting = render.ComputeDynamicLighting
+local render_GetLightColor = render.GetLightColor
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
@@ -152,9 +150,9 @@ local mDepthOfField = Material "pp/dof"
 
 local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
+local render_UpdateRefractTexture = render.UpdateRefractTexture
 
 local cam_Start3D = cam.Start3D
-local render_UpdateRefractTexture = render.UpdateRefractTexture
 local cam_End3D = cam.End3D
 
 local tDrawColorModify = {
@@ -192,7 +190,11 @@ local flFogMaxDensity = 0
 
 local flBloomDarken, flBloomMultiply, flBloomColorMultiply = 0, 0, 0
 
-local flDepthOfField, flDistance, flSpacing = 0, 0, 0, 0
+local flDepthOfField, flSpacing = 0, 0
+
+local DOFModeHack = DOFModeHack
+
+local flActualDoFBegin = 0
 
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
@@ -201,6 +203,7 @@ hook.Add( "Tick", "Graphics", function()
 	flLastTickCall = RealTime()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
+	DOFModeHack( true )
 	vColor = Vector()
 	local iPasses = 0
 	local vEye, aEye, dEye = EyePos(), EyeAngles(), EyeVector()
@@ -215,9 +218,9 @@ hook.Add( "Tick", "Graphics", function()
 				mask = MASK_VISIBLE_AND_NPCS,
 				filter = self
 			}
-			local vHitPos, dHitNormal = tr.HitPos, tr.HitNormal
-			vColor:Add( render_ComputeLighting( vHitPos, dHitNormal ) )
-			vColor:Add( render_ComputeDynamicLighting( vHitPos, dHitNormal ) )
+			local v = render_GetLightColor( tr.HitPos )
+			v:Mul( 1.5 )
+			vColor:Add( v )
 			aEye[ 1 ] = aEye[ 1 ] - flPitch
 			aEye[ 2 ] = aEye[ 2 ] - flYaw
 		end
@@ -248,7 +251,7 @@ hook.Add( "Tick", "Graphics", function()
 	bWaterBlur = flWaterBlur > 0
 	flWaterBlurDirect = flWaterBlur * MAX_WATER_BLUR
 	flWaterBlurRefractAmount = flWaterBlur * .01
-	local vTargetColor = LerpVector( ( flColorSum / 3 ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
+	local vTargetColor = LerpVector( ( flColorSum * ( 1 / 3 ) ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
 	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )
 	flColor = math_Clamp( flColorSum, 0, 1 )
 	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
@@ -264,24 +267,35 @@ hook.Add( "Tick", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulr" ] = flFogR * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulg" ] = flFogG * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
-	flBloom = Lerp( math_min( 1, FrameTime() * .5 ), flBloom || 0, 1 - flColor )
+	flBloom = Lerp( math_min( 1, flFrameTime * .5 ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
 	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
-	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
-	flDistance = Lerp(
-		math_min( 1, 5 * FrameTime() ),
-		flDepthOfField || 0,
-		math_Clamp( util_TraceLine( {
-			start = vEye,
-			endpos = vEye + dEye * 999999,
-			mask = MASK_VISIBLE_AND_NPCS,
-			filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
-		} ).HitPos:Distance( EyePos() ), 0, 6144 )
-	)
-	flDepthOfField = flDistance * 1.5
 	//	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
 	flFogDensityMul = ( 1 - flBrightness ) * ( flFogDensityMul || 0 )
+	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
+	local tr = util_TraceLine {
+		start = vEye,
+		endpos = vEye + dEye * 999999,
+		mask = MASK_VISIBLE_AND_NPCS,
+		filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
+	}
+	local flDistance = tr.HitPos:Distance( EyePos() ) * 1.2
+	flDepthOfField = Lerp(
+		math_min( 1, 5 * flFrameTime ),
+		flDepthOfField,	
+		math_Clamp( flDistance, 0, 6144 )
+	)
+	flSpacing = Lerp(
+		math_min( 1, 5 * flFrameTime ),
+		flSpacing,
+		math_Clamp( flDistance, 0, 1024 )
+	)
+	if tr.HitSky then
+		flActualDoFBegin = Lerp( math_min( 1, 1.5 * flFrameTime ), flActualDoFBegin, math_Clamp( ( flDepthOfField / flDistance ) ^ 10 * 5, 0, 5 ) )
+	else
+		flActualDoFBegin = Lerp( math_min( 1, 1.5 * flFrameTime ), flActualDoFBegin, 0 )
+	end
 end )
 
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
@@ -304,11 +318,11 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	DrawColorModify( tDrawColorModify )
 	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
-		render_UpdateRefractTexture()
-		for i = 0, 32 do
+		for i = flActualDoFBegin, 4 do
+			render_UpdateRefractTexture()
 			render_SetMaterial( mDepthOfField )
-			local flSize = ( flDistance + flDistance * i ) * 8
-			render_DrawSprite( vEye + vForward * ( flDistance + flDistance * i ), flSize, flSize, color_white )
+			local flSize = ( flDepthOfField + flSpacing * i ) * 8
+			render_DrawSprite( vEye + vForward * ( flDepthOfField + flSpacing * i ), flSize, flSize, color_white )
 		end
 	cam_End3D()
 end )

@@ -28,9 +28,20 @@ local cMaterialRemainsMaxLifeTime = CreateClientConVar(
 	8, 32
 )
 
+sound.Add {
+	name = "MetalBulletImpact",
+	sound = { "physics/metal/metal_sheet_impact_bullet1.wav", "physics/metal/metal_sheet_impact_bullet2.wav" },
+	level = 90,
+	pitch = { 80, 120 },
+	channel = CHAN_STATIC
+}
+
+local EmitSound = EmitSound
+
 local EFFECTS = {
 	[ util.GetSurfaceIndex "metal" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
+		EmitSound( "MetalBulletImpact", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 		local pLight = EphemeralLight()
 		if pLight then
 			pLight.brightness = math_Rand( 6, 8 )
