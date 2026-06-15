@@ -474,8 +474,10 @@ if CLIENT then
 	local vViewFinalRatherQuick, vViewFinalRatherQuickVel = Vector(), Vector()
 	local vViewFinalRatherQuickAngle, vViewFinalRatherQuickAngleVel = Vector(), Vector()
 	local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
-	local vRecoilSpring, vRecoilVelocity = Vector(), Vector()
-	local vRecoilAngleSpring, vRecoilAngleVelocity = Vector(), Vector()
+	local vRecoilWorldSpring, vRecoilWorldVelocity = Vector(), Vector()
+	local vRecoilWorldAngleSpring, vRecoilWorldAngleVelocity = Vector(), Vector()
+	local vRecoilViewSpring, vRecoilViewVelocity = Vector(), Vector()
+	local vRecoilViewAngleSpring, vRecoilViewAngleVelocity = Vector(), Vector()
 
 	local flLandTime, flJumpTime = 0, 0
 	SWEP.flSwayStabilizer = .415
@@ -615,30 +617,15 @@ if CLIENT then
 				end
 			end
 		end
-		if MyTable.WPN_SHOOT == WPN_RIFLE || MyTable.WPN_SHOOT == WPN_RIFLEUP then
-			//	local flDelay = math_min( .2, MyTable.Primary_flDelay )
-			//	local flDelayTurn = flDelay * 3
-			//	local flDelayTurnLong = flDelayTurn * 3
-			//	local flDelayTurnLongEnd = flDelayTurnLong + flDelayTurn
-			//	local flScale = MyTable.flAimShootTurn * 10
-			//	local flResultingPitchOffset, flResultingYawOffset = 0, 0
-			//	for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			//		local flBegin = tAnimation[ 1 ]
-			//		if CurTime() <= flBegin + flDelayTurn then
-			//			local f = ( 1 - ( flBegin + flDelayTurn - CurTime() ) / flDelayTurn ) ^ 1.5
-			//			flResultingPitchOffset = flResultingPitchOffset + tAnimation[ 2 ] * f * flScale
-			//			flResultingYawOffset = flResultingYawOffset + tAnimation[ 3 ] * f * flScale
-			//		elseif CurTime() <= flBegin + flDelayTurnLongEnd then
-			//			local f = ( ( flBegin + flDelayTurnLongEnd - CurTime() ) / flDelayTurnLong ) ^ 1.5
-			//			flResultingPitchOffset = flResultingPitchOffset + tAnimation[ 2 ] * f * flScale
-			//			flResultingYawOffset = flResultingYawOffset + tAnimation[ 3 ] * f * flScale
-			//		end
-			//	end
-			//	ang[ 1 ] = ang[ 1 ] + flResultingPitchOffset
-			//	ang[ 2 ] = ang[ 2 ] + flResultingYawOffset
-			//	vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - flResultingPitchOffset
-			//	vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - flResultingYawOffset
-		end
+		local flOmega = 4.5 / ( 2.5 * MyTable.Primary_flDelay )
+		local flStiffness = flOmega * flOmega
+		local flDamping = -.8 * flOmega
+		vRecoilWorldVelocity = vRecoilWorldVelocity - vRecoilWorldSpring * flStiffness * flFrameTime
+		vRecoilWorldVelocity = vRecoilWorldVelocity * math_exp( flDamping * flFrameTime )
+		vRecoilWorldSpring = vRecoilWorldSpring + vRecoilWorldVelocity * flFrameTime
+		vRecoilWorldAngleVelocity = vRecoilWorldAngleVelocity - vRecoilWorldAngleSpring * flStiffness * flFrameTime
+		vRecoilWorldAngleVelocity = vRecoilWorldAngleVelocity * math_exp( flDamping * flFrameTime )
+		vRecoilWorldAngleSpring = vRecoilWorldAngleSpring + vRecoilWorldAngleVelocity * flFrameTime
 		vViewTargetRatherQuick:Add( vBezier )
 		vViewTargetRatherQuickAngle:Add( vBezierAngle )
 		vViewFinalVel = vViewFinalVel + ( vTarget - vViewFinal ) * SPRING_CAMERA_STIFFNESS_CURRENT * flFrameTime
@@ -647,9 +634,14 @@ if CLIENT then
 		vViewFinalAngleVel = vViewFinalAngleVel + ( vTargetAngle - vViewFinalAngle ) * SPRING_CAMERA_STIFFNESS_CURRENT * flFrameTime
 		vViewFinalAngleVel = vViewFinalAngleVel * math_exp( SPRING_CAMERA_DAMPING_CURRENT * flFrameTime )
 		vViewFinalAngle = vViewFinalAngle + vViewFinalAngleVel * flFrameTime
-		ang:RotateAroundAxis( ang:Right(), vViewFinalAngle.x )
-		ang:RotateAroundAxis( ang:Up(), vViewFinalAngle.y )
-		ang:RotateAroundAxis( ang:Forward(), vViewFinalAngle.z )
+		ang:RotateAroundAxis( ang:Right(), vViewFinalAngle[ 1 ] )
+		ang:RotateAroundAxis( ang:Up(), vViewFinalAngle[ 2 ] )
+		ang:RotateAroundAxis( ang:Forward(), vViewFinalAngle[ 3 ] - vRecoilWorldAngleSpring[ 3 ] )
+		ang:RotateAroundAxis( ang:Right(), -vRecoilWorldAngleSpring[ 1 ] )
+		ang:RotateAroundAxis( ang:Up(), -vRecoilWorldAngleSpring[ 2 ] )
+		pos = pos - vRecoilWorldSpring[ 1 ] * ang:Forward()
+		pos = pos - vRecoilWorldSpring[ 2 ] * ang:Right()
+		pos = pos - vRecoilWorldSpring[ 3 ] * ang:Up()
 		pos = pos + vViewFinal[ 1 ] * ang:Forward()
 		pos = pos + vViewFinal[ 2 ] * ang:Right()
 		pos = pos + vViewFinal[ 3 ] * ang:Up()
@@ -756,6 +748,29 @@ if CLIENT then
 
 	local math_max = math.max
 	local math_Rand = math.Rand
+
+	local function fApplyRecoil( MyTable, flFrameTime )
+		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
+			if tAnimation[ 4 ] then continue end
+			tAnimation[ 4 ] = true
+			vRecoilWorldVelocity[ 1 ] = vRecoilWorldVelocity[ 1 ] - 30
+			vRecoilWorldVelocity[ 2 ] = vRecoilWorldVelocity[ 2 ] + tAnimation[ 2 ] * math_Rand( 3, 6 )
+			vRecoilWorldVelocity[ 3 ] = vRecoilWorldVelocity[ 3 ] + tAnimation[ 3 ] * math_Rand( 2, 4 )
+			vRecoilWorldAngleVelocity[ 1 ] = vRecoilWorldAngleVelocity[ 1 ] + tAnimation[ 2 ] * math_Rand( 3, 6 )
+			vRecoilWorldAngleVelocity[ 2 ] = vRecoilWorldAngleVelocity[ 2 ] + tAnimation[ 3 ] * math_Rand( 2, 4 )
+			vRecoilWorldAngleVelocity[ 3 ] = vRecoilWorldAngleVelocity[ 3 ] + math_Rand( -90, 90 )
+			vRecoilViewAngleVelocity[ 3 ] = vRecoilViewAngleVelocity[ 3 ] + math_Rand( -90, 90 )
+		end
+		local flOmega = 4.5 / ( 2.5 * MyTable.Primary_flDelay )
+		local flStiffness = flOmega * flOmega
+		local flDamping = -.8 * flOmega
+		vRecoilViewVelocity = vRecoilViewVelocity - vRecoilViewSpring * flStiffness * flFrameTime
+		vRecoilViewVelocity = vRecoilViewVelocity * math_exp( flDamping * flFrameTime )
+		vRecoilViewSpring = vRecoilViewSpring + vRecoilViewVelocity * flFrameTime
+		vRecoilViewAngleVelocity = vRecoilViewAngleVelocity - vRecoilViewAngleSpring * flStiffness * flFrameTime
+		vRecoilViewAngleVelocity = vRecoilViewAngleVelocity * math_exp( flDamping * flFrameTime )
+		vRecoilViewAngleSpring = vRecoilViewAngleSpring + vRecoilViewAngleVelocity * flFrameTime
+	end
 
 	function SWEP:CalcViewModelView( _, pos, ang )
 		SPRING_STIFFNESS_CURRENT = 225
@@ -964,37 +979,7 @@ if CLIENT then
 			vTargetAngle:Add( WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
 		end
 		local flYawTurn, flPitchTurn = 0, 0
-		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			if tAnimation[ 4 ] then continue end
-			tAnimation[ 4 ] = true
-			vRecoilVelocity[ 1 ] = vRecoilAngleVelocity[ 1 ] - 10
-			vRecoilVelocity[ 2 ] = vRecoilAngleVelocity[ 2 ] + tAnimation[ 2 ] * 2 * math_Rand( 1, 2 )
-			vRecoilVelocity[ 3 ] = vRecoilAngleVelocity[ 3 ] + tAnimation[ 3 ] * .75 * math_Rand( 1, 2 )
-			vRecoilAngleVelocity[ 1 ] = vRecoilAngleVelocity[ 1 ] + tAnimation[ 2 ] * .75 * math_Rand( 1, 2 )
-			vRecoilAngleVelocity[ 2 ] = vRecoilAngleVelocity[ 2 ] + tAnimation[ 3 ] * 3 * math_Rand( 1, 2 )
-			vRecoilAngleVelocity[ 3 ] = vRecoilAngleVelocity[ 3 ] + math_Rand( -2, 2 )
-		end
-		vRecoilVelocity[ 2 ] = math_Clamp( vRecoilVelocity[ 2 ], -4, 4 )
-		vRecoilVelocity[ 3 ] = math_Clamp( vRecoilVelocity[ 3 ], -2, 2 )
-		vRecoilAngleVelocity[ 1 ] = math_Clamp( vRecoilAngleVelocity[ 1 ], -2, 2 )
-		vRecoilAngleVelocity[ 2 ] = math_Clamp( vRecoilAngleVelocity[ 2 ], -4, 4 )
-		vRecoilAngleVelocity[ 3 ] = math_Clamp( vRecoilAngleVelocity[ 3 ], -4, 4 )
-		local flOmega = 4.5 / ( 4 * MyTable.Primary_flDelay )
-		local flStiffness = flOmega * flOmega
-		local flDamping = -1.4 * flOmega
-		vRecoilVelocity = vRecoilVelocity - vRecoilSpring * flStiffness * flFrameTime
-		vRecoilVelocity = vRecoilVelocity * math_exp( flDamping * flFrameTime )
-		vRecoilSpring = vRecoilSpring + vRecoilVelocity * flFrameTime
-		vRecoilAngleVelocity = vRecoilAngleVelocity - vRecoilAngleSpring * flStiffness * flFrameTime
-		vRecoilAngleVelocity = vRecoilAngleVelocity * math_exp( flDamping * flFrameTime )
-		vRecoilAngleSpring = vRecoilAngleSpring + vRecoilAngleVelocity * flFrameTime
-		//	flPitchTurn = flPitchTurn + vRecoilAngleSpring[ 1 ]
-		//	flYawTurn = flYawTurn + vRecoilAngleSpring[ 2 ]
-		ang:RotateAroundAxis( ang:Right(), vRecoilAngleSpring[ 1 ] )
-		ang:RotateAroundAxis( ang:Up(), vRecoilAngleSpring[ 2 ] )
-		pos = pos + vRecoilSpring[ 1 ] * ang:Forward()
-		pos = pos + vRecoilSpring[ 2 ] * ang:Right()
-		pos = pos + vRecoilSpring[ 3 ] * ang:Up()
+		fApplyRecoil( MyTable, flFrameTime )
 		// Sniper support... needs to be redone lmao
 		local flAimShoot = MyTable.flAimShoot
 		if flAimShoot then
@@ -1081,9 +1066,9 @@ if CLIENT then
 		vFinalAngleVel = vFinalAngleVel + ( vTargetAngle - vFinalAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 		vFinalAngleVel = vFinalAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 		vFinalAngle = vFinalAngle + vFinalAngleVel * flFrameTime
-		ang:RotateAroundAxis( ang:Right(), vFinalAngle[ 1 ] )
-		ang:RotateAroundAxis( ang:Up(), vFinalAngle[ 2 ] )
-		ang:RotateAroundAxis( ang:Forward(), vFinalAngle[ 3 ] + vRecoilAngleSpring[ 3 ] )
+		ang:RotateAroundAxis( ang:Right(), vFinalAngle[ 1 ] + vRecoilViewAngleSpring[ 1 ] )
+		ang:RotateAroundAxis( ang:Up(), vFinalAngle[ 2 ] + vRecoilViewAngleSpring[ 2 ] )
+		ang:RotateAroundAxis( ang:Forward(), vFinalAngle[ 3 ] + vRecoilViewAngleSpring[ 3 ] )
 		ang:RotateAroundAxis( ang:Right(), vInstantTargetAngle[ 1 ] )
 		ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle[ 2 ] )
 		ang:RotateAroundAxis( ang:Forward(), vInstantTargetAngle[ 3 ] )
@@ -1096,9 +1081,9 @@ if CLIENT then
 		ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle[ 1 ] )
 		ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle[ 2 ] )
 		ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle[ 3 ] )
-		pos = pos + vFinal[ 1 ] * ang:Forward()
-		pos = pos + vFinal[ 2 ] * ang:Right()
-		pos = pos + vFinal[ 3 ] * ang:Up()
+		pos = pos + ( vFinal[ 1 ] + vRecoilViewSpring[ 1 ] ) * ang:Forward()
+		pos = pos + ( vFinal[ 2 ] + vRecoilViewSpring[ 2 ] ) * ang:Right()
+		pos = pos + ( vFinal[ 3 ] + vRecoilViewSpring[ 3 ] ) * ang:Up()
 		pos = pos + vInstantTarget[ 1 ] * ang:Forward()
 		pos = pos + vInstantTarget[ 2 ] * ang:Right()
 		pos = pos + vInstantTarget[ 3 ] * ang:Up()
