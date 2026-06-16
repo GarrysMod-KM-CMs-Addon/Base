@@ -7,7 +7,15 @@ function GetBrightnessColor( c ) return c.r * .00083372549 + c.g * .00280470588 
 // Same as above but uses Vectors
 function GetBrightnessVector( v ) return v[ 1 ]  * .2126 + v[ 2 ] * .7152  + v[ 3 ] * .0722 end
 
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+
 if SERVER then
+	util.AddNetworkString "UpdateLuminosity"
+	util.AddNetworkString "EphemeralLight"
+
+	local net_ReadColor = net.ReadColor
+	net.Receive( "UpdateLuminosity", function( _, ply ) CEntity_GetTable( ply ).GAME_cLuminosity = net_ReadColor( false ) end )
+
 	CreateConVar(
 		"bAllowThirdPerson",
 		0,
@@ -15,6 +23,7 @@ if SERVER then
 		"Allow clients to use thirdperson mode (bThirdPerson)?",
 		0, 1
 	)
+	return
 end
 
 /*
@@ -27,8 +36,6 @@ net.Start "EphemeralLight"
 	net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) // R, G, B
 net.Broadcast()
 */
-
-if SERVER then util.AddNetworkString "EphemeralLight" return end
 
 local DynamicLight = DynamicLight
 local net_ReadFloat = net.ReadFloat
@@ -131,8 +138,7 @@ local math_abs = math.abs
 local function VectorSum( v ) return math_abs( v[ 1 ] ) + math_abs( v[ 2 ] ) + math_abs( v[ 3 ] ) end
 
 local render_GetLightColor = render.GetLightColor
-
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+local render_ComputeDynamicLighting = render.ComputeDynamicLighting
 
 local FrameTime = FrameTime
 
@@ -196,13 +202,51 @@ local DOFModeHack = DOFModeHack
 
 local flActualDoFBegin = 0
 
+local flNextSendLuminosity = 0
+
+local net_Start = net.Start
+local net_WriteColor = net.WriteColor
+local net_SendToServer = net.SendToServer
+
+local vector_origin = vector_origin
+
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
+	local self = LocalPlayer()
+	if !IsValid( self ) then return end
+	if RealTime() > flNextSendLuminosity then
+		net_Start( "UpdateLuminosity", true )
+		local iPasses = 0
+		vColor = Vector()
+		local vPos, aEye, dEye = self:GetPos(), EyeAngles(), EyeVector()
+		vPos:Add( self:OBBCenter() )
+		for flPitch = 0, 360, 33.75 do
+			for flYaw = 0, 360, 33.75 do
+				iPasses = iPasses + 1
+				aEye[ 1 ] = aEye[ 1 ] + flPitch
+				aEye[ 2 ] = aEye[ 2 ] + flYaw
+				local tr = util_TraceLine {
+					start = vPos,
+					endpos = vPos + aEye:Forward() * self:BoundingRadius() * 1.5,
+					mask = MASK_VISIBLE_AND_NPCS,
+					filter = self
+				}
+				local vHitPos = tr.HitPos
+				local v = render_GetLightColor( vHitPos )
+				v:Add( render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
+				v:Mul( 1.5 )
+				vColor:Add( v )
+				aEye[ 1 ] = aEye[ 1 ] - flPitch
+				aEye[ 2 ] = aEye[ 2 ] - flYaw
+			end
+		end
+		vColor:Div( iPasses )
+		net_WriteColor( vColor:ToColor(), false )
+		net_SendToServer()
+	end
 	local flFrameTime = RealTime() - flLastTickCall
 	if flFrameTime < .05 then return end // This will be ran 20 FPS MAX
 	flLastTickCall = RealTime()
-	local self = LocalPlayer()
-	if !IsValid( self ) then return end
 	DOFModeHack( true )
 	vColor = Vector()
 	local iPasses = 0
@@ -218,7 +262,9 @@ hook.Add( "Tick", "Graphics", function()
 				mask = MASK_VISIBLE_AND_NPCS,
 				filter = self
 			}
-			local v = render_GetLightColor( tr.HitPos )
+			local vHitPos = tr.HitPos
+			local v = render_GetLightColor( vHitPos )
+			v:Add( render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
 			v:Mul( 1.5 )
 			vColor:Add( v )
 			aEye[ 1 ] = aEye[ 1 ] - flPitch

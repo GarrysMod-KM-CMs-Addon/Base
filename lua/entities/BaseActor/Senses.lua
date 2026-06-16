@@ -174,9 +174,21 @@ ENT.flMaxVisionRange = 131072
 
 local math_Remap = math.Remap
 
-function ENT:GetVisionStrengthIncreaseSpeed( VecOrEnt, vEyePos )
-	if isentity( VecOrEnt ) then VecOrEnt = VecOrEnt:GetPos() + VecOrEnt:OBBCenter() end
-	return 3 * math_Remap( vEyePos:Distance( VecOrEnt ), 0, self.flMaxVisionRange, 1, 0 )
+function ENT:GetBrightnessColor( c/*, MyTable*/ ) return c.r * .00083372549 + c.g * .00280470588 + c.b * .00028313725 end
+
+// The less, the better we see in the dark. Unlike bNightVision, we cannot see in complete darkness.
+ENT.flLuminosityPower = .1
+function ENT:GetVisionStrengthIncreaseSpeed( VecOrEnt, vEyePos, MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+	if isentity( VecOrEnt ) then
+		if MyTable.bNightVision then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, MyTable.flMaxVisionRange, 1, 0 ) end
+		// Players send this via net messages. Sadly, there is no way to measure this on the server,
+		// and as such no way for an Actor to not see another Actor in the darkness :(
+		local c = CEntity_GetTable( VecOrEnt ).GAME_cLuminosity
+		if c then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, MyTable.flMaxVisionRange, 1, 0 ) * MyTable.GetBrightnessColor( self, c, MyTable ) ^ MyTable.flLuminosityPower end
+		VecOrEnt = VecOrEnt:GetPos() + VecOrEnt:OBBCenter()
+	end
+	return 3 * math_Remap( vEyePos:Distance( VecOrEnt ), 0, MyTable.flMaxVisionRange, 1, 0 )
 end
 
 local HUGE_Z = Vector( 0, 0, 999999 )
@@ -279,7 +291,7 @@ function ENT:Look( MyTable )
 					MyTable.tNextWeaponCheck[ ent ] = CurTime() + 2
 					continue
 				end
-				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
+				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
 			elseif TheirTable.__ACTOR_BULLSEYE__ then
 				if !bMelee && HasMeleeAttack( ent ) then bMelee = true end
 				if !bRange && HasRangeAttack( ent ) then bRange = true end
@@ -297,7 +309,7 @@ function ENT:Look( MyTable )
 						end
 					else
 						// Slower so they have some time to reappear before the combat is cancelled
-						tVisionStrength[ ent ] = math.Clamp( f + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * .1 * flFrameTime, 0, 1 )
+						tVisionStrength[ ent ] = math_Clamp( f - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * .1 * flFrameTime, 0, 1 )
 					end
 				end
 			elseif ent.__FLARE_ACTIVE__ then
@@ -331,13 +343,13 @@ function ENT:Look( MyTable )
 							//	end
 							if ent.FLARE_tFoundByClass then ent.FLARE_tFoundByClass[ self:Classify() ] = true
 							else ent.FLARE_tFoundByClass = { [ self:Classify() ] = true } end
-						else tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 ) end
+						else tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 ) end
 					end
 				end
 			else
 				if !bMelee && HasMeleeAttack( ent ) then bMelee = true end
 				if !bRange && HasRangeAttack( ent ) then bRange = true end
-				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
+				tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
 				if tVisionStrength[ ent ] >= 1 then
 					MyTable.bHoldFire = nil
 					MyTable.flLastEnemy = CurTime()

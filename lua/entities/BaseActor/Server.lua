@@ -80,6 +80,7 @@ local math_ceil = math.ceil
 
 local ents_Create = ents.Create
 local CEntity_SetOwner = CEntity.SetOwner
+
 function ENT:CreateProjectile( sClass )
 	local pProjectile = ents_Create( sClass )
 	if !IsValid( pProjectile ) then return end
@@ -87,6 +88,7 @@ function ENT:CreateProjectile( sClass )
 	CEntity_SetOwner( pProjectile, self )
 	return pProjectile
 end
+
 function ENT:CreateActor( sClass )
 	local pActor = ents_Create( sClass )
 	if !IsValid( pActor ) then return end
@@ -174,6 +176,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter ) self:MoveAlongPath( pPath, m
 
 ENT.bHoldFire = true
 
+local HITGROUP_GENERIC = HITGROUP_GENERIC
 ENT.ELastHitGroup = HITGROUP_GENERIC
 function ENT:LastHitGroup() return self.ELastHitGroup end
 function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
@@ -183,17 +186,25 @@ local EffectData = EffectData
 local util_Effect = util.Effect
 function ENT:BloodSplatter( dDamage )
 	local MyTable = CEntity_GetTable( self )
+	// TODO: Spray decals around
 	//	util_Decal( "Blood", dDamage:GetDamagePosition(), dDamage:GetDamagePosition() )
 	//	local pEffectData = EffectData()
 	//	pEffectData:SetOrigin( dDamage:GetDamagePosition() )
 	//	util_Effect( "BloodImpact", pEffectData )
 end
 
+local math_max = math.max
+
 function ENT:OnTakeDamage( dDamage )
 	local MyTable = CEntity_GetTable( self )
 	hook.Run( "ScalePlayerDamage", self, MyTable.ELastHitGroup, dDamage )
 	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) +
-	dDamage:GetDamage() / ( math.max( self:Health(), self:GetMaxHealth() ) * 112 ) )
+	dDamage:GetDamage() / ( math_max( self:Health(), self:GetMaxHealth() ) * 112 ) )
+	local pPhys = self:GetPhysicsObject()
+	if IsValid( pPhys ) then
+		local pLocomotion = MyTable.loco
+		pLocomotion:SetVelocity( pLocomotion:GetVelocity() + dDamage:GetDamageForce() / pPhys:GetMass() )
+	end
 	MyTable.ELastHitGroup = HITGROUP_GENERIC
 	MyTable.bHoldFire = nil
 end
@@ -204,7 +215,11 @@ ENT.iState = NPC_STATE_NONE
 function ENT:GetNPCState() return self.iState end
 function ENT:SetNPCState( i ) self.iState = i end
 
-function ENT:GetShootPos() return self:GetPos() + Vector( 0, 0, self:OBBMaxs().z * .77777777777778 ) end
+function ENT:GetShootPos()
+	local v = self:GetPos()
+	v:Add( self:GetUp() * self:OBBMaxs()[ 3 ] * .77777777777778 )
+	return v
+end
 function ENT:EyePos() return self:GetShootPos() end
 
 function ENT:GetHull() return self.vHullMins, self.vHullMaxs end
@@ -347,18 +362,22 @@ function ENT:HandleTurning( MyTable )
 		else aDesAim = ( v - MyTable.GetShootPos( self, MyTable ) ):Angle() end
 	else aDesAim = Angles end
 	local flTurnRate = MyTable.flTurnRate
-	local f = MyTable.flOverrideTurnRateThisTick
-	if f then flTurnRate = f MyTable.flOverrideTurnRateThisTick = nil end
 	local vAimVelocity = MyTable.vAimVelocity
 	local sPitch = MyTable.m_sPitchPoseParameter
 	local sYaw = MyTable.m_sYawPoseParameter
 	local flPitch = CEntity_GetPoseParameter( self, sPitch )
 	local flYaw = CEntity_GetPoseParameter( self, sYaw )
+
+	local flAimStiffnessThisTick = MyTable.flOverrideAimStiffnessThisTick || 24
+	MyTable.flOverrideAimStiffnessThisTick = nil
+	local flAimDampingThisTick = MyTable.flOverrideAimDampingThisTick || -2
+	MyTable.flOverrideAimDampingThisTick = nil
+
 	vAimVelocity:Add( Vector(
 		math_AngleDifference( aDesAim[ 1 ], Angles[ 1 ] + flPitch ),
 		math_AngleDifference( aDesAim[ 2 ], Angles[ 2 ] + flYaw )
-	) * 24 * flFrameTime )
-	vAimVelocity:Mul( math_exp( -2 * flFrameTime ) )
+	) * flAimStiffnessThisTick * flFrameTime )
+	vAimVelocity:Mul( math_exp( flAimDampingThisTick * flFrameTime ) )
 	MyTable.vAimVelocity = vAimVelocity
 	flPitch = flPitch + ( vAimVelocity[ 1 ] * flFrameTime )
 	CEntity_SetPoseParameter( self, sPitch, flPitch )
@@ -372,7 +391,13 @@ function ENT:HandleTurning( MyTable )
 	local v = MyTable.vaAimTargetBody || CEntity_GetAngles( self )
 	if isangle( v ) then v = v:Forward() else v = ( v - self:GetShootPos() ):GetNormalized() end
 	local flYawVelocity = MyTable.flYawVelocity
-	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * 14 /*STIFFNESS*/ * flFrameTime ) * math_exp( -12 /*DAMPING*/ * flFrameTime )
+
+	local flBodyStiffnessThisTick = MyTable.flOverrideBodyStiffnessThisTick || 14
+	MyTable.flOverrideBodyStiffnessThisTick = nil
+	local flBodyDampingThisTick = MyTable.flOverrideBodyDampingThisTick || -12
+	MyTable.flOverrideBodyDampingThisTick = nil
+
+	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )
 	MyTable.flYawVelocity = flYawVelocity
 	local loco = MyTable.loco
 	loco:SetMaxYawRate( math_abs( MyTable.flYawVelocity ) )

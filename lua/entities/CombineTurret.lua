@@ -38,6 +38,8 @@ list.Set( "NPC", "npc_turret_floor", {
 
 if !SERVER then return end
 
+ENT.bNightVision = true
+
 ENT.flTopSpeed = 0
 ENT.flRunSpeed = 0
 ENT.flWalkSpeed = 0

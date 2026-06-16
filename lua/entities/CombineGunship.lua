@@ -40,7 +40,9 @@ sound.Add {
 	sound = { "npc/strider/strider_minigun.wav", "npc/strider/strider_minigun.wav2" }
 }
 
-if !SERVER then return end
+if CLIENT then return end
+
+ENT.bNightVision = true
 
 ENT.Primary_flDelay = .08
 ENT.Primary_flDamage = 80

@@ -35,6 +35,8 @@ list.Set( "NPC", "npc_combine_s", {
 
 if !SERVER then return end
 
+ENT.bNightVision = true
+
 ENT.iDefaultClass = CLASS_COMBINE
 
 function ENT:Initialize()
