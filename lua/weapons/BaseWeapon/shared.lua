@@ -617,7 +617,7 @@ if CLIENT then
 				end
 			end
 		end
-		local flOmega = 4.5 / ( 2.5 * MyTable.Primary_flDelay )
+		local flOmega = 4.5 / ( 2.5 * math_Clamp( MyTable.Primary_flDelay, .05, .2 ) )
 		local flStiffness = flOmega * flOmega
 		local flDamping = -.8 * flOmega
 		vRecoilWorldVelocity = vRecoilWorldVelocity - vRecoilWorldSpring * flStiffness * flFrameTime
@@ -761,7 +761,7 @@ if CLIENT then
 			vRecoilWorldAngleVelocity[ 3 ] = vRecoilWorldAngleVelocity[ 3 ] + math_Rand( -90, 90 )
 			vRecoilViewAngleVelocity[ 3 ] = vRecoilViewAngleVelocity[ 3 ] + math_Rand( -90, 90 )
 		end
-		local flOmega = 4.5 / ( 2.5 * MyTable.Primary_flDelay )
+		local flOmega = 4.5 / ( 2.5 * math_Clamp( MyTable.Primary_flDelay, .05, .2 ) )
 		local flStiffness = flOmega * flOmega
 		local flDamping = -.8 * flOmega
 		vRecoilViewVelocity = vRecoilViewVelocity - vRecoilViewSpring * flStiffness * flFrameTime
