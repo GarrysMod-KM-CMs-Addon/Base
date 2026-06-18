@@ -1,6 +1,6 @@
 # KM_CM's Addon
 
-# IMPORTANT: If this is your first time playing with KM_CM's Addon, [READ THIS!](https://km-cm.gitbook.io/km_cms-addon/controls-note)
+### IMPORTANT: If this is your first time playing with KM_CM's Addon, [READ THIS](https://km-cm.gitbook.io/km_cms-addon/controls-note) AND [THIS!](https://km-cm.gitbook.io/km_cms-addon/decals-note) These are VERY important for your gaming experience, and the addon will not be able to show its full potential unless you do!
 
 Successor of [KM_CM's Random Things.](https://github.com/KM-CM/GarrysMod-KM_CMs_Random_Things)
 
