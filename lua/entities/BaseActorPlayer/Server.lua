@@ -29,6 +29,7 @@ function ENT:GetShootPos()
 end
 
 function ENT:OnBulletImpact( dDamage )
+	if self:GetNW2Float( "GAME_flBlood", 1 ) <= 0 then return end
 	local ed = EffectData()
 	ed:SetOrigin( dDamage:GetDamagePosition() )
 	util.Effect( "BloodImpact", ed )

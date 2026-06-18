@@ -1,11 +1,27 @@
-local coroutine_wait = coroutine.wait
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+
+local CurTime = CurTime
+local math_abs = math.abs
+local coroutine_yield = coroutine.yield
 // You MUST call AnimationSystemHalt before this!
 function ENT:PlaySequenceAndWait( sName, flSpeed )
 	local flLength = self:SetSequence( sName )
 	self:ResetSequenceInfo()
 	self:SetCycle( 0 )
 	self:SetPlaybackRate( flSpeed )
-	coroutine_wait( flLength / flSpeed )
+	local flDuration = flLength / math_abs( flSpeed )
+	local flStartTime = CurTime()
+	local flEndTime = CurTime() + flDuration
+	local flInverseDuration = 1 / flDuration
+	while CurTime() <= flEndTime do
+		self:SetSequence( sName )
+		self:SetPlaybackRate( flSpeed )
+		self:SetCycle( ( CurTime() - flStartTime ) * flInverseDuration )
+		local pLocomotion = CEntity_GetTable( self ).loco
+		pLocomotion:SetDesiredSpeed( 0 )
+		pLocomotion:Approach( self:GetPos(), 1 )
+		coroutine_yield()
+	end
 	self:SetSequence( 0 )
 end
 
@@ -15,8 +31,6 @@ ENT.tPromoteSequences = {}
 ENT.tInstantlyPromote = {}
 
 ENT.m_tSequenceEvents = {}
-
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 function ENT:PromoteSequence( seq, flSpeed )
 	if isnumber( seq ) then seq = self:GetSequenceName( seq ) end

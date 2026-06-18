@@ -132,6 +132,12 @@ function ENT:Stand() self.loco:SetDesiredSpeed( 0 ) self.loco:Approach( self:Get
 function ENT:OnKilled( dmg )
 	if self.bDead then return true end
 	self.bDead = true
+	local v = dmg:GetDamageForce()
+	local l = v:Length()
+	v:Normalize()
+	// To prevent crazy physics... when in reality a ragdoll flying with an impulse of 4096 * 85 is perfectly fine
+	v:Mul( math.min( l, 2048 * 32 ) )
+	dmg:SetDamageForce( v )
 	for wep in pairs( self.tWeapons ) do self:DropWeapon( wep ) end
 	local pAttacker = dmg:GetAttacker()
 	if IsValid( pAttacker ) then
@@ -181,16 +187,40 @@ ENT.ELastHitGroup = HITGROUP_GENERIC
 function ENT:LastHitGroup() return self.ELastHitGroup end
 function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
 
+local math_Rand = math.Rand
 local util_Decal = util.Decal
-local EffectData = EffectData
-local util_Effect = util.Effect
 function ENT:BloodSplatter( dDamage )
+	local flBlood = self:GetNW2Float( "GAME_flBlood", 1 )
+	if flBlood <= 0 then return end
 	local MyTable = CEntity_GetTable( self )
-	// TODO: Spray decals around
-	//	util_Decal( "Blood", dDamage:GetDamagePosition(), dDamage:GetDamagePosition() )
-	//	local pEffectData = EffectData()
-	//	pEffectData:SetOrigin( dDamage:GetDamagePosition() )
-	//	util_Effect( "BloodImpact", pEffectData )
+	local vForce = dDamage:GetDamageForce()
+	local flForce = math.max( dDamage:GetDamage() * 16, vForce:Length() / 512 )
+	vForce:Normalize()
+	local vPosition = dDamage:GetDamagePosition()
+	local aAim = vForce:Angle()
+	local flMaxHealth = self.GAME_flOldMaxHealth || self:GetMaxHealth()
+	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 64 ) * math.Rand( 1, 2 )
+	if f < 1 then
+		if math_Rand( 0, 1 / f ) <= 1 then
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+		end
+	else
+		for i = 0, f do
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+		end
+	end
+	local aAim = ( -vForce ):Angle()
+	flForce = flForce * .5
+	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 64 ) * math.Rand( .5, 1.5 )
+	if f < 1 then
+		if math_Rand( 0, 1 / f ) <= 1 then
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+		end
+	else
+		for i = 0, f do
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+		end
+	end
 end
 
 local math_max = math.max
@@ -201,12 +231,11 @@ function ENT:OnTakeDamage( dDamage )
 	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) +
 	dDamage:GetDamage() / ( math_max( self:Health(), self:GetMaxHealth() ) * 112 ) )
 	local pPhys = self:GetPhysicsObject()
-	if IsValid( pPhys ) then
-		local pLocomotion = MyTable.loco
-		pLocomotion:SetVelocity( pLocomotion:GetVelocity() + dDamage:GetDamageForce() / pPhys:GetMass() )
-	end
+	if IsValid( pPhys ) then AddVelocity( self, dDamage:GetDamageForce() / pPhys:GetMass() ) end
 	MyTable.ELastHitGroup = HITGROUP_GENERIC
+	MyTable.BloodSplatter( self, dDamage )
 	MyTable.bHoldFire = nil
+	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) + dDamage:GetDamage() / ( self:GetMaxHealth() * 112 ) )
 end
 
 ENT.flHearDistanceMultiplier = 1
