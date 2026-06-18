@@ -340,6 +340,7 @@ hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll 
 	if f then pRagdoll.BloodSplatter = f end
 	local f = pOwner.OnCreateRagdoll
 	if f then f( pOwner, pRagdoll ) end
+	if !pOwner.__ACTOR__ then return end
 	pRagdoll:SetNW2Float( "GAME_flBleeding", pOwner:GetNW2Float( "GAME_flBleeding", 0 ) )
 	local f = math.max( pOwner:Health(), pOwner:GetMaxHealth() )
 	if f <= 0 then f = 100 end
@@ -405,6 +406,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		Data.Damage = Data.Damage * .1
 	end
 	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .33, .66 ), 0, .2 )
+	local flForce = math.max( Data.Force, 1 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
 		local pTarget, vTargetVelocity, dDamage = tr.Entity
@@ -416,6 +418,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		dDamage:SetDamage( dmg:GetDamage() )
 		dDamage:SetDamageType( DMG_BULLET )
 		dDamage:SetDamagePosition( tr.HitPos )
+		dDamage:SetDamageForce( ( tr.HitPos - tr.StartPos ):GetNormalized() * flForce )
 		if bTarget then vTargetVelocity = ent:GetVelocity() end
 		local t = OldCallBack( atk, tr, dDamage ) || { damage = true, effects = true }
 		if t.damage && bTarget then
@@ -462,6 +465,8 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	// Bloodloss only works on players for now, so see PlayerHurt for bloodloss code
 	local at = dDamage:GetAttacker()
 	if IsValid( at ) then
+		local f = at.GAME_OnHurtSomething
+		if f && f( at, pEntity, dDamage ) then return true end
 		if at:IsPlayer() then
 			local v = __PLAYER_MODEL__[ at:GetModel() ]
 			if v then
@@ -469,13 +474,11 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 				if v then if v( at, pEntity, dDamage ) then b = nil end end
 			end
 		elseif at.GetEnemy then at.GAME_bHurtEnemy = true end
-		local f = at.GAME_OnHurtSomething
-		if f then f( at, pEntity, dDamage ) end
 	end
 	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
 	local fBloodSplatter = pEntity.BloodSplatter
 	if fBloodSplatter then fBloodSplatter( pEntity, dDamage ) end
-	if pEntity:GetClass() == "prop_ragdoll" then
+	if pEntity:GetClass() == "prop_ragdoll" && pEntity.GAME_flOldMaxHealth then
 		pEntity:SetNW2Float( "GAME_flBleeding", pEntity:GetNW2Float( "GAME_flBleeding", 0 ) +
 		dDamage:GetDamage() / ( pEntity.GAME_flOldMaxHealth * 112 ) )
 	end
@@ -668,7 +671,7 @@ hook.Add( "Think", "GameImprovements", function()
 			end
 			if !ACTOR_QUEUE_LAST then break end
 		end
-		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 832 - engine_TickInterval(), 0, 1 ) * 5
+		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 896 - engine_TickInterval(), 0, 1 )
 	else ACTOR_QUEUE_CURRENT = nil end
 	if IsValid( CascadeShadowMapping ) then
 		if SUN_ANGLES then
@@ -700,9 +703,9 @@ hook.Add( "Think", "GameImprovements", function()
 				if flTimeLeft <= 0 then
 					local v = ent:GetPos()
 					v:Add( ent:OBBCenter() )
-					for i = 1, math.random( 3 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 8, ent ) end
+					for i = 1, math.random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 4, ent ) end
 					ent.GAME_flBleedTimeLeft = 1
-				else ent.GAME_flBleedTimeLeft = flTimeLeft - f * 256 * math_Rand( .9, 1.1 ) * FrameTime() end
+				else ent.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
 			// We cannot regenerate blood if we're dead!
 			//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )

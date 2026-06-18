@@ -436,7 +436,7 @@ function GetVelocity( ent )
 	local v = EntTable.__VELOCITY__
 	if v then return v end
 	v = EntTable.GAME_pVehicle
-	if IsValid( v ) && v != ent then return GetVelocity( v ) end
+	if IsValid( pVehicle ) && pVehicle != ent then return GetVelocity( v ) end
 	if EntTable.__GetVelocity__ then return EntTable.__GetVelocity__( ent, EntTable ) end
 	if ent:IsPlayer() || ent:IsNPC() then return CEntity_GetVelocity( ent ) else
 		if SERVER && ent:IsNextBot() then
@@ -455,15 +455,13 @@ function GetVelocity( ent )
 	return Vector()
 end
 
-local CEntity_GetTable = CEntity.GetTable
 local CEntity_SetVelocity = CEntity.SetVelocity
 local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
-local Vector = Vector
-local CurTime = CurTime
+
 function SetVelocity( ent, vVelocity )
 	local EntTable = CEntity_GetTable( ent )
-	v = EntTable.GAME_pVehicle
-	if IsValid( v ) && v != ent then SetVelocity( v, vVelocity ) end
+	local pVehicle = EntTable.GAME_pVehicle
+	if IsValid( pVehicle ) && pVehicle != ent then SetVelocity( pVehicle, vVelocity ) return end
 	if EntTable.__SetVelocity__ then EntTable.__SetVelocity__( ent, vVelocity, EntTable ) end
 	if ent:IsPlayer() then
 		CEntity_SetVelocity( ent, vVelocity - CEntity_GetVelocity( ent ) )
@@ -473,15 +471,20 @@ function SetVelocity( ent, vVelocity )
 		if IsValid( phys ) then phys:SetVelocity( vVelocity ) end
 	end
 end
+
 function AddVelocity( ent, vVelocity )
 	local EntTable = CEntity_GetTable( ent )
-	v = EntTable.GAME_pVehicle
-	if IsValid( v ) && v != ent then SetVelocity( v, vVelocity ) end
-	if EntTable.__SetVelocity__ then EntTable.__SetVelocity__( ent, vVelocity, EntTable ) end
+	local pVehicle = EntTable.GAME_pVehicle
+	if IsValid( pVehicle ) && pVehicle != ent then AddVelocity( pVehicle, vVelocity ) return end
+	if EntTable.__AddVelocity__ then EntTable._AddVelocity__( ent, vVelocity, EntTable ) end
 	if ent:IsPlayer() then
 		CEntity_SetVelocity( ent, vVelocity )
 	elseif ent:IsNPC() then CEntity_SetVelocity( ent, CEntity_GetVelocity( ent ) + vVelocity ) else
-		if SERVER && ent:IsNextBot() then EntTable.loco:SetVelocity( EntTable.loco:GetVelocity() + vVelocity ) return end
+		if SERVER && ent:IsNextBot() then
+			local pLocomotion = EntTable.loco
+			pLocomotion:SetVelocity( pLocomotion:GetVelocity() + vVelocity )
+			return
+		end
 		local phys = CEntity_GetPhysicsObject( ent )
 		if IsValid( phys ) then phys:AddVelocity( vVelocity ) end
 	end

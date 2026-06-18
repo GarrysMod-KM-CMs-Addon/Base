@@ -164,7 +164,7 @@ hook.Add( "Tick", "Director", function()
 						util_Decal( "Blood", v, v + d * f, ply )
 					end
 					PlyTable.GAME_flBleedTimeLeft = 1
-				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 256 * math_Rand( .9, 1.1 ) * FrameTime() end
+				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
 			flBlood = math_Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 			ply:SetNW2Float( "GAME_flBlood", flBlood )

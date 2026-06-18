@@ -42,7 +42,8 @@ function SWEP:PrimaryAttack()
 		TracerName = MyTable.Primary_sTracer,
 		Spread = Vector( MyTable.Primary_flSpreadX, MyTable.Primary_flSpreadY ),
 		Damage = MyTable.Primary_flDamage,
-		Num = MyTable.Primary_iNum
+		Num = MyTable.Primary_iNum,
+		Force = 1
 	}
 	MyTable.FurtherModificationsToBulletTable( self, tBullets, MyTable )
 	CEntity_FireBullets( self, tBullets )

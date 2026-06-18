@@ -281,9 +281,8 @@ hook.Add( "Tick", "Graphics", function()
 		else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
 	else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
-	local f = ( 1 - flDeath ) * 4
-	DrawSharpen( f, f )
-	tDrawColorModify[ "$pp_colour_colour" ] = math_Clamp( math_Remap( flDeath, 1, .3, 1, 0 ), 0, 1 )
+	tDrawColorModify[ "$pp_colour_brightness" ] = math_Clamp( math_Remap( flDeath, 1, .4, 0, -.35 ), -.35, 0 )
+	tDrawColorModify[ "$pp_colour_contrast" ] = math_Clamp( math_Remap( flDeath, 1, .4, 1, 1.8 ), 1, 1.8 )
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		bBleedingBlur = true
@@ -314,11 +313,10 @@ hook.Add( "Tick", "Graphics", function()
 	tDrawColorModify[ "$pp_colour_mulg" ] = flFogG * flMultiplier
 	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
 	flBloom = Lerp( math_min( 1, flFrameTime * .5 ), flBloom || 0, 1 - flColor )
-	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
+	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
 	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
-	//	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
-	flFogDensityMul = ( 1 - flBrightness ) * ( flFogDensityMul || 0 )
+	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 	local tr = util_TraceLine {
 		start = vEye,
