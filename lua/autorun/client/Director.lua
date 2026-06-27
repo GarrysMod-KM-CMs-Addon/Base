@@ -269,6 +269,7 @@ function DirectorUpdateContainerInternal( self, ... )
 	// since we also technically simulate the next tick
 	local t = self.m_pTable
 	local flInterval = SysTime() - LAST_DIRECTOR_CLIENT_TICK
+	// TODO: This isn't the actual interval between the executes
 	t.Execute( self, flInterval, ... )
 	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
