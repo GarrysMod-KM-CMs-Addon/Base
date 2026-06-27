@@ -272,14 +272,20 @@ function ENT:OnRemove()
 	end
 end
 
-function ENT:Tick( MyTable ) end
+local CEntity_GetAngles = CEntity.GetAngles
+local CEntity_SetAngles = CEntity.SetAngles
+
+function ENT:Tick( MyTable )
+	if MyTable.bPhysics then return end
+	local ang = CEntity_GetAngles( self )
+	if ang[ 1 ] != 0 || ang[ 3 ] != 0 then ang[ 1 ] = 0 ang[ 3 ] = 0 CEntity_SetAngles( self, ang ) end
+end
 
 local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
 local CEntity_GetParent = CEntity.GetParent
 local CEntity_PhysicsDestroy = CEntity.PhysicsDestroy
 local CEntity_WaterLevel = CEntity.WaterLevel
 local CEntity_GetPos = CEntity.GetPos
-local CEntity_GetAngles = CEntity.GetAngles
 
 local IsValid = IsValid
 

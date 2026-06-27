@@ -59,12 +59,12 @@ function ENT:Think()
 		RunConsoleCommand( "r_shadowrendertotexture", "1" )
 		RunConsoleCommand( "r_shadowdist", "10000" )
 		RunConsoleCommand( "r_shadows_gamecontrol", "0" )
-		local tProjectedTextures = self.tProjectedTextures
+		local tProjectedTextures = self.m_tProjectedTextures
 		tProjectedTextures[ 1 ]:SetOrthographic( true, self:GetSizeNear(), self:GetSizeNear(), self:GetSizeNear(), self:GetSizeNear() )
 		tProjectedTextures[ 2 ]:SetOrthographic( true, self:GetSizeMid(), self:GetSizeMid(), self:GetSizeMid(), self:GetSizeMid() )
 		tProjectedTextures[ 3 ]:SetOrthographic( true, self:GetSizeFar(), self:GetSizeFar(), self:GetSizeFar(), self:GetSizeFar() )
 		tProjectedTextures[ 4 ]:SetOrthographic( true, self:GetSizeFurther(), self:GetSizeFurther(), self:GetSizeFurther(), self:GetSizeFurther() )
-		for i, pTexture in pairs( self.tProjectedTextures ) do
+		for i, pTexture in pairs( tProjectedTextures ) do
 			pTexture:SetColor( self:GetLightColor():ToColor() )
 			pTexture:SetBrightness( self:GetBrightness() )
 			pTexture:SetPos( vector_origin + vOffset )
@@ -84,10 +84,10 @@ function ENT:Think()
 end
 
 if CLIENT then
-	ENT.tProjectedTexture = {}
+	ENT.m_tProjectedTextures = {}
 	function ENT:Initialize()
 		local tProjectedTextures = {}
-		self.tProjectedTextures = tProjectedTextures
+		self.m_tProjectedTextures = tProjectedTextures
 		for i = 1, 4 do
 			local pTexture = ProjectedTexture()
 			tProjectedTextures[ i ] = pTexture
@@ -95,8 +95,11 @@ if CLIENT then
 			pTexture:SetTexture( i == 1 && "CascadeShadowMapping/MaskCenter" || "CascadeShadowMapping/MaskRing" )
 		end
 		timer.Simple( .1, function() render.RedownloadAllLightmaps( false, true ) end )
-		for _, pTexture in pairs( self.tProjectedTexture ) do pTexture:Remove() end
-		table.Empty( self.tProjectedTexture )
+	end
+	function ENT:OnRemove()
+		timer.Simple( .1, function() render.RedownloadAllLightmaps( false, true ) end )
+		for _, pTexture in pairs( self.m_tProjectedTextures ) do pTexture:Remove() end
+		self.m_tProjectedTextures = {}
 	end
 	return
 end

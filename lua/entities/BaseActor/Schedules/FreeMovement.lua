@@ -5,7 +5,7 @@ local util_TraceHull = util.TraceHull
 
 local math_max = math.max
 
-function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * .5 + .5 ) end
+function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * 2 + 2 ) end
 
 RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 	MyTable.vCover = nil
@@ -343,7 +343,7 @@ RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 		end )
 		pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
 		local flBoundingRadius = self:BoundingRadius()
-		local flDesiredCursor = math.Clamp( pEnemyPath:GetCursorPosition() + flBoundingRadius * math.Remap( pEnemyPath:GetLength() - pEnemyPath:GetCursorPosition(), 0, flBoundingRadius * 128, 8, 32 ) * MyTable.flCombatState, 0, pEnemyPath:GetLength() - flBoundingRadius * 8 )
+		local flDesiredCursor = pEnemyPath:GetCursorPosition()
 		local vMyStart, vMyEnd = sched.vMyStart, sched.vMyEnd
 		local vSimpleOffset = Vector( 0, 0, 12 )
 		local vDuckOffset = Vector( 0, 0, MyTable.GetViewOffsetDucked( self, MyTable ) )
@@ -455,9 +455,7 @@ RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 					end
 				end
 			end
-			pEnemyPath:MoveCursorToClosestPosition( vPoint )
-			if pEnemyPath:GetCursorPosition() <= flDesiredCursor ||
-			util_TraceLine( {
+			if util_TraceLine( {
 				start = vPoint + vSimpleOffset,
 				endpos = vPoint + vDuckOffset,
 				mask = MASK_SOLID,

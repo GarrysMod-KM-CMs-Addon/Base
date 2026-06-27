@@ -1,3 +1,5 @@
+include "Player.lua"
+
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
 ENT.vHullDuckMins = HULL_HUMAN_DUCK_MINS
@@ -45,6 +47,7 @@ function ENT:PreScheduleResetVariables( MyTable )
 end
 
 function ENT:MoveAlongPathToCover( pPath, tFilter )
+	local pLocomotion = self.loco
 	if self:GetNW2Bool "CTRL_bSliding" then
 		// HACK: Rapidly decelerate
 		local f = self.flPathTolerance
@@ -53,9 +56,9 @@ function ENT:MoveAlongPathToCover( pPath, tFilter )
 			f = self:GetNW2Float( "CTRL_flSlideSpeed", 0 )
 			self:SetNW2Float( "CTRL_flSlideSpeed", f - ( self.GAME_flSlideSpeed || self:GetRunSpeed() * 1.5 ) * ( self.CTRL_flSlideSpeedDecay || .8 ) * FrameTime() )
 		end
-		self.loco:SetDesiredSpeed( 0 )
-		self.loco:SetAcceleration( 0 )
-		self.loco:SetDeceleration( 0 )
+		pLocomotion:SetDesiredSpeed( 0 )
+		pLocomotion:SetAcceleration( 0 )
+		pLocomotion:SetDeceleration( 0 )
 		self:HandleJumpingAlongPath( pPath, self.flTopSpeed, tFilter )
 		return
 	end
@@ -64,9 +67,9 @@ function ENT:MoveAlongPathToCover( pPath, tFilter )
 		local f, n = math.abs( pPath:GetLength() - pPath:GetCursorPosition() ), self:GetSlideLength()
 		if f > n * .2 && f <= n then
 			QuickSlide_Start( self )
-			self.loco:SetDesiredSpeed( 0 )
-			self.loco:SetAcceleration( 0 )
-			self.loco:SetDeceleration( 0 )
+			pLocomotion:SetDesiredSpeed( 0 )
+			pLocomotion:SetAcceleration( 0 )
+			pLocomotion:SetDeceleration( 0 )
 			pPath:Update( self )
 			return
 		end
@@ -142,4 +145,30 @@ function ENT:OnKilled( dmg )
 	//	self:EmitSound( dmg:IsDamageType( DMG_FALL ) && "Player.FallGib" || "Player.Death" )
 	dmg:SetDamage( 0 )
 	self:BecomeRagdoll( dmg )
+end
+
+local sv_friction, sv_gravity = GetConVar "sv_friction", GetConVar "sv_gravity"
+function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
+	if flHeight == nil then flHeight = 1 end
+	if !bAllowSliding then self:SetNW2Bool( "CTRL_bSliding", false ) end
+	self:SetCrouchTarget( flHeight )
+	if flHeight > .5 then flSpeed = math.min( self.flTopSpeed, flSpeed )
+	else flSpeed = math.min( self.flWalkSpeed, flSpeed ) end
+	if self.flTopSpeed > self.flRunSpeed && flSpeed >= self.flTopSpeed then
+		self:SetNW2Bool( "CTRL_bSprinting", true )
+	else self:SetNW2Bool "CTRL_bSprinting" end
+	local pLocomotion = self.loco
+	pLocomotion:SetDesiredSpeed( flSpeed )
+	local f = flSpeed * ACCELERATION_NORMAL
+	pLocomotion:SetAcceleration( f )
+	pLocomotion:SetDeceleration( f )
+	self:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
+end
+
+function ENT:Stand( flHeight )
+	if flHeight == nil then flHeight = 1 end
+	self:SetCrouchTarget( flHeight )
+	self:SetNW2Bool "CTRL_bSliding"
+	self:SetNW2Bool "CTRL_bSprinting"
+	BaseClass.Stand( self )
 end

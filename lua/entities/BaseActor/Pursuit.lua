@@ -4,7 +4,7 @@
 
 ACTOR_PURSUIT_DATA = {}
 
-function ENT:UpdatePursuitSenses( pEnemy, pKey /*aka pTrueEnemy*/ )
+function ENT:UpdatePursuitSenses( pEnemy, pKey /* a.k.a pTrueEnemy */ )
 	if !IsValid( pKey ) || !pKey:IsPlayer() /* dirty HACK */ then return end
 	local PURSUIT_DATA = ACTOR_PURSUIT_DATA[ self:Classify() ] || {}
 	for pEnemy, tData in pairs( PURSUIT_DATA ) do
@@ -17,9 +17,9 @@ function ENT:UpdatePursuitSenses( pEnemy, pKey /*aka pTrueEnemy*/ )
 	local f = GetVelocity( pEnemy ):GetNormalized():Dot( ( pEnemy:GetPos() + pEnemy:OBBCenter() - self:GetPos() ):GetNormalized() )
 	local fc = tData.flRunningAwayFactor
 	if f > fc then
-		tData.flRunningAwayFactor = Lerp( math.min( 1, .5 * FrameTime() ), tData.flRunningAwayFactor, f )
+		tData.flRunningAwayFactor = Lerp( math.min( 1, .05 * FrameTime() ), tData.flRunningAwayFactor, f )
 	else
-		tData.flRunningAwayFactor = Lerp( math.min( 1, .25 * FrameTime() ), tData.flRunningAwayFactor, f )
+		tData.flRunningAwayFactor = Lerp( math.min( 1, .2 * FrameTime() ), tData.flRunningAwayFactor, f )
 	end
 	return f >= .66
 end
