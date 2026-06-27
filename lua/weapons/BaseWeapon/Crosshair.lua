@@ -342,7 +342,7 @@ function SWEP:DoDrawCrosshair()
 	local flRecoilPart = Lerp(
 		math_min( 1, MyTable.Primary_flDelay * 800 * flFrameTime ),
 		MyTable.flCrosshairInAccuracyRecoilPart,
-		MyTable.flCurrentRecoilForGap ^ 1.05 * .05 / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / math_min( 15, self:GetMaxClip1() * .5 )
+		MyTable.flCurrentRecoilForGap ^ 1.04 * .05 / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / math_min( 15, self:GetMaxClip1() * .5 )
 	)
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
 	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart
@@ -375,11 +375,8 @@ function SWEP:DoDrawCrosshair()
 		if cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
 			MyTable.flCrosshairAlpha = Lerp( math_min( 1, flFrameTime * 5 ), MyTable.flCrosshairAlpha, 255 )
 		else
-			MyTable.flCrosshairAlpha = Lerp(
-				math_min( 1, MyTable.Primary_flDelay * 260 * flFrameTime ),
-				MyTable.flCrosshairAlpha,
-				math_max( 0, 255 - 255 * flRecoilPart ^ .7 * 10 )
-			)
+			local flAlpha = math_max( 0, 255 - 255 * MyTable.flCurrentRecoilForCrosshair ^ .75 * ( MyTable.Primary.Automatic && 1 || ( 1 / 3 ) ) / math_min( 15, self:GetMaxClip1() ) * 40 )
+			MyTable.flCrosshairAlpha = flAlpha
 		end
 	end
 	if MyTable.bSniper && flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then

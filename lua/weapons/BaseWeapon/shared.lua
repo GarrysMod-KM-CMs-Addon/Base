@@ -1,18 +1,10 @@
 // Lots of code is taken from Buu342's Weapon Base 2
 // You can find it here: https://github.com/buu342/GMod-BuuBaseRedone
-// I would've just took the code because it's the best way to do it,
+// I could've just took the code because it's the best way to do it,
 // and because he took the general idea and some assets from Far Cry 3,
-// but his base really helped me, and I should've wrote this credit sooner.
+// but his base really helped me, and I really wanted to credit him.
 //
 // Thank you, Buu.
-
-// TODO: Rifle shooting animations. They're still not perfect.
-// (Yes, even after I added springed recoil!)
-// I have no idea what kinda black magic Ubisoft used,
-// but my anims are nowhere near the real Far Cry 3 AK-47.
-// Probably springed recoil.
-// (I wrote this comment before adding it, but even now that I did,
-// it's still just not that vibe that the FC3 AK-47 has!)
 
 DEFINE_BASECLASS "weapon_base"
 
@@ -142,6 +134,7 @@ if CLIENT then
 	SWEP.tShootAnimations = {}
 	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoilForGap = 0
+	SWEP.flCurrentRecoilForCrosshair = 0
 	function SWEP:LastShot() self.flLastShot = CurTime() end
 	SWEP.m_flRecoilLastPitch = 0
 	SWEP.m_flRecoilLastYaw = 0
@@ -150,7 +143,10 @@ if CLIENT then
 	function SWEP:AddRecoil()
 		local pOwner = self:GetOwner()
 		if !IsValid( pOwner ) then return end
-		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + 1 / pOwner:GetNW2Float( "GAME_flRecoil", 1 )
+		self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + 1 * pOwner:GetNW2Float( "GAME_flRecoil", 1 )
+		//	local f = 1 * pOwner:GetNW2Float( "GAME_flRecoil", 1 )
+		//	self.flCurrentRecoilForGap = self.flCurrentRecoilForGap + f
+		//	self.flCurrentRecoilForCrosshair = self.flCurrentRecoilForCrosshair + f
 		if self.flAimShoot then self.flBarrelBack = ( self.flBarrelBack || 0 ) + 1 end
 		table.insert( self.tShootAnimations, { CurTime(), self.m_flRecoilLastPitch, self.m_flRecoilLastYaw } )
 	end
@@ -381,7 +377,7 @@ function SWEP:DoRecoil()
 	if !IsValid( pOwner ) then return end
 	if game.SinglePlayer() && SERVER && pOwner:IsPlayer() then self:CallOnClient "DoRecoil" end
 	local flMultiplier = pOwner.GetNW2Float && pOwner:GetNW2Float( "GAME_flRecoil", 1 ) || 1
-	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier
+	local flRecoil = self:CalcRecoil( pOwner ) * flMultiplier * 1.5
 	local aAngle = Angle( -util_SharedRandom( "BaseWeaponRecoil", self.flRecoilGrowMin, self.flRecoilGrowMax ) * flRecoil, util_SharedRandom( "BaseWeaponRecoil", self.flSideWaysRecoilMin, self.flSideWaysRecoilMax ) * flRecoil )
 	local f, flPitch, flYaw = pOwner.ViewPunch
 	if IsValid( pOwner ) && f then
@@ -442,10 +438,10 @@ function SWEP:ShootEffects()
 			if iSequence != -1 then
 				pViewModel:SendViewModelMatchingSequence( iSequence )
 				self:DoMuzzleFlashInternal( pOwner )
-			elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
+			elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
 				self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 			else self:DoMuzzleFlashInternal( pOwner ) end
-		elseif self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) then
+		elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
 			self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 		else self:DoMuzzleFlashInternal( pOwner ) end
 	end
@@ -460,6 +456,8 @@ AddCSLuaFile "Crosshair.lua"
 function SWEP:DrewWorldModelAndUsedRenderOverrides() self.flRemoveWorldModelOverrideIn = CurTime() + .1 end
 
 if CLIENT then
+	// TODO: This WHOLE THING is old and needs to be REDONE ENTIRELY!
+
 	local vFinal, vFinalVel = Vector(), Vector()
 	local vFinalAngle, vFinalAngleVel = Vector(), Vector()
 	local vTarget = Vector()
@@ -593,8 +591,8 @@ if CLIENT then
 				if flVelocity > 10 then
 					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale
 					local flBreathe = RealTime() * 12
-					vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .5, ( .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * -1 ) * f )
-					vTargetAngle:Add( Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f )
+					vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .33, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
+					vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * .33 )
 				end
 			end
 		end
@@ -750,27 +748,60 @@ if CLIENT then
 	local math_max = math.max
 	local math_Rand = math.Rand
 
-	local function fApplyRecoil( MyTable, flFrameTime )
-		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			if tAnimation[ 4 ] then continue end
-			tAnimation[ 4 ] = true
-			vRecoilWorldVelocity[ 1 ] = vRecoilWorldVelocity[ 1 ] - 30
-			vRecoilWorldVelocity[ 2 ] = vRecoilWorldVelocity[ 2 ] + tAnimation[ 2 ] * math_Rand( 3, 6 )
-			vRecoilWorldVelocity[ 3 ] = vRecoilWorldVelocity[ 3 ] + tAnimation[ 3 ] * math_Rand( 2, 4 )
-			vRecoilWorldAngleVelocity[ 1 ] = vRecoilWorldAngleVelocity[ 1 ] + tAnimation[ 2 ] * math_Rand( 3, 6 )
-			vRecoilWorldAngleVelocity[ 2 ] = vRecoilWorldAngleVelocity[ 2 ] + tAnimation[ 3 ] * math_Rand( 2, 4 )
-			vRecoilWorldAngleVelocity[ 3 ] = vRecoilWorldAngleVelocity[ 3 ] + math_Rand( -90, 90 )
-			vRecoilViewAngleVelocity[ 3 ] = vRecoilViewAngleVelocity[ 3 ] + math_Rand( -90, 90 )
-		end
-		local flOmega = 4.5 / ( 2.5 * math_Clamp( MyTable.Primary_flDelay, .05, .2 ) )
+	// TODO: Rifle shooting animations. They're still not perfect.
+	// (Yes, even after I added springed recoil!)
+	// I have no idea what kinda black magic Ubisoft used,
+	// but my anims are nowhere near the real Far Cry 3 AK-47.
+	// Probably springed recoil.
+	// (I wrote this comment before adding it, but even now that I did,
+	// it's still just not that vibe that the FC3 AK-47 has!)
+
+	local flHipTime, flHipPower = 0, 0
+	local function fApplyRecoil( MyTable, flFrameTime, bZoom, pos, ang )
+		local flDelay = math_Clamp( MyTable.Primary_flDelay, .05, .2 )
+		local flOmega = 4.5 / ( 4 * flDelay )
 		local flStiffness = flOmega * flOmega
-		local flDamping = -.8 * flOmega
+		local flDamping = -2 * flOmega
 		vRecoilViewVelocity = vRecoilViewVelocity - vRecoilViewSpring * flStiffness * flFrameTime
 		vRecoilViewVelocity = vRecoilViewVelocity * math_exp( flDamping * flFrameTime )
 		vRecoilViewSpring = vRecoilViewSpring + vRecoilViewVelocity * flFrameTime
 		vRecoilViewAngleVelocity = vRecoilViewAngleVelocity - vRecoilViewAngleSpring * flStiffness * flFrameTime
 		vRecoilViewAngleVelocity = vRecoilViewAngleVelocity * math_exp( flDamping * flFrameTime )
 		vRecoilViewAngleSpring = vRecoilViewAngleSpring + vRecoilViewAngleVelocity * flFrameTime
+		if bZoom then
+			for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
+				if tAnimation[ 4 ] then continue end
+				tAnimation[ 4 ] = true
+				vRecoilWorldVelocity[ 1 ] = vRecoilWorldVelocity[ 1 ] - math_Rand( 0, 30 )
+				vRecoilWorldVelocity[ 2 ] = vRecoilWorldVelocity[ 2 ] + tAnimation[ 2 ] * math_Rand( 0, 4 )
+				vRecoilWorldVelocity[ 3 ] = vRecoilWorldVelocity[ 3 ] + tAnimation[ 3 ] * math_Rand( 0, 2 )
+				vRecoilWorldAngleVelocity[ 1 ] = vRecoilWorldAngleVelocity[ 1 ] + tAnimation[ 2 ] * math_Rand( 0, 4 )
+				vRecoilWorldAngleVelocity[ 2 ] = vRecoilWorldAngleVelocity[ 2 ] + tAnimation[ 3 ] * math_Rand( 0, 2 )
+				vRecoilWorldAngleVelocity[ 3 ] = vRecoilWorldAngleVelocity[ 3 ] + math_Rand( -8, 8 )
+				vRecoilViewAngleVelocity[ 3 ] = vRecoilViewAngleVelocity[ 3 ] + math_Rand( -8, 8 )
+			end
+			return
+		end
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN then return end
+		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
+			if tAnimation[ 4 ] then continue end
+			tAnimation[ 4 ] = true
+			flHipTime = CurTime() + flDelay
+		end
+		local flRecoil = math_min( 1, MyTable.flRecoil * .5 )
+		if CurTime() <= flHipTime then
+			flHipPower = flRecoil
+		else
+			flHipPower = math_max( 0, flHipPower - flRecoil * flFrameTime / flDelay )
+		end
+		flDelay = flDelay * .8
+		vRecoilViewSpring[ 1 ] = vRecoilViewSpring[ 1 ] - math_abs( math_sin( RealTime() * 5 / flDelay ) ) * flHipPower * 20 * flFrameTime
+		vRecoilViewSpring[ 2 ] = vRecoilViewSpring[ 2 ] + math_abs( math_sin( RealTime() * 2 / flDelay ) ) * flHipPower * 1 * flFrameTime
+		vRecoilViewSpring[ 3 ] = vRecoilViewSpring[ 3 ] + math_abs( math_sin( RealTime() * 2 / flDelay ) ) * flHipPower * 4 * flFrameTime
+		vRecoilViewAngleSpring[ 1 ] = vRecoilViewAngleSpring[ 1 ] + math_sin( RealTime() * 3 / flDelay ) * flHipPower * 50 * flFrameTime
+		vRecoilViewAngleSpring[ 2 ] = vRecoilViewAngleSpring[ 2 ] + -math_sin( RealTime() * 4 / flDelay ) * flHipPower * 1 * flFrameTime
+		vRecoilViewAngleSpring[ 3 ] = vRecoilViewAngleSpring[ 3 ] + math_sin( RealTime() * 3 / flDelay ) * flHipPower * 45 * flFrameTime
+		vRecoilWorldAngleSpring[ 3 ] = vRecoilWorldAngleSpring[ 3 ] - math_cos( RealTime() * 5 / flDelay ) * flHipPower * 10 * flFrameTime
 	end
 
 	function SWEP:CalcViewModelView( _, pos, ang )
@@ -938,14 +969,24 @@ if CLIENT then
 				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
 			end
 		end
-		local f
+		local flDelay, f = MyTable.Primary_flDelay
 		if MyTable.Primary.Automatic then
-			f = .66 / MyTable.Primary_flDelay
+			f = .8 / flDelay
 			MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		else
-			f = .66 / ( MyTable.Primary_flDelay + .1 )
+			f = .8 / ( flDelay + .066 )
 			MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 		end
+		if CurTime() > MyTable.flLastShot + flDelay * 2 then
+			local f
+			if MyTable.Primary.Automatic then
+				f = 2 / MyTable.Primary_flDelay
+				MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
+			else
+				f = 2 / ( MyTable.Primary_flDelay + .066 )
+				MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
+			end
+		else MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + 1 * ply:GetNW2Float( "GAME_flRecoil", 1 ) * flFrameTime end
 		local flRoll = MyTable.flAimRoll
 		local flAimTiltTime = MyTable.flAimTiltTime
 		flAimTiltTime = math_Approach( flAimTiltTime, bZoom && flRoll || 0, flRoll * MyTable.flAimSpeed * flFrameTime )
@@ -980,7 +1021,7 @@ if CLIENT then
 			vTargetAngle:Add( WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
 		end
 		local flYawTurn, flPitchTurn = 0, 0
-		fApplyRecoil( MyTable, flFrameTime )
+		fApplyRecoil( MyTable, flFrameTime, bZoom, pos, ang )
 		// Sniper support... needs to be redone lmao
 		local flAimShoot = MyTable.flAimShoot
 		if flAimShoot then
@@ -1082,24 +1123,24 @@ if CLIENT then
 		ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle[ 1 ] )
 		ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle[ 2 ] )
 		ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle[ 3 ] )
-		pos = pos + ( vFinal[ 1 ] + vRecoilViewSpring[ 1 ] ) * ang:Forward()
-		pos = pos + ( vFinal[ 2 ] + vRecoilViewSpring[ 2 ] ) * ang:Right()
-		pos = pos + ( vFinal[ 3 ] + vRecoilViewSpring[ 3 ] ) * ang:Up()
-		pos = pos + vInstantTarget[ 1 ] * ang:Forward()
-		pos = pos + vInstantTarget[ 2 ] * ang:Right()
-		pos = pos + vInstantTarget[ 3 ] * ang:Up()
-		pos = pos + vFinalRatherQuick[ 1 ] * ang:Forward()
-		pos = pos + vFinalRatherQuick[ 2 ] * ang:Right()
-		pos = pos + vFinalRatherQuick[ 3 ] * ang:Up()
+		pos:Add( ( vFinal[ 1 ] + vRecoilViewSpring[ 1 ] ) * ang:Forward() )
+		pos:Add( ( vFinal[ 2 ] + vRecoilViewSpring[ 2 ] ) * ang:Right() )
+		pos:Add( ( vFinal[ 3 ] + vRecoilViewSpring[ 3 ] ) * ang:Up() )
+		pos:Add( vInstantTarget[ 1 ] * ang:Forward() )
+		pos:Add( vInstantTarget[ 2 ] * ang:Right() )
+		pos:Add( vInstantTarget[ 3 ] * ang:Up() )
+		pos:Add( vFinalRatherQuick[ 1 ] * ang:Forward() )
+		pos:Add( vFinalRatherQuick[ 2 ] * ang:Right() )
+		pos:Add( vFinalRatherQuick[ 3 ] * ang:Up() )
 		local flSway = MyTable.flSway
 		local flSwayNeg = -flSway
-		local flSwayVector = flSway * MyTable.flSwayStabilizer
+		local flSwayVector = flSway * ( MyTable.flSwayStabilizer * ( 1 - flMultiplier ) + .3 * flMultiplier )
 		local flSwayVectorNeg = -flSwayVector
 		ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( MyTable.aLastEyePosition[ 2 ] * flMultiplier + flYawTurn ) / MyTable.flSwayScale )
-		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * flMultiplier + flYawTurn ) / MyTable.flSwayScale ) * ang:Right()
+		pos:Add( ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 2 ] * flMultiplier + flYawTurn ) / MyTable.flSwayScale ) * ang:Right() )
 		MyTable.aLastEyePosition[ 1 ] = math_Clamp( MyTable.aLastEyePosition[ 1 ], -MyTable.flSwayScale, MyTable.flSwayScale )
 		ang:RotateAroundAxis( ang:Right(), flSway * ( MyTable.aLastEyePosition[ 1 ] * flMultiplier + flPitchTurn ) / MyTable.flSwayScale )
-		pos = pos + ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 1 ] * flMultiplier + flPitchTurn ) / MyTable.flSwayScale ) * ang:Up()
+		pos:Add( ( flSwayVectorNeg * ( MyTable.aLastEyePosition[ 1 ] * flMultiplier + flPitchTurn ) / MyTable.flSwayScale ) * ang:Up() )
 		return pos, ang
 	end
 	include "Crosshair.lua"

@@ -210,6 +210,8 @@ local net_SendToServer = net.SendToServer
 
 local vector_origin = vector_origin
 
+local TERROR_VECTOR_COLOR = Vector( 1 / 3, 0, 0 )
+
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
 	local self = LocalPlayer()
@@ -283,6 +285,9 @@ hook.Add( "Tick", "Graphics", function()
 	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
 	tDrawColorModify[ "$pp_colour_brightness" ] = math_Clamp( math_Remap( flDeath, 1, .4, 0, -.35 ), -.35, 0 )
 	tDrawColorModify[ "$pp_colour_contrast" ] = math_Clamp( math_Remap( flDeath, 1, .4, 1, 1.8 ), 1, 1.8 )
+	local flTerror = self:GetNW2Float( "BODY_flTerror", 0 )
+	tDrawColorModify[ "$pp_colour_brightness" ] = tDrawColorModify[ "$pp_colour_brightness" ]
+	- flTerror * .2 - math.abs( math.sin( RealTime() * .1 ) ) * flTerror * .05 - math.abs( math.sin( RealTime() * ( 1 / 3 ) ) ) ^ 3 * flTerror * .25
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		bBleedingBlur = true
@@ -297,26 +302,22 @@ hook.Add( "Tick", "Graphics", function()
 	flWaterBlurDirect = flWaterBlur * MAX_WATER_BLUR
 	flWaterBlurRefractAmount = flWaterBlur * .01
 	local vTargetColor = LerpVector( ( flColorSum * ( 1 / 3 ) ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
+	vTargetColor = LerpVector( flTerror, vColor, TERROR_VECTOR_COLOR )
 	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )
 	flColor = math_Clamp( flColorSum, 0, 1 )
 	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
 	flFogG = math_Approach( flFogG || 255, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
 	flFogB = math_Approach( flFogB || 255, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
-	flFogDistance = Lerp( math_min( 1, 10 * flFrameTime ), flFogDistance, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 3072 ) )
+	flFogDistance = Lerp( math_min( 1, 2 * flFrameTime ), flFogDistance, Lerp( flTerror,
+		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 8192 ),
+		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 1536 ) || math_Remap( flColor, 0, 1, 512, 1024 ) ) )
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
-	local flMultiplier = math_Remap( flBrightness, 0, 1, 1, 0 )
-	local flFogR, flFogG, flFogB = flFogR * .00392156862, flFogG * .00392156862, flFogB * .00392156862
-	tDrawColorModify[ "$pp_colour_addr" ] = flFogR * .33 * flMultiplier
-	tDrawColorModify[ "$pp_colour_addg" ] = flFogG * .33 * flMultiplier
-	tDrawColorModify[ "$pp_colour_addb" ] = flFogB * .33 * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulr" ] = flFogR * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulg" ] = flFogG * flMultiplier
-	tDrawColorModify[ "$pp_colour_mulb" ] = flFogB * flMultiplier
 	flBloom = Lerp( math_min( 1, flFrameTime * .5 ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
 	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
-	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
+	local f = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
+	flFogMaxDensity = Lerp( flTerror, f, math_max( f, .99 ) )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 	local tr = util_TraceLine {
 		start = vEye,
@@ -324,7 +325,7 @@ hook.Add( "Tick", "Graphics", function()
 		mask = MASK_VISIBLE_AND_NPCS,
 		filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
 	}
-	local flDistance = tr.HitPos:Distance( EyePos() ) * 1.2
+	local flDistance = tr.HitPos:Distance( EyePos() ) * Lerp( self:GetNW2Float( "BODY_flTerror", 0 ), 1.2, .8 )
 	flDepthOfField = Lerp(
 		math_min( 1, 5 * flFrameTime ),
 		flDepthOfField,	
@@ -390,6 +391,17 @@ hook.Add( "SetupWorldFog", "Graphics", function()
 	return true
 end )
 
+hook.Add( "SetupSkyboxFog", "Graphics", function( flScale )
+	local self = LocalPlayer()
+	if !IsValid( self ) then return end
+	render_FogMode( MATERIAL_FOG_LINEAR )
+	render_FogColor( flFogR, flFogG, flFogB )
+	render_FogStart( 0 )
+	render_FogEnd( flFogDistance * flScale )
+	render_FogMaxDensity( flFogMaxDensity )
+	return true
+end )
+
 local Vector, Angle = Vector, Angle
 
 local vThirdPersonCameraOffset = Vector()
@@ -400,7 +412,7 @@ local function fMoreEffects( ply, tView )
 	local f = 1 - ply:GetNW2Float( "GAME_flBlood", 1 )
 	tView.fov = tView.fov * ( 1 - math.abs( math.sin( RealTime() * .5 ) ) *
 	( f + .0016 - ply:GetNW2Float( "GAME_flBleeding", 0 ) ) * FrameTime()
-	* .125 )
+	* .125 - math.abs( math.sin( RealTime() * ( 2 / 3 ) ) ) * ply:GetNW2Float( "BODY_flTerror", 0 ) * .05 )
 end
 
 local aThirdPerson = Angle( 0, math.Rand( 0, 360 ), 0 )

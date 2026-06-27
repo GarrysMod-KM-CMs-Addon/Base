@@ -71,6 +71,15 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe ) * flForce
 		cmd:SetViewAngles( ang )
 	end
+	local flTerror = ply:GetNW2Float( "BODY_flTerror", 0 )
+	if flTerror > 0 then
+		local ang = cmd:GetViewAngles()
+		local flBreathe = RealTime() * 2 * flTerror
+		local flForce = FrameTime() * 2 * flTerror
+		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
+		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
+		cmd:SetViewAngles( ang )
+	end
 	if CLIENT then
 		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
 		elseif ply.GAME_bWalkPressed then ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk ply.GAME_bWalkPressed = nil end
@@ -344,7 +353,9 @@ end )
 
 hook.Add( "PlayerFootstep", "Improvements", function( ply, ... )
 	if ply:GetNW2Bool "CTRL_bSliding" || GetVelocity( ply ):Length() <= ply:GetSlowWalkSpeed() then return true end
-	if ply:WaterLevel() > 0 then
+	if ply:WaterLevel() > 0 &&
+		// Tip_Walking8: Different surfaces make different amounts of noise. The loudest is water, the exception being the ocean floor, walking on which makes almost no sound.
+		ply:WaterLevel() < 3 then
 		local pEffectData = EffectData()
 		pEffectData:SetOrigin( vec || ply:GetPos() )
 		pEffectData:SetScale( ply:BoundingRadius() * .2 )

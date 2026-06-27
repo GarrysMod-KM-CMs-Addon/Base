@@ -15,28 +15,19 @@ function EFFECT:Init( pData )
 			if IsValid( pOwner ) then v = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() ) end
 		end
 	end
+
 	self.m_pWeapon = pWeapon
+
 	//	self.m_bMuzzleID = pData:GetFlags() == 1
+
 	local vVelocity = IsValid( pOwner ) && pOwner:GetVelocity() || vector_origin
 	local pEmitter = ParticleEmitter( v )
-	local flLifeTime = 1 / pData:GetMagnitude()
+	local flLifeTime = 1 / pData:GetMagnitude() * math_Rand( 1, 2 )
 	local f = 1 - .9 * math_random() * math_random()
-	for i = 1, 8 do
-		local l = v + VectorRand():GetNormalized() * math_Rand( 0, 4 ) * f
+	for i = 1, 16 do
+		local l = v + VectorRand():GetNormalized() * math_Rand( 0, 3 ) * f
 		local pPart = pEmitter:Add( "effects/muzzleflash" .. math_random( 1, 4 ), v )
-		pPart:SetVelocity( vVelocity )
-		pPart:SetPos( l )
-		pPart:SetDieTime( flLifeTime )
-		pPart:SetStartAlpha( 255 )
-		pPart:SetEndAlpha( 255 )
-		pPart:SetStartSize( 8 * f )
-		pPart:SetEndSize( 8 * f )
-		pPart:SetRoll( math_Rand( 180, 480 ) )
-		pPart:SetRollDelta( math_Rand( -1, 1 ) )
-		pPart:SetColor( 255, 255, 255 )
-		pPart:SetAirResistance( 140 )
-		local pPart = pEmitter:Add( "effects/muzzleflash" .. math_random( 1, 4 ), v )
-		pPart:SetVelocity( vVelocity )
+		pPart:SetVelocity( vVelocity + VectorRand():GetNormalized() * math_Rand( 0, 64 ) )
 		pPart:SetPos( l )
 		pPart:SetDieTime( flLifeTime )
 		pPart:SetStartAlpha( 255 )
@@ -44,26 +35,11 @@ function EFFECT:Init( pData )
 		pPart:SetStartSize( 12 * f )
 		pPart:SetEndSize( 12 * f )
 		pPart:SetRoll( math_Rand( 180, 480 ) )
-		pPart:SetRollDelta( math_Rand( -1, 1 ) )
+		pPart:SetRollDelta( math_Rand( -20, 20 ) )
 		pPart:SetColor( 255, 255, 255 )
 		pPart:SetAirResistance( 140 )
 	end
-	// Legacy smoke from when this inherited Buu's Weapon Base II muzzleflashes
-	// Smoke is not needed here, but I'll leave this here for memory
-	//	for i = 1, 3 do 
-	//		local pPart = pEmitter:Add( "particle/particle_smokegrenade", v )
-	//		// This is square shaped, and we don't like them squares 'round these parts
-	//		//	pPart:SetVelocity( vVelocity + Vector( math_Rand( -20, 20 ), math_Rand( -20, 20 ), math_Rand( -20, 20 ) ) )
-	//		pPart:SetVelocity( vVelocity + VectorRand():GetNormalized() * math_Rand( 0, 20 ) )
-	//		pPart:SetDieTime( math_Rand( .5, 1 ) )
-	//		pPart:SetStartAlpha( math_Rand( 50, 155 ) )
-	//		pPart:SetStartSize( math_Rand( .5, 1 ) * i )
-	//		pPart:SetEndSize( math_Rand( 2, 4 ) * i )
-	//		pPart:SetRoll( math_Rand( 180, 480 ) )
-	//		pPart:SetRollDelta( math_Rand( -1, 1 ) )
-	//		pPart:SetColor( 200, 200, 200 )
-	//		pPart:SetAirResistance( 140 )
-	//	end
+
 	//	self.m_pEmitter = pEmitter
 	pEmitter:Finish()
 end

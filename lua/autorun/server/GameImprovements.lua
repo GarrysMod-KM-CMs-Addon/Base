@@ -401,11 +401,11 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
 		local v = Data.Spread
-		v[ 1 ] = v[ 1 ] * 4
-		v[ 2 ] = v[ 2 ] * 4
-		Data.Damage = Data.Damage * .1
+		v[ 1 ] = v[ 1 ] * 5
+		v[ 2 ] = v[ 2 ] * 5
+		Data.Damage = Data.Damage * .15
 	end
-	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .33, .66 ), 0, .2 )
+	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .1, .15 ), 0, .2 )
 	local flForce = math.max( Data.Force, 1 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )

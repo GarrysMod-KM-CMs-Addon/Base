@@ -65,7 +65,7 @@ function SWEP:Initialize()
 	self:SetHoldType "Normal"
 end
 
-function SWEP:Deploy() self:Think() end
+//	function SWEP:Deploy() self:Think() end
 
 function SWEP:OnRemove()
 	local pWaterLoop = self.pWaterLoop

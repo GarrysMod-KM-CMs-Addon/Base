@@ -4,14 +4,18 @@ local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 local CurTime = CurTime
 
+local LocalPlayer = LocalPlayer
+
 function EFFECT:Init( pData )
+	local pWeapon = pData:GetEntity()
+	local pOwner = pWeapon:GetOwner()
+	local MyTable = CEntity_GetTable( self )
+	if pOwner == LocalPlayer() then MyTable.m_bFirstPersonTracer = true end
 	local vEnd = pData:GetOrigin()
 	local v = pData:GetStart()
-	local pWeapon = pData:GetEntity()
 	if IsValid( pWeapon ) then
 		local vRenderOrigin = pWeapon:GetRenderOrigin()
 		if vRenderOrigin then v = vRenderOrigin + ( vEnd - vRenderOrigin ):GetNormalized() * 32 else
-			local pOwner = pWeapon:GetOwner()
 			if IsValid( pOwner ) then
 				local vNew = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
 				if vNew:DistToSqr( v ) <= 1048576/*1024*/ then
@@ -20,7 +24,6 @@ function EFFECT:Init( pData )
 			end
 		end
 	end
-	local MyTable = CEntity_GetTable( self )
 	MyTable.vStart = v
 	MyTable.vEnd = vEnd
 	local dDirection = vEnd - v
@@ -42,6 +45,7 @@ local DynamicLight = DynamicLight
 local COLOR = Color( 255, 128, 64 )
 function EFFECT:Render()
 	local MyTable = CEntity_GetTable( self )
+	if MyTable.m_bFirstPersonTracer then return end
 	local flLifeTime = MyTable.flLifeTime
 	self:SetPos( MyTable.vStart + ( MyTable.dDirection * ( MyTable.flDistance * ( flLifeTime - ( MyTable.flDieTime - CurTime() ) ) / flLifeTime ) ) )
 	local vPos = self:GetPos()
