@@ -425,7 +425,7 @@ function DIRECTOR_CLIENT_TICK()
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
 				local p = DirectorContainerInternal()
-				p.m_pTable = { Execute = function() end }
+				p.m_pTable = { Execute = function() end, Load = function() end }
 				DIRECTOR_MUSIC[ ELayer ] = p
 			end
 		end
@@ -612,11 +612,13 @@ function DIRECTOR_CLIENT_TICK()
 			end
 			if flInitialVolumeA && flInitialVolumeB then break end
 		end
-		local bDone, flVolumeA, flVolumeB = DirectorUpdateContainerInternal( DIRECTOR_TRANSITION, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
-		DIRECTOR_MUSIC_LAST_THREAT = ELayerTo
+		local Done, flVolumeA, flVolumeB = DirectorUpdateContainerInternal( DIRECTOR_TRANSITION, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
 		flVolumeA = flVolumeA || 0
 		flVolumeB = flVolumeB || 1
-		if bDone then DIRECTOR_TRANSITION = nil end
+		if Done then
+			if Done == 0 then DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom else DIRECTOR_MUSIC_LAST_THREAT = ELayerTo end
+			DIRECTOR_TRANSITION = nil
+		end
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
 				if ELayer == ELayerFrom then
