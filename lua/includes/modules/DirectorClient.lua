@@ -522,8 +522,6 @@ function DIRECTOR_CLIENT_TICK()
 						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 					end
 				end
-				local pCombat = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
-				if pCombat then pCombat.m_pTable.Load( pCombat ) end
 			else
 				local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
 				local t = pSource.m_pTable
