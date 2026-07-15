@@ -61,7 +61,7 @@ function ENT:RunMind()
 	if !pSchedule then MyTable.SelectScheduleInternal( self, MyTable ) return end
 	local sClassName = pSchedule.m_sClassName || ""
 	if IsValid( MyTable.GAME_pVehicle ) then
-		if !sClassName:match then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
+		if !sClassName:match "^Vehicle" then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
 	elseif sClassName:match "^Vehicle" then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
 	local pScheduleClass = __SCHEDULE__[ sClassName ]
 	if !pScheduleClass then MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
