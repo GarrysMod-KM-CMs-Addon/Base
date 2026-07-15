@@ -1,12 +1,12 @@
 __SCHEDULE__ = __SCHEDULE__ || {}
 local __SCHEDULE__ = __SCHEDULE__
 
-function RegisterSchedule( Name, Func ) __SCHEDULE__[ Name ] = Func end
+function RegisterSchedule( sName, tData ) __SCHEDULE__[ sName ] = tData end
 
 __INTERACTION__ = __INTERACTION__ || {}
 local __INTERACTION__ = __INTERACTION__
 
-function RegisterInteraction( Name, Data ) __INTERACTION__[ Name ] = Data end
+function RegisterInteraction( sName, tData ) __INTERACTION__[ sName ] = tData end
 
 __ALARMS__ = __ALARMS__ || {}
 __ALARMS_ACTIVE__ = __ALARMS_ACTIVE__ || {}

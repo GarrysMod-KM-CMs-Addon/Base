@@ -1,3 +1,9 @@
+// Director server API isn't exposed properly as a require'able thingy.
+// Why? Simple. I don't see a reason too. No one really needs what is defined here,
+// as nothing major actually IS defined here. If you think otherwise, feel free to tell me.
+
+require "DirectorShared"
+
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local player_Iterator = player.Iterator
@@ -31,8 +37,6 @@ local CEntity_SetNW2Bool = CEntity.SetNW2Bool
 local tostring = tostring
 local ents_FindInPVS = ents.FindInPVS
 local math_random = math.random
-
-include "autorun/Director.lua"
 
 util.AddNetworkString "DR_ClientWantsToBeInCombat"
 

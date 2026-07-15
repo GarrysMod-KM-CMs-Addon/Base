@@ -1,4 +1,4 @@
-// This is shared for a reason, and includes more than just client graphics
+require "DirectorClient"
 
 // Gets the human percieved brightness of a color
 function GetBrightness( r, g, b ) return r * .00083372549 + g * .00280470588 + b * .00028313725 end
@@ -44,8 +44,59 @@ local net_ReadUInt = net.ReadUInt
 local math_Round = math.Round
 local math_Rand = math.Rand
 local CurTime = CurTime
-local iEphemeralIndexLast = 0
+local util_TraceLine = util.TraceLine
+local MASK_VISIBLE_AND_NPCS = MASK_VISIBLE_AND_NPCS
+local LocalPlayer = LocalPlayer
+local EyePos = EyePos
+local EyeVector = EyeVector
+local EyeAngles = EyeAngles
+local IsValid = IsValid
+local math_Clamp = math.Clamp
+local math_Remap = math.Remap
+local math_Approach = math.Approach
+local math_max = math.max
+local math_abs = math.abs
+local math_min = math.min
+local render_GetLightColor = render.GetLightColor
+local render_ComputeDynamicLighting = render.ComputeDynamicLighting
+local FrameTime = FrameTime
+local Lerp = Lerp
+local render_SetMaterial = render.SetMaterial
+local render_DrawSprite = render.DrawSprite
+local render_UpdateRefractTexture = render.UpdateRefractTexture
+local cam_Start3D = cam.Start3D
+local cam_End3D = cam.End3D
+local RealTime = RealTime
+local vUpHuge = Vector( 0, 0, 999999 )
+local net_Start = net.Start
+local net_WriteColor = net.WriteColor
+local net_SendToServer = net.SendToServer
+local vector_origin = vector_origin
+local render_FogMode = render.FogMode
+local render_FogColor = render.FogColor
+local render_FogStart = render.FogStart
+local render_FogEnd = render.FogEnd
+local render_FogMaxDensity = render.FogMaxDensity
+local MATERIAL_FOG_LINEAR = MATERIAL_FOG_LINEAR
+local Vector, Angle = Vector, Angle
+local surface_SetDrawColor = surface.SetDrawColor
+local surface_DrawLine = surface.DrawLine
+local math_cos = math.cos
+local math_sin = math.sin
+local math_rad = math.rad
+local draw_NoTexture = draw.NoTexture
+local surface_DrawRect = surface.DrawRect
+local draw_DrawText = draw.DrawText
 
+// Better not do this, in case it's ever updated,
+// or if the module is refreshed via lua_run_cl -
+// we don't want to run two different directors at once! xD
+//	local DIRECTOR_CLIENT_TICK = DIRECTOR_CLIENT_TICK
+
+hook.Add( "DrawDeathNotice", "Graphics", function() return true end )
+//	timer_Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
+
+local iEphemeralIndexLast = 0
 function EphemeralLight( tData )
 	iEphemeralIndexLast = iEphemeralIndexLast + 1
 	if iEphemeralIndexLast > 8192 then iEphemeralIndexLast = 0 end
@@ -96,14 +147,6 @@ end )
 local cThirdPerson = CreateClientConVar( "bThirdPerson", "0", true, nil, "Enable thirdperson?", 0, 1 )
 local cThirdPersonShoulder = CreateClientConVar( "bThirdPersonShoulder", "0", true, nil, "Should thirdperson use the left shoulder?", 0, 1 )
 
-local util_TraceLine = util.TraceLine
-local MASK_VISIBLE_AND_NPCS = MASK_VISIBLE_AND_NPCS
-local LocalPlayer = LocalPlayer
-local EyePos = EyePos
-local EyeVector = EyeVector
-local EyeAngles = EyeAngles
-local vUpHuge = Vector( 0, 0, 999999 )
-
 // Similar to util.IsSkyboxVisibleFromPoint
 function UTIL_IsUnderSkybox()
 	return util_TraceLine( {
@@ -126,40 +169,14 @@ local DrawBloom = DrawBloom
 include "postprocess/color_modify.lua"
 local DrawColorModify = DrawColorModify
 
-local IsValid = IsValid
-
-local math = math
-local math_Clamp = math.Clamp
-local math_Remap = math.Remap
-local math_Approach = math.Approach
-local math_max = math.max
-local math_abs = math.abs
-
 local function VectorSum( v ) return math_abs( v[ 1 ] ) + math_abs( v[ 2 ] ) + math_abs( v[ 3 ] ) end
-
-local render_GetLightColor = render.GetLightColor
-local render_ComputeDynamicLighting = render.ComputeDynamicLighting
-
-local FrameTime = FrameTime
-
-local math_Remap = math.Remap
 
 BREEZE_COLOR = Color( 80, 180, 240 )
 BREEZE_VECTOR_COLOR = BREEZE_COLOR:ToVector()
 
-local Lerp = Lerp
-local math_min = math.min
-
 local ANALYZATION_STEP = 22.5 / 4
 
 local mDepthOfField = Material "pp/dof"
-
-local render_SetMaterial = render.SetMaterial
-local render_DrawSprite = render.DrawSprite
-local render_UpdateRefractTexture = render.UpdateRefractTexture
-
-local cam_Start3D = cam.Start3D
-local cam_End3D = cam.End3D
 
 local tDrawColorModify = {
 	[ "$pp_colour_addr" ] = 0,
@@ -172,8 +189,6 @@ local tDrawColorModify = {
 	[ "$pp_colour_mulg" ] = 0,
 	[ "$pp_colour_mulb" ] = 0
 }
-
-local RealTime = RealTime
 
 local vColor, flColorSum, flColor = Vector(), 0, 0
 
@@ -204,16 +219,11 @@ local flActualDoFBegin = 0
 
 local flNextSendLuminosity = 0
 
-local net_Start = net.Start
-local net_WriteColor = net.WriteColor
-local net_SendToServer = net.SendToServer
-
-local vector_origin = vector_origin
-
 local TERROR_VECTOR_COLOR = Vector( 1 / 3, 0, 0 )
 
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
+	DIRECTOR_CLIENT_TICK()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	if RealTime() > flNextSendLuminosity then
@@ -344,6 +354,7 @@ hook.Add( "Tick", "Graphics", function()
 end )
 
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
+	DIRECTOR_CLIENT_TICK()
 	if bWaterBlur then
 		DrawBlur( flWaterBlurDirect )
 		DrawMaterialOverlay( "effects/water_warp01", flWaterBlurRefractAmount )
@@ -372,15 +383,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	cam_End3D()
 end )
 
-local render = render
-local render_FogMode = render.FogMode
-local render_FogColor = render.FogColor
-local render_FogStart = render.FogStart
-local render_FogEnd = render.FogEnd
-local render_FogMaxDensity = render.FogMaxDensity
-local MATERIAL_FOG_LINEAR = MATERIAL_FOG_LINEAR
-
 hook.Add( "SetupWorldFog", "Graphics", function()
+	DIRECTOR_CLIENT_TICK()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	render_FogMode( MATERIAL_FOG_LINEAR )
@@ -392,6 +396,7 @@ hook.Add( "SetupWorldFog", "Graphics", function()
 end )
 
 hook.Add( "SetupSkyboxFog", "Graphics", function( flScale )
+	DIRECTOR_CLIENT_TICK()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	render_FogMode( MATERIAL_FOG_LINEAR )
@@ -401,8 +406,6 @@ hook.Add( "SetupSkyboxFog", "Graphics", function( flScale )
 	render_FogMaxDensity( flFogMaxDensity )
 	return true
 end )
-
-local Vector, Angle = Vector, Angle
 
 local vThirdPersonCameraOffset = Vector()
 
@@ -417,11 +420,13 @@ end
 
 local aThirdPerson = Angle( 0, math.Rand( 0, 360 ), 0 )
 
-function ApplyRecoilToThirdPerson( aAngle ) aThirdPerson:Add( aAngle ) end
+function AddAngleToThirdPersonFacing( aAngle ) aThirdPerson:Add( aAngle ) end
+//	function ApplyRecoilToThirdPerson( aAngle ) aThirdPerson:Add( aAngle ) end
 
 local flThirdPersonAttackTime = 0
 
 hook.Add( "CreateMove", "Graphics", function( cmd )
+	DIRECTOR_CLIENT_TICK()
 	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
 	if !cThirdPerson:GetBool() then return end
 	local pPlayer = LocalPlayer()
@@ -471,18 +476,26 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 end )
 
 hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
+	DIRECTOR_CLIENT_TICK()
+	x = x * FrameTime()
+	y = y * FrameTime()
+	if WEAPON_SWAY then
+		WEAPON_SWAY[ 1 ] = WEAPON_SWAY[ 1 ] - y
+		WEAPON_SWAY[ 2 ] = WEAPON_SWAY[ 2 ] + x
+	end
 	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
 	local pPlayer = LocalPlayer()
 	if !IsValid( pPlayer ) then return end
 	local pWeapon = pPlayer:GetActiveWeapon()
 	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
 	if !cThirdPerson:GetBool() then return end
-	aThirdPerson[ 1 ] = aThirdPerson[ 1 ] + y * FrameTime()
-	aThirdPerson[ 2 ] = aThirdPerson[ 2 ] - x * FrameTime()
+	aThirdPerson[ 1 ] = aThirdPerson[ 1 ] + y
+	aThirdPerson[ 2 ] = aThirdPerson[ 2 ] - x
 	return true
 end )
 
 hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
+	DIRECTOR_CLIENT_TICK()
 	local view = {
 		origin = origin,
 		angles = angles,
@@ -571,21 +584,14 @@ surface.CreateFont( "ReinforcementsBar", {
 	additive = false,
 	outline = false
 } )
+
 local flProgress = 0
 local MARKER_SIZE = 20
 local MARKER_SIZE_OUTLINE = MARKER_SIZE * 1.01
-local surface_SetDrawColor = surface.SetDrawColor
-local surface_DrawLine = surface.DrawLine
-local math_abs = math.abs
 local PRECOMPUTED = 360 / ( 2 * math.pi ) * .8
-local math_max = math.max
-local math_cos = math.cos
-local math_sin = math.sin
-local math_rad = math.rad
-local draw_NoTexture = draw.NoTexture
-local surface_DrawRect = surface.DrawRect
-local draw_DrawText = draw.DrawText
+
 hook.Add( "HUDPaint", "Graphics", function()
+	DIRECTOR_CLIENT_TICK()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
@@ -612,9 +618,9 @@ hook.Add( "HUDPaint", "Graphics", function()
 				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .6
 				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
 				s = s + 1
-				local flCurveInward = flDelta ^ 2 * 4
+				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
 				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 4
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 3 /* CURL */
 				local flNextRadius = flScale - flCurveInwardNext
 				surface_DrawLine(
 					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
@@ -632,9 +638,9 @@ hook.Add( "HUDPaint", "Graphics", function()
 				local flDelta = math_abs( a - f ) / MARKER_SIZE
 				local s = MARKER_SIZE * ( 1 - flDelta ) * .6
 				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
-				local flCurveInward = flDelta ^ 2 * 4
+				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
 				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 4
+				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 3 /* CURL */
 				local flNextRadius = flScale - flCurveInwardNext
 				local flValue = 1 - flDelta ^ 3 * .5
 				if bThreat then surface_SetDrawColor( flValue * 255, 0, 0, 255 )

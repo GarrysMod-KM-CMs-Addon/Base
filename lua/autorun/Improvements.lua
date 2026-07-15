@@ -26,60 +26,119 @@ WEAPON_STANCE_AIMING = 1
 // EVERYTHING but pistols/revolvers/etc at the hip
 WEAPON_STANCE_HIP = 2
 // EVERYTHING but pistols/revolvers/etc shouldered
-WEAPON_STANCE_SHOULDER = 3
+WEAPON_STANCE_SHOULDER = 34
+
+COVER_PEEK_NONE = 0
+COVER_BLINDFIRE_UP = 1
+COVER_BLINDFIRE_LEFT = 2
+COVER_BLINDFIRE_RIGHT = 3
+COVER_FIRE_LEFT = 4
+COVER_FIRE_RIGHT = 5
+COVER_FIRE_UP = 6
+
+COVER_VARIANTS_NONE = 0
+// Should be COVER_VARIANTS_UP, but this name just stuck with me from previous versions,
+// and I like it too much to just abandon it in the older versions
+COVER_VARIANTS_CENTER = 1
+COVER_VARIANTS_BOTH = 1
+COVER_VARIANTS_LEFT = 2
+COVER_VARIANTS_RIGHT = 3
+
+TRAVERSES_NONE = 0
+TRAVERSES_WATER = 1
+TRAVERSES_GROUND = 2
+TRAVERSES_AIR = 4
+
+UNIVERSAL_FOV = 80
+
+local RealTime = RealTime
+local FrameTime = FrameTime
+local math_cos = math.cos
+local CEntity = FindMetaTable "Entity"
+local CEntity_GetVelocity = CEntity.GetVelocity
+local CEntity_GetNW2Bool = CEntity.GetNW2Bool
+local CEntity_GetTable = CEntity.GetTable
+local CEntity_IsOnGround = CEntity.IsOnGround
+local IN_WALK = IN_WALK
+local IN_DUCK = IN_DUCK
+local CPlayer_KeyDown = FindMetaTable( "Player" ).KeyDown
+local SysTime = SysTime
+local math_min = math.min
+local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
+local Vector = Vector
+local math_deg = math.deg
+local math_acos = math.acos
+local hook_Run = hook.Run
+local CEntity_LookupSequence = CEntity.LookupSequence
+local CEntity_GetOwner = CEntity.GetOwner
+local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
+local CurTime = CurTime
+local CEntity_SetVelocity = CEntity.SetVelocity
+local math_Approach = math.Approach
+
+physenv.SetGravity( Vector( 0, 0, -514.83 ) )
 
 hook.Add( "PlayerStepSoundTime", "Improvements", function( ply, EType, bWalk )
 	if ply:GetNW2Bool "CTRL_bSprinting" then return 350 end
 	return 500
 end )
 
-local RealTime = RealTime
-local FrameTime = FrameTime
-local math_cos = math.cos
-
-local CEntity = FindMetaTable "Entity"
-
-local CEntity_GetVelocity = CEntity.GetVelocity
-local CEntity_GetNW2Bool = CEntity.GetNW2Bool
-local CEntity_GetTable = CEntity.GetTable
-local CEntity_IsOnGround = CEntity.IsOnGround
-
-local CPlayer_KeyDown = FindMetaTable( "Player" ).KeyDown
-
 function QuickSlide_Can( ply, t ) if t == nil then t = CEntity_GetTable( ply ) end return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !Either( t.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, t.CTRL_bCantSlide ) && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9 ) end
 
-local IN_WALK = IN_WALK
-local IN_DUCK = IN_DUCK
-
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
+	local ang = cmd:GetViewAngles()
+
+	local PlyTable = CEntity_GetTable( ply )
+
+	local flFrameTime = SysTime() - ( PlyTable.GAME_flLastStartCommandCall || SysTime() )
+	PlyTable.GAME_flLastStartCommandCall = SysTime()
+
+	local pActiveWeapon = ply:GetActiveWeapon()
+	local flDelay, flRecoil = .1, 1
+	if IsValid( pActiveWeapon ) then
+		local WeaponTable = CEntity_GetTable( pActiveWeapon )
+		flDelay = WeaponTable.Primary_flDelay || .1
+		flRecoil = WeaponTable.flRecoil || 1
+	end
+
+	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * flDelay ) * ( 1 + 1 / 3 ) * flFrameTime
+
+	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
+	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
+
+	local flRecoilImpulseRight = math_Approach( PlyTable.GAME_flRecoilImpulseRight || 0, 0, flDecaySpeedFrameTimed )
+	PlyTable.GAME_flRecoilImpulseRight = flRecoilImpulseRight
+
+	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flFrameTime
+	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flFrameTime
+
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
-		local ang = cmd:GetViewAngles()
 		local flBreathe = RealTime() * .5
-		local flForce = FrameTime() * .5
+		local flForce = flFrameTime * .5
 		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
-		cmd:SetViewAngles( ang )
 	end
+
 	local flShake = ply:GetNW2Float( "GAME_flShellShockShake", 0 )
 	if flShake > 0 then
-		ply:SetNW2Float( "GAME_flShellShockShake", Lerp( math.min( 1, 2 * FrameTime() ), flShake, 0 ) )
+		ply:SetNW2Float( "GAME_flShellShockShake", Lerp( math.min( 1, 2 * flFrameTime ), flShake, 0 ) )
 		flShake = math.min( flShake, 40 ) * ply:GetNW2Float( "GAME_flShellShockShakeScale", 1 )
-		local ang = cmd:GetViewAngles()
 		local flBreathe = RealTime() * flShake
-		local flForce = FrameTime() * flShake
+		local flForce = flFrameTime * flShake
 		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe * .5 ) * flForce
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe ) * flForce
-		cmd:SetViewAngles( ang )
 	end
+
 	local flTerror = ply:GetNW2Float( "BODY_flTerror", 0 )
 	if flTerror > 0 then
-		local ang = cmd:GetViewAngles()
 		local flBreathe = RealTime() * 2 * flTerror
-		local flForce = FrameTime() * 2 * flTerror
+		local flForce = flFrameTime * 2 * flTerror
 		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
-		cmd:SetViewAngles( ang )
 	end
+
+	cmd:SetViewAngles( ang )
+
 	if CLIENT then
 		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
 		elseif ply.GAME_bWalkPressed then ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk ply.GAME_bWalkPressed = nil end
@@ -120,33 +179,9 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			end
 		end
 	end
+
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
 end )
-
-COVER_PEEK_NONE = 0
-COVER_BLINDFIRE_UP = 1
-COVER_BLINDFIRE_LEFT = 2
-COVER_BLINDFIRE_RIGHT = 3
-COVER_FIRE_LEFT = 4
-COVER_FIRE_RIGHT = 5
-COVER_FIRE_UP = 6
-
-COVER_VARIANTS_NONE = 0
-// Should be COVER_VARIANTS_UP, but this name just stuck with me from previous versions,
-// and I like it too much to just abandon it in the older versions
-COVER_VARIANTS_CENTER = 1
-COVER_VARIANTS_BOTH = 1
-COVER_VARIANTS_LEFT = 2
-COVER_VARIANTS_RIGHT = 3
-
-TRAVERSES_NONE = 0
-TRAVERSES_WATER = 1
-TRAVERSES_GROUND = 2
-TRAVERSES_AIR = 4
-
-UNIVERSAL_FOV = 80
-
-physenv.SetGravity( Vector( 0, 0, -514.83 ) )
 
 local cDisableLevelOfDetail = CreateConVar(
 	"bDisableLevelOfDetail",
@@ -155,9 +190,7 @@ local cDisableLevelOfDetail = CreateConVar(
 	"Disabled LoD. Not the same LoD that changes model vertices.\n\nThe one which optimizes code.\n\nNOT RECOMMENDED!",
 	0, 1
 )
-local SysTime = SysTime
-local math_min = math.min
-local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
+
 function LevelOfDetail( pContainer, Key, flMultiplier )
 	if cDisableLevelOfDetail:GetBool() then pContainer[ sKey ] = 0 return true end
 	local f = pContainer[ Key ]
@@ -219,10 +252,6 @@ else
 		gui_AddCaption( table_concat( tBuffer ), math_min( flDuration, sLength / ReadSpeed:GetFloat() ) )
 	end )
 end
-
-local Vector = Vector
-local math_deg = math.deg
-local math_acos = math.acos
 
 // TODO: Actually properly implement this - right now it's a simple hack for it to roughly work
 function CalculateAngularVelocity( aTarget, aForward, vAngleVelocity, flTurnRate, flTurnAcceleration, flFrameTime )
@@ -309,15 +338,11 @@ end )
 __PLAYER_MODEL__ = {}
 local __PLAYER_MODEL__ = __PLAYER_MODEL__
 
-local hook_Run = hook.Run
-
 CEntity_OBBMinsInternal = CEntity_OBBMinsInternal || CEntity.OBBMins
 CEntity_OBBMaxsInternal = CEntity_OBBMaxsInternal || CEntity.OBBMaxs
 
 local CEntity_OBBMinsInternal = CEntity_OBBMinsInternal
 local CEntity_OBBMaxsInternal = CEntity_OBBMaxsInternal
-
-local CEntity_GetTable = CEntity.GetTable
 
 function CEntity:OBBMins()
 	local v = CEntity_GetTable( self ).GAME_BoundMins
@@ -330,9 +355,6 @@ function CEntity:OBBMaxs()
 	return CEntity_OBBMaxsInternal( self )
 end
 
-local CEntity_LookupSequence = CEntity.LookupSequence
-local CEntity_GetTable = CEntity.GetTable
-local CEntity_GetNW2Bool = CEntity.GetNW2Bool
 hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 	local veh = ply.GAME_pVehicle || ply:GetNW2Entity "GAME_pVehicle"
 	if IsValid( veh ) then
@@ -384,7 +406,6 @@ function SetHumanPlayer( ply )
 	ply:SetViewOffsetDucked( Vector( 0, 0, 28 ) )
 	ply:SetHull( Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) )
 	ply:SetHullDuck( Vector( -16, -16, 0 ), Vector( 16, 16, 32 ) )
-	ply:SetModelScale( GetConVar( "bCorrectScale" ):GetBool() && MODEL_SIZE_GENERAL_MULTIPLIER || 1 )
 end
 
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
@@ -429,19 +450,12 @@ hook.Add( "CalcView", "Improvements", function( ply, ... )
 	end
 end )
 
-local CEntity = FindMetaTable "Entity"
-local CEntity_GetOwner = CEntity.GetOwner
 function GetOwner( self )
 	local owner = CEntity_GetOwner( self )
 	if IsValid( owner ) then return GetOwner( owner ) end
 	return self
 end
 
-local CEntity_GetTable = CEntity.GetTable
-local CEntity_GetVelocity = CEntity.GetVelocity
-local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
-local Vector = Vector
-local CurTime = CurTime
 function GetVelocity( ent )
 	local EntTable = CEntity_GetTable( ent )
 	local v = EntTable.__VELOCITY__
@@ -465,9 +479,6 @@ function GetVelocity( ent )
 	end
 	return Vector()
 end
-
-local CEntity_SetVelocity = CEntity.SetVelocity
-local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
 
 function SetVelocity( ent, vVelocity )
 	local EntTable = CEntity_GetTable( ent )
@@ -503,7 +514,7 @@ end
 
 for _, n in ipairs( file.Find( "Player/*.lua", "LUA" ) ) do ProtectedCall( function() include( "Player/" .. n ) end ) end
 
-// Assumes there is only one sound attached, and assumes everything is valid!
+// Assumes there is only one sound file, and that everything is valid
 function SoundScriptDuration( sSound ) return SoundDuration( sound.GetProperties( sSound ).sound ) end
 
 local sPath = "Map/" .. game.GetMap() .. ".lua"

@@ -7,7 +7,8 @@ end )
 
 include "autorun/Improvements.lua"
 
-local RunConsoleCommand = RunConsoleCommand
+local math_Clamp = math.Clamp
+
 RunConsoleCommand( "sv_accelerate", ACCELERATION_NORMAL )
 RunConsoleCommand( "sv_friction", ACCELERATION_NORMAL )
 
@@ -219,33 +220,8 @@ hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 	return false
 end )
 
-// This is very crude and might break things, but whatever, it's worth enough
-MODEL_SIZE_GENERAL_MULTIPLIER = 10 / 7
-
-// NOTE: Removing the T O D O in the findable format because it's not necessary any longer.
-// Any sane campaign creator will scale their map correctly. This is for Sandbox now.
-// T O D O: Implement a system for ragdoll resizing...
-// probably something like https://steamcommunity.com/workshop/filedetails/?id=470366741
-
-local cCorrectScale = CreateConVar(
-	"bCorrectScale",
-	1,
-	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
-	"If 1, everything is scaled to give a more realistic scale. The multiplier is MODEL_SIZE_GENERAL_MULTIPLIER (as of registering the convar, it is" .. tostring( MODEL_SIZE_GENERAL_MULTIPLIER ) .. ", but may have changed).",
-	0, 1
-)
-
 hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
 	if IsValid( ent ) then
-		if !cCorrectScale:GetBool() || ent:GetClass() == "prop_door_rotating" then return end
-		local f = ent:GetModelScale()
-		if !f then return end
-		ent:SetModelScale( f * MODEL_SIZE_GENERAL_MULTIPLIER )
-		local vMins, vMaxs = ent:GetCollisionBounds()
-		vMins = vMins * MODEL_SIZE_GENERAL_MULTIPLIER
-		vMaxs = vMaxs * MODEL_SIZE_GENERAL_MULTIPLIER
-		ent:SetCollisionBounds( vMins, vMaxs )
-		ent:Activate()
 		timer.Simple( .01, function()
 			if !IsValid( ent ) then return end
 			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
@@ -297,6 +273,7 @@ hook.Add( "PlayerCanPickupWeapon", "GameImprovements", function( ply, wep )
 	if IsValid( w ) then ply:DropWeapon( w ) end
 	GrantWeaponAchievement( ply, wep )
 end )
+
 hook.Add( "PlayerCanPickupItem", "GameImprovements", function( ply, item )
 	if !ply:KeyDown( IN_USE ) then return false end
 	local tr = util_TraceLine {
@@ -401,9 +378,9 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
 		local v = Data.Spread
-		v[ 1 ] = v[ 1 ] * 5
-		v[ 2 ] = v[ 2 ] * 5
-		Data.Damage = Data.Damage * .15
+		v[ 1 ] = v[ 1 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 15, 1 ), 1, 15 )
+		v[ 2 ] = v[ 2 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 15, 1 ), 1, 15 )
+		Data.Damage = Data.Damage * .2
 	end
 	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .1, .15 ), 0, .2 )
 	local flForce = math.max( Data.Force, 1 )
@@ -432,10 +409,11 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 		if t then t( pTarget, dDamage ) end
 		if bMuzzleFlash then
 			net_Start "EphemeralLight"
-				net_WriteFloat( col[ 4 ] * .001 * fViolentAssRandom() ) // Brightness
+				net_WriteFloat( col[ 4 ] / 255 * .2 * fViolentAssRandom() ) // Brightness
 				net_WriteFloat( 512 * fViolentAssRandom() ) // Size
-				net_WriteFloat( flMuzzleFlashTime * fViolentAssRandom() ) // Existence length
-				net_WriteFloat( 512 ) // Fade time - just keep this a huge number, muzzleflashes fade out instantly on dietime instead of this
+				local f = flMuzzleFlashTime * fViolentAssRandom()
+				net_WriteFloat( f ) // Existence length
+				net_WriteFloat( f )
 				net_WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
 				net_WriteUInt( col[ 1 ], 8 ) net_WriteUInt( col[ 2 ], 8 ) net_WriteUInt( col[ 3 ], 8 ) // R, G, B
 			net_Broadcast()
@@ -632,7 +610,6 @@ local flNextActorQueueCall = 0
 local coroutine_resume = coroutine.resume
 local coroutine_status = coroutine.status
 local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
-local math_Clamp = math.Clamp
 local engine_TickInterval = engine.TickInterval
 hook.Add( "Think", "GameImprovements", function()
 	if cEvents:GetBool() && __EVENTS_LENGTH__ > 0 && math.Rand( 0, cEventProbability:GetFloat() * FrameTime() ) <= 1 then
