@@ -59,7 +59,7 @@ function ENT:RunMind()
 	PreScheduleResetVariables( MyTable, MyTable.tPreScheduleResetVariables )
 	local pSchedule = MyTable.Schedule
 	if !pSchedule then MyTable.SelectScheduleInternal( self, MyTable ) return end
-	local sClassName = pSchedule.m_sClassName || ""
+	local sClassName = pSchedule.m_sName || ""
 	if IsValid( MyTable.GAME_pVehicle ) then
 		if !sClassName:match "^Vehicle" then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
 	elseif sClassName:match "^Vehicle" then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
