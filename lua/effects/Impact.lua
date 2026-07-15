@@ -145,8 +145,8 @@ local EFFECTS = {
 
 		local pLight = EphemeralLight()
 		if pLight then
-			pLight.brightness = math_Rand( 3, 5 )
-			pLight.size = 96 * ( 1 - .5 * math_random() * math_random() )
+			pLight.brightness = math_Rand( 5, 7 )
+			pLight.size = 128 * ( 1 - .5 * math_random() * math_random() )
 			local f = math_Rand( 2 / 3, 1 + 1 / 3 )
 			pLight.dietime = CurTime() + f
 			pLight.decay = 1000 / f
@@ -258,8 +258,8 @@ local EFFECTS = {
 
 		local pLight = EphemeralLight()
 		if pLight then
-			pLight.brightness = math_Rand( 3, 5 )
-			pLight.size = 96 * ( 1 - .5 * math_random() * math_random() )
+			pLight.brightness = math_Rand( 5, 7 )
+			pLight.size = 128 * ( 1 - .5 * math_random() * math_random() )
 			local f = math_Rand( 2 / 3, 1 + 1 / 3 )
 			pLight.dietime = CurTime() + f
 			pLight.decay = 1000 / f

@@ -101,7 +101,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		flRecoil = WeaponTable.flRecoil || 1
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * flDelay ) * ( 1 + 1 / 3 ) * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / ( ( flDelay * .75 ) ^ 2 ) * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp

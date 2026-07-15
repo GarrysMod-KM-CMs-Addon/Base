@@ -355,23 +355,29 @@ end )
 
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	DIRECTOR_CLIENT_TICK()
+
 	if bWaterBlur then
 		DrawBlur( flWaterBlurDirect )
 		DrawMaterialOverlay( "effects/water_warp01", flWaterBlurRefractAmount )
 	end
+
 	if bBleedingBlur then
 		DrawBlur( flBleedingBlur )
 		DrawMotionBlur( flBleedingMotionBlurAdd, flBleedingMotionBlurDraw, 0 )
 	end
+
 	DrawMotionBlur( .66, 1, 0 )
+
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		6, // Size X
-		6, // Size Y
+		4, // Size X
+		4, // Size Y
 		1, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
+
 	DrawColorModify( tDrawColorModify )
+
 	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
 		for i = flActualDoFBegin, 4 do
@@ -381,6 +387,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 			render_DrawSprite( vEye + vForward * ( flDepthOfField + flSpacing * i ), flSize, flSize, color_white )
 		end
 	cam_End3D()
+
+	DIRECTOR_CLIENT_TICK()
 end )
 
 hook.Add( "SetupWorldFog", "Graphics", function()
