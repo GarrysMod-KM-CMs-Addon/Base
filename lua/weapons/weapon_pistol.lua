@@ -30,10 +30,10 @@ SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.flRecoil = 1.6
-SWEP.flSideWaysRecoilMin = -.28
-SWEP.flSideWaysRecoilMax = .28
-SWEP.flRecoilGrowMin = .5
-SWEP.flRecoilGrowMax = .9
+SWEP.flSidewaysRecoilMin = -.28
+SWEP.flSidewaysRecoilMax = .28
+SWEP.flUpwardsRecoilMin = .5
+SWEP.flUpwardsRecoilMax = .9
 
 if CLIENT then
 	local math_abs = math.abs
@@ -81,7 +81,7 @@ sound.Add {
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^HKP2000Shot.wav"
+	sound = "weapons/pistol/pistol_fire2.wav"
 }
 SWEP.sSound = "USPMatchShot"
 

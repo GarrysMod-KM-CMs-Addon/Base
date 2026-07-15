@@ -21,8 +21,8 @@ SWEP.Crosshair = "Revolver"
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
-SWEP.flSideWaysRecoilMin = -.33
-SWEP.flSideWaysRecoilMax = .33
+SWEP.flSidewaysRecoilMin = -.33
+SWEP.flSidewaysRecoilMax = .33
 SWEP.flRecoil = 5
 SWEP.sHoldType = "Pistol"
 

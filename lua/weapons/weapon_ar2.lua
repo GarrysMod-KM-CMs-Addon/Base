@@ -33,10 +33,10 @@ SWEP.flViewModelY = -2
 SWEP.flViewModelX = 6
 SWEP.vViewModelAim = Vector( -8, -5.82 - SWEP.flViewModelY, 1.255 )
 SWEP.flRecoil = .7
-SWEP.flSideWaysRecoilMin = -.15
-SWEP.flSideWaysRecoilMax = .15
-SWEP.flRecoilGrowMin = .8
-SWEP.flRecoilGrowMax = 1
+SWEP.flSidewaysRecoilMin = -.15
+SWEP.flSidewaysRecoilMax = .15
+SWEP.flUpwardsRecoilMin = .8
+SWEP.flUpwardsRecoilMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 
 function SWEP:FireAnimationEvent() end

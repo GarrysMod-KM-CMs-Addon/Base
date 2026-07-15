@@ -24,10 +24,10 @@ SWEP.Slot = 2
 SWEP.DrawAmmo = true
 SWEP.Crosshair = "Rifle"
 SWEP.flRecoil = 1.6
-SWEP.flSideWaysRecoilMin = -.34
-SWEP.flSideWaysRecoilMax = .34
-SWEP.flRecoilGrowMin = .66
-SWEP.flRecoilGrowMax = 1
+SWEP.flSidewaysRecoilMin = -.34
+SWEP.flSidewaysRecoilMax = .34
+SWEP.flUpwardsRecoilMin = .66
+SWEP.flUpwardsRecoilMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.sHoldType = "AR2"
 

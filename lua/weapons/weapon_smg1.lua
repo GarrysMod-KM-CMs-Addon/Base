@@ -28,10 +28,10 @@ SWEP.vViewModelAim = Vector( -10, -6.43, 1.03 )
 SWEP.Crosshair = "SubMachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubMachineGun"
 SWEP.flRecoil = .9
-SWEP.flSideWaysRecoilMin = -.22
-SWEP.flSideWaysRecoilMax = .22
-SWEP.flRecoilGrowMin = .55
-SWEP.flRecoilGrowMax = .95
+SWEP.flSidewaysRecoilMin = -.22
+SWEP.flSidewaysRecoilMax = .22
+SWEP.flUpwardsRecoilMin = .55
+SWEP.flUpwardsRecoilMax = .95
 SWEP.flViewModelX = 2
 
 if CLIENT then

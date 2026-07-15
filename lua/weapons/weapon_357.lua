@@ -24,11 +24,11 @@ SWEP.vViewModelAim = Vector( 0, -4.62, .67 )
 SWEP.Crosshair = "Revolver"
 SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
-SWEP.flRecoil = 10
-SWEP.flSideWaysRecoilMin = -.2
-SWEP.flSideWaysRecoilMax = .2
-SWEP.flRecoilGrowMin = .4
-SWEP.flRecoilGrowMax = .85
+SWEP.flRecoil = 3
+SWEP.flSidewaysRecoilMin = -.2
+SWEP.flSidewaysRecoilMax = .2
+SWEP.flUpwardsRecoilMin = .4
+SWEP.flUpwardsRecoilMax = .85
 SWEP.sAimSound = "BaseWeapon_Aim_Pistol"
 
 sound.Add {

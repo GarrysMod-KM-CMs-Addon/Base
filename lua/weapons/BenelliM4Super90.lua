@@ -38,10 +38,10 @@ SWEP.Slot = 3
 SWEP.DrawAmmo = true
 SWEP.Crosshair = "Rifle"
 SWEP.flRecoil = 6.8
-SWEP.flSideWaysRecoilMin = -.45
-SWEP.flSideWaysRecoilMax = .45
-SWEP.flRecoilGrowMin = .6
-SWEP.flRecoilGrowMax = 1
+SWEP.flSidewaysRecoilMin = -.45
+SWEP.flSidewaysRecoilMax = .45
+SWEP.flUpwardsRecoilMin = .6
+SWEP.flUpwardsRecoilMax = 1
 SWEP.WPN_SHOOT = WPN_SHOTGUN
 
 function SWEP:SetupDataTables()
