@@ -150,7 +150,7 @@ function SWEP:CalcView( ply, pos, ang )
 		else
 			local flVelocity = CEntity_GetVelocity( ply ):Length()
 			if flVelocity > 10 then
-				local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale
+				local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale * ( 1 - MyTable.flAimMultiplier )
 				local flBreathe = RealTime() * 12
 				vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .33, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
 				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * .33 )
@@ -499,12 +499,13 @@ function SWEP:CalcViewModelView( _, pos, ang )
 					end
 				end
 
-				//	if flVelocity > 10 then
-				//		local flBreathe = RealTime() * 12
-				//		local f = flVelocity / CPlayer_GetWalkSpeed( ply ) * MyTable.flAimMultiplier * MyTable.flBobScale * .5
-				//		vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .5, ( .5 - math_abs( math_cos( flBreathe * .5 ) ) ) * -1 ) * f )
-				//		vTargetAngle:Add( Vector( math_sin( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f )
-				//	end
+				local flVelocity = CEntity_GetVelocity( ply ):Length()
+				if flVelocity > 10 then
+					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale * MyTable.flAimMultiplier
+					local flBreathe = RealTime() * 13
+					vTarget:Add( Vector( 0, math_sin( flBreathe * .5 ) * ( 1 / 3 ), ( 2 / 3 ) - math_abs( math_cos( flBreathe * .5 ) ) * ( 1 + 1 / 3 ) ) * f )
+					vTargetAngle:Add( Vector( math_sin( flBreathe ) * 2, 0, math_cos( flBreathe * .5 ) ) * f * ( -1 / 3 ) )
+				end
 			end
 		else
 			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )

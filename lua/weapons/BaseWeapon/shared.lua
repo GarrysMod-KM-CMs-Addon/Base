@@ -385,11 +385,12 @@ SWEP.flSidewaysRecoilMax = 1
 
 function SWEP:CalculateRecoil( pOwner, MyTable )
 	local flRecoil = MyTable.flRecoil
-	if pOwner.GetRunSpeed then flRecoil = flRecoil * math.Clamp( 1 + pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.5 ), 1, 1.5 ) end
+	local flMultiplier = 1
+	if pOwner.GetRunSpeed then flMultiplier = flMultiplier + math_Clamp( pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.1 ), 0, .1 ) end
 	local f = pOwner.KeyDown
-	if f && !f( pOwner, IN_ZOOM ) then flRecoil = flRecoil * 1.1 end
-	if !pOwner:IsOnGround() then flRecoil = flRecoil * 1.1 end
-	return flRecoil
+	if f && !f( pOwner, IN_ZOOM ) then flMultiplier = flMultiplier + .4 end
+	if !pOwner:IsOnGround() then flMultiplier = flMultiplier + ( 1 / 3 ) end
+	return flRecoil * flMultiplier
 end
 
 local type = type
