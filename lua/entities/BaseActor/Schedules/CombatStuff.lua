@@ -6,10 +6,12 @@ ENT.tPreScheduleResetVariables.bWantsCover = false
 function ENT:RangeAttack()
 	if self.bHoldFire then return end
 	self:WeaponPrimaryVolley()
-	// Set back to the default values for next no-custom-template shots
-	self.tWeaponPrimaryVolleyTimes = { 0, 3 }
-	self.tWeaponPrimaryVolleyBreaks = { .33, .66 }
-	self.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, .4 }
+	self.flWeaponPrimaryVolleyTimeMin = 0
+	self.flWeaponPrimaryVolleyTimeMax = 3
+	self.flWeaponPrimaryVolleyBreakMin = 0
+	self.flWeaponPrimaryVolleyBreakMax = 1
+	self.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+	self.flWeaponPrimaryVolleyNonAutomaticDelayMax = .4
 	return true
 end
 
@@ -46,7 +48,7 @@ function ENT:DLG_State_Retreat() end // "GET THE HELL OUTTA HERE!! GET BACK TO C
 
 ENT.flLastAttackCombatState = 1
 
-RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
+RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
 	MyTable.vActualCover = MyTable.vCover
 	MyTable.vActualTarget = sched.vFrom
@@ -150,7 +152,7 @@ RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
 		local trCurStand, trCurDuck = util_TraceLine {
@@ -208,9 +210,12 @@ RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			end
 			MyTable.vaAimTargetBody = v
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-			MyTable.tWeaponPrimaryVolleyTimes = { 2, 4 }
-			MyTable.tWeaponPrimaryVolleyBreaks = { .2, .4 }
-			MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { .1, .2 }
+			MyTable.flWeaponPrimaryVolleyTimeMin = 2
+			MyTable.flWeaponPrimaryVolleyTimeMax = 4
+			MyTable.flWeaponPrimaryVolleyBreakMin = .2
+			MyTable.flWeaponPrimaryVolleyBreakMax = .4
+			MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+			MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			if MyTable.CanAttackHelper( self, v, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
 			local tNearestEnemies = {}
@@ -346,7 +351,7 @@ RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
 		if IsValid( w ) then MyTable.SetActiveWeapon( self, w, MyTable ) end
@@ -383,9 +388,14 @@ RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			if flRecoil then
 				local flDistance = self:GetShootPos():Distance( MyTable.vaAimTargetBody )
 				if flRecoil <= 0 || flDistance < 1792 / flRecoil then // To Hell everything, I'm magdumping your ass
-					MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
-					MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
-					MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+					MyTable.flWeaponPrimaryVolleyTimeMin = 0
+					MyTable.flWeaponPrimaryVolleyTimeMax = 0
+
+					MyTable.flWeaponPrimaryVolleyBreakMin = 0
+					MyTable.flWeaponPrimaryVolleyBreakMax = 0
+
+					MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+					MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 				end
 			end
 			if MyTable.CanAttackHelper( self, enemy, MyTable ) then
@@ -455,4 +465,4 @@ RegisterSchedule( "RangeAttack", function( self, sched, MyTable )
 			else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 		end
 	end
-end )
+end } )

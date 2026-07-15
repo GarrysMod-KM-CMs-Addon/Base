@@ -1,4 +1,4 @@
-RegisterSchedule( "PickUpGun", function( self, sched, MyTable )
+RegisterSchedule( "PickUpGun", { Execute = function( self, sched, MyTable )
 	if !table.IsEmpty( self.tEnemies ) then return false end
 	if CurTime() > MyTable.flWeaponReloadTime then
 		local t = {}
@@ -27,4 +27,4 @@ RegisterSchedule( "PickUpGun", function( self, sched, MyTable )
 		MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	end
 	MyTable.MoveAlongPath( self, sched.pPath, MyTable.flRunSpeed, 1 )
-end )
+end } )

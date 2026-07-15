@@ -1,4 +1,4 @@
-RegisterSchedule( "VehicleAirMoveToLoS", function( self, sched, MyTable )
+RegisterSchedule( "VehicleAirMoveToLoS", { Execute = function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy
@@ -28,4 +28,4 @@ RegisterSchedule( "VehicleAirMoveToLoS", function( self, sched, MyTable )
 	if vCenter:DistToSqr( vPoint ) <= ( pVehicle:BoundingRadius() * pVehicle:BoundingRadius() ) then
 		MyTable.SetSchedule( self, "VehicleAirEngage", MyTable )
 	end
-end )
+end } )

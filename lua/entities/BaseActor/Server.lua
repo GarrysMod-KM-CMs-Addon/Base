@@ -382,20 +382,31 @@ local CEntity_GetRight = CEntity.GetRight
 local Angle = Angle
 local math_exp = math.exp
 local math_abs = math.abs
+
 ENT.m_sPitchPoseParameter = "aim_pitch"
 ENT.m_sYawPoseParameter = "aim_yaw"
+
 ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
+
+ENT.flAimStiffness = 24
+ENT.flAimDamping = -2
+
+ENT.flBodyStiffness = 14
+ENT.flBodyDamping = -12
+
 function ENT:HandleTurning( MyTable )
 	local flFrameTime = MyTable.m_flFrameTime
 	local Angles = CEntity_GetAngles( self )
 	local aAim = Angle( Angles )
 	local v = MyTable.vaAimTargetPose
 	local aDesAim
+
 	if v then
 		if isangle( v ) then aDesAim = v
 		else aDesAim = ( v - MyTable.GetShootPos( self, MyTable ) ):Angle() end
 	else aDesAim = Angles end
+
 	local flTurnRate = MyTable.flTurnRate
 	local vAimVelocity = MyTable.vAimVelocity
 	local sPitch = MyTable.m_sPitchPoseParameter
@@ -403,9 +414,9 @@ function ENT:HandleTurning( MyTable )
 	local flPitch = CEntity_GetPoseParameter( self, sPitch )
 	local flYaw = CEntity_GetPoseParameter( self, sYaw )
 
-	local flAimStiffnessThisTick = MyTable.flOverrideAimStiffnessThisTick || 24
+	local flAimStiffnessThisTick = MyTable.flOverrideAimStiffnessThisTick || MyTable.flAimStiffness
 	MyTable.flOverrideAimStiffnessThisTick = nil
-	local flAimDampingThisTick = MyTable.flOverrideAimDampingThisTick || -2
+	local flAimDampingThisTick = MyTable.flOverrideAimDampingThisTick || MyTable.flAimDamping
 	MyTable.flOverrideAimDampingThisTick = nil
 
 	vAimVelocity:Add( Vector(
@@ -427,9 +438,9 @@ function ENT:HandleTurning( MyTable )
 	if isangle( v ) then v = v:Forward() else v = ( v - self:GetShootPos() ):GetNormalized() end
 	local flYawVelocity = MyTable.flYawVelocity
 
-	local flBodyStiffnessThisTick = MyTable.flOverrideBodyStiffnessThisTick || 14
+	local flBodyStiffnessThisTick = MyTable.flOverrideBodyStiffnessThisTick || MyTable.flBodyStiffness
 	MyTable.flOverrideBodyStiffnessThisTick = nil
-	local flBodyDampingThisTick = MyTable.flOverrideBodyDampingThisTick || -12
+	local flBodyDampingThisTick = MyTable.flOverrideBodyDampingThisTick || MyTable.flBodyDamping
 	MyTable.flOverrideBodyDampingThisTick = nil
 
 	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )

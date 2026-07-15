@@ -7,7 +7,7 @@ local math_max = math.max
 
 function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * 2 + 2 ) end
 
-RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
+RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -51,7 +51,7 @@ RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
 		sched.flSuppressTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax ) * .5
@@ -71,9 +71,14 @@ RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 		if flRecoil then
 			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( MyTable.vaAimTargetBody )
 			if flRecoil <= 0 || flDistance < 1792 / flRecoil then
-				MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+				MyTable.flWeaponPrimaryVolleyTimeMin = 0
+				MyTable.flWeaponPrimaryVolleyTimeMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyBreakMin = 0
+				MyTable.flWeaponPrimaryVolleyBreakMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			end
 		end
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
@@ -172,9 +177,9 @@ RegisterSchedule( "FreeMovementStand", function( self, sched, MyTable )
 		s.vMyStart = sched.vMyStart
 		s.vMyEnd = sched.vMyEnd
 	end
-end )
+end } )
 
-RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
+RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -239,9 +244,14 @@ RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 		if flRecoil then
 			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( vTarget )
 			if flRecoil <= 0 || flDistance < 1792 / flRecoil then
-				MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+				MyTable.flWeaponPrimaryVolleyTimeMin = 0
+				MyTable.flWeaponPrimaryVolleyTimeMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyBreakMin = 0
+				MyTable.flWeaponPrimaryVolleyBreakMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			end
 		end
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
@@ -313,9 +323,9 @@ RegisterSchedule( "FreeMovementMove", function( self, sched, MyTable )
 			end
 		end
 	end
-end )
+end } )
 
-RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
+RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -545,9 +555,11 @@ RegisterSchedule( "FreeMovementSearch", function( self, sched, MyTable )
 			coroutine.yield()
 		end
 	end )
-end )
+end } )
 
-RegisterSchedule( "FreeMovementPursuit", function( self, sched, MyTable )
+// TODO: This should ideally find a point in front of the hostile and go there
+// when not chasing anymore, not just go straight at them, but whatever
+RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -595,9 +607,14 @@ RegisterSchedule( "FreeMovementPursuit", function( self, sched, MyTable )
 		if flRecoil then
 			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( vTarget )
 			if flRecoil <= 0 || flDistance < 1792 / flRecoil then
-				MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
-				MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+				MyTable.flWeaponPrimaryVolleyTimeMin = 0
+				MyTable.flWeaponPrimaryVolleyTimeMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyBreakMin = 0
+				MyTable.flWeaponPrimaryVolleyBreakMax = 0
+				
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			end
 		end
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
@@ -669,4 +686,4 @@ RegisterSchedule( "FreeMovementPursuit", function( self, sched, MyTable )
 			end
 		end
 	end
-end )
+end } )

@@ -27,7 +27,7 @@ end
 
 ENT.flDefaultJumpHeight = 99999
 
-RegisterSchedule( "DevHumanNavTester", function( self, sched )
+RegisterSchedule( "DevHumanNavTester", { Execute = function( self, sched )
 	local pEnemy = self.Enemy
 	if !IsValid( pEnemy ) then return end
 	local pPath = sched.pPath
@@ -40,4 +40,4 @@ RegisterSchedule( "DevHumanNavTester", function( self, sched )
 		self.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
 		self.vaAimTargetPose = self.vaAimTargetBody
 	end
-end )
+end } )

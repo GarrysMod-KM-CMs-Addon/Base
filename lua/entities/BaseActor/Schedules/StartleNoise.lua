@@ -6,7 +6,7 @@ end
 // Startled BY NOISE. Do NOT confuse with DLG_Startle for combat!
 function ENT:DLG_Startled() end
 
-RegisterSchedule( "StartleNoise", function( self, sched )
+RegisterSchedule( "StartleNoise", { Execute = function( self, sched )
 	if !table.IsEmpty( self.tEnemies ) then return {} end
 	if !sched.bDidNoise then
 		self:DLG_Startled()
@@ -76,4 +76,4 @@ RegisterSchedule( "StartleNoise", function( self, sched )
 		sched.Path = nil
 		sched.vGoal = nil
 	end
-end )
+end } )

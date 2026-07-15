@@ -2,7 +2,7 @@ local table_IsEmpty = table.IsEmpty
 
 ENT.CombatHeavy_WEAPON_STANCE = WEAPON_STANCE_HIP
 
-RegisterSchedule( "CombatHeavy", function( self, sched, MyTable )
+RegisterSchedule( "CombatHeavy", { Execute = function( self, sched, MyTable )
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy
@@ -36,7 +36,7 @@ RegisterSchedule( "CombatHeavy", function( self, sched, MyTable )
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0
 			if d <= 0 then continue end
-			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws > ws then w, ws = wep, nws end
 		end
 		if IsValid( w ) then MyTable.SetActiveWeapon( self, w, MyTable ) end
@@ -44,4 +44,4 @@ RegisterSchedule( "CombatHeavy", function( self, sched, MyTable )
 	end
 	local tGoal = pPath:GetCurrentGoal()
 	if tGoal then MyTable.vaAimTargetBody = ( tGoal.pos - self:GetPos() ):Angle() MyTable.vaAimTargetPose = MyTable.vaAimTargetBody end
-end )
+end } )

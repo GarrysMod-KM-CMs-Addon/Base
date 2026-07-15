@@ -1,7 +1,7 @@
 ENT.flIdleStandTimeMin = 0
 ENT.flIdleStandTimeMax = 4
 
-RegisterSchedule( "Idle", function( self, sched )
+RegisterSchedule( "Idle", { Execute = function( self, sched )
 	if !table.IsEmpty( self.tEnemies ) then return false end
 	self.WEAPON_STANCE = WEAPON_STANCE_PASSIVE
 	if CurTime() > self.flWeaponReloadTime then
@@ -94,4 +94,4 @@ RegisterSchedule( "Idle", function( self, sched )
 			sched.vGoal = nil
 		end
 	else self.vaAimTargetBody = nil self.vaAimTargetPose = nil sched.Path = nil sched.vGoal = nil self:Stand() end
-end )
+end } )

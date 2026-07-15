@@ -1,6 +1,6 @@
 local util_TraceLine = util.TraceLine
 
-RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
+RegisterSchedule( "TakeCoverMove", { Execute = function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
 	local tEnemies = sched.tEnemies || self.tEnemies
 	if table.IsEmpty( tEnemies ) then return {} end
@@ -108,4 +108,4 @@ RegisterSchedule( "TakeCoverMove", function( self, sched, MyTable )
 		end
 		self:MoveAlongPathToCover( sched.Path )
 	end
-end )
+end } )

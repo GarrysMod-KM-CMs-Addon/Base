@@ -28,7 +28,7 @@ end
 
 ENT.flDefaultJumpHeight = 99999
 
-RegisterSchedule( "DevHumanCenterTargetTester", function( self, sched, MyTable )
+RegisterSchedule( "DevHumanCenterTargetTester", { Execute = function( self, sched, MyTable )
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return end
 	local pPath = sched.pPath
@@ -39,4 +39,4 @@ RegisterSchedule( "DevHumanCenterTargetTester", function( self, sched, MyTable )
 	MyTable.CenterTarget( self, pEnemy:GetPos() + pEnemy:OBBCenter(), MyTable )
 	MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, 1 )
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_HIP
-end )
+end } )

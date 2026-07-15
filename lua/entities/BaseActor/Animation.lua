@@ -3,7 +3,11 @@ local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 local CurTime = CurTime
 local math_abs = math.abs
 local coroutine_yield = coroutine.yield
+
+local function fEmpty() end
+
 // You MUST call AnimationSystemHalt before this!
+
 function ENT:PlaySequenceAndWait( sName, flSpeed )
 	local flLength = self:SetSequence( sName )
 	self:ResetSequenceInfo()
@@ -13,7 +17,10 @@ function ENT:PlaySequenceAndWait( sName, flSpeed )
 	local flStartTime = CurTime()
 	local flEndTime = CurTime() + flDuration
 	local flInverseDuration = 1 / flDuration
+	self.sCallMeInRunBehaviour = sName
+	self.fCallMeInRunBehaviour = fEmpty
 	while CurTime() <= flEndTime do
+		if self.sCallMeInRunBehaviour != sName then break end
 		self:SetSequence( sName )
 		self:SetPlaybackRate( flSpeed )
 		self:SetCycle( ( CurTime() - flStartTime ) * flInverseDuration )

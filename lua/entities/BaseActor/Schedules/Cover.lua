@@ -12,7 +12,7 @@ include "CoverMove.lua"
 local util_TraceLine = util.TraceLine
 local util_TraceHull = util.TraceHull
 
-RegisterSchedule( "TakeCover", function( self, sched, MyTable )
+RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
@@ -57,7 +57,7 @@ RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 					if t <= 0 then continue end
 					local d = wep.Primary_flDamage || 0
 					if d <= 0 then continue end
-					local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.tWeaponPrimaryVolleyNonAutomaticDelay[ 2 ] ) * d * ( wep.Primary_iNum || 1 ) )
+					local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 					if nws < ws then w, ws = wep, nws end
 				end
 				if !trStandToCenter.Hit && !trDuckToCenter.Hit then
@@ -75,9 +75,14 @@ RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 				if flRecoil then
 					local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( MyTable.vaAimTargetBody )
 					if flRecoil <= 0 || flDistance < 1792 / flRecoil then
-						MyTable.tWeaponPrimaryVolleyTimes = { 0, 0 }
-						MyTable.tWeaponPrimaryVolleyBreaks = { 0, 0 }
-						MyTable.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, 0 }
+						MyTable.flWeaponPrimaryVolleyTimeMin = 0
+						MyTable.flWeaponPrimaryVolleyTimeMax = 0
+						
+						MyTable.flWeaponPrimaryVolleyBreakMin = 0
+						MyTable.flWeaponPrimaryVolleyBreakMax = 0
+						
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 					end
 				end
 				if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
@@ -341,4 +346,4 @@ RegisterSchedule( "TakeCover", function( self, sched, MyTable )
 		end
 		MyTable.MoveAlongPathToCover( self, sched.Path, Either( pEntity == nil, nil, { self, pEntity } ) )
 	end
-end )
+end } )

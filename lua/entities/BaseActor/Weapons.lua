@@ -167,24 +167,38 @@ local math = math
 local math_Rand = math.Rand
 local unpack = unpack
 
+ENT.flWeaponPrimaryVolleyTimeMin = 0
+ENT.flWeaponPrimaryVolleyTimeMax = 3
+
+ENT.flWeaponPrimaryVolleyBreakMin = 0
+ENT.flWeaponPrimaryVolleyBreakMax = 1
+
+ENT.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+ENT.flWeaponPrimaryVolleyNonAutomaticDelayMax = .4
+
+ENT.flWeaponPrimaryVolleyNonAutomaticDelay = 0
 ENT.flWeaponPrimaryVolleyTime = 0
 ENT.flWeaponPrimaryVolleyTimeNext = 0
-ENT.tWeaponPrimaryVolleyTimes = { 0, 3 }
-ENT.tWeaponPrimaryVolleyBreaks = { .33, .66 }
-ENT.tWeaponPrimaryVolleyNonAutomaticDelay = { 0, .4 }
-ENT.flWeaponPrimaryVolleyNonAutomaticDelay = 0
+
 function ENT:WeaponPrimaryVolley( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if CurTime() > MyTable.flWeaponPrimaryVolleyTimeNext then
-		local t = CurTime() + math_Rand( unpack( MyTable.tWeaponPrimaryVolleyTimes ) )
+		local t = CurTime() + math_Rand( MyTable.flWeaponPrimaryVolleyTimeMin, MyTable.flWeaponPrimaryVolleyTimeMax )
 		MyTable.flWeaponPrimaryVolleyTime = t
-		MyTable.flWeaponPrimaryVolleyTimeNext = t + math_Rand( unpack( MyTable.tWeaponPrimaryVolleyBreaks ) )
+		MyTable.flWeaponPrimaryVolleyTimeNext = t + math_Rand(
+			MyTable.flWeaponPrimaryVolleyBreakMin,
+			MyTable.flWeaponPrimaryVolleyBreakMax )
 	end
 	if CurTime() <= MyTable.flWeaponPrimaryVolleyTime && CurTime() > MyTable.flWeaponPrimaryVolleyNonAutomaticDelay && MyTable.WeaponPrimaryAttack( self, MyTable ) then
 		local wep = MyTable.Weapon
 		if IsValid( wep ) then
 			local p = wep.Primary
-			if p && !p.Automatic then MyTable.flWeaponPrimaryVolleyNonAutomaticDelay = CurTime() + math_Rand( unpack( MyTable.tWeaponPrimaryVolleyNonAutomaticDelay ) ) end
+			if p && !p.Automatic then
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelay = CurTime() +
+					math_Rand(
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin,
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax )
+			end
 		end
 	end
 end

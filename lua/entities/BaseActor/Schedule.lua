@@ -1,14 +1,10 @@
-local _reg = debug.getregistry()
-local CActorSchedule = _reg.ActorSchedule || {}
-_reg.ActorSchedule = CActorSchedule
-
-CActorSchedule.__index = CActorSchedule
-
 // ENT.Schedule = nil
 
 // See Mind.lua for the new default implementation as of version 0.20.0
 // local ErrorNoHaltWithStack = ErrorNoHaltWithStack
 // function ENT:SelectSchedule( MyTable, Previous, PrevName, PrevReturn ) ErrorNoHaltWithStack "SelectSchedule Not Overriden" end
+
+// EDIT: 0.20.0?! Holy shit, this is OLD! (writing this as of developing commit 532)
 
 local rawget = rawget
 
@@ -20,17 +16,12 @@ function ENT:IsCurrentSchedule( sName )
 end
 
 function ENT:SetSchedule( Name, MyTable )
-	local sched = setmetatable( { m_pOwner = self, m_sName = Name }, { __index = function( self, Key, Value )
-		local v = rawget( self, Key )
-		if v == nil then return rawget( CActorSchedule, Key )
-		else return v end
-	end } )
+	local sched = { m_pOwner = self, m_sName = Name }
 	if MyTable then MyTable.Schedule = sched else CEntity_GetTable( self ).Schedule = sched end
 	return sched
 end
 
 local __SCHEDULE__ = __SCHEDULE__
-ENT.__SCHEDULE__ = {}
 
 ENT.tPreScheduleResetVariables = {}
 ENT.tPreScheduleResetVariables.bCharging = false
@@ -52,10 +43,10 @@ local Either = Either
 
 function ENT:PreScheduleResetVariables() end
 
-local function fPreScheduleResetVariables( MyTable, t )
+local function PreScheduleResetVariables( MyTable, t )
 	for k, v in pairs( t ) do
 		if k == "BaseClass" then
-			fPreScheduleResetVariables( MyTable, v )
+			PreScheduleResetVariables( MyTable, v )
 			continue
 		end
 		MyTable[ k ] = Either( v == false, nil, v )
@@ -65,15 +56,23 @@ end
 function ENT:RunMind()
 	local MyTable = CEntity_GetTable( self )
 	MyTable.PreScheduleResetVariables( self, MyTable )
-	fPreScheduleResetVariables( MyTable, MyTable.tPreScheduleResetVariables )
-	local v = MyTable.Schedule
-	if !v then MyTable.SelectScheduleInternal( self, MyTable ) return end
-	local s = v.m_sName || ""
-	local f = MyTable.__SCHEDULE__[ s ] || __SCHEDULE__[ s ]
-	local b = IsValid( MyTable.GAME_pVehicle )
-	if !f || ( b && !s:match "^Vehicle" || !b && s:match "^Vehicle" ) then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, v, s ) return end
-	local r = f( self, v, MyTable )
-	if r != nil then MyTable.SelectScheduleInternal( self, MyTable, v, s, r ) end
+	PreScheduleResetVariables( MyTable, MyTable.tPreScheduleResetVariables )
+	local pSchedule = MyTable.Schedule
+	if !pSchedule then MyTable.SelectScheduleInternal( self, MyTable ) return end
+	local sClassName = pSchedule.m_sClassName || ""
+	if IsValid( MyTable.GAME_pVehicle ) then
+		if !sClassName:match then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
+	elseif sClassName:match "^Vehicle" then MyTable.Schedule = nil MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
+	local pScheduleClass = __SCHEDULE__[ sClassName ]
+	if !pScheduleClass then MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName ) return end
+	local fExecute = pScheduleClass.Execute
+	if !fExecute then
+		ErrorNoHaltWithStack( "Schedule class " .. sClassName .. "missing Execute!" )
+		MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName )
+		return
+	end
+	local Return = fExecute( self, pSchedule, MyTable )
+	if Return != nil then MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName, Return ) end
 end
 
 ------ Include Default Schedules ------

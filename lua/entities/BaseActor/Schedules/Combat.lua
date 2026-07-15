@@ -90,7 +90,7 @@ ENT.flPathStabilizer = 16
 
 function ENT:DLG_Charge() end
 
-RegisterSchedule( "Combat", function( self, sched, MyTable )
+RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 	// Remind me of this when we actually get cover animations lmao
 	MyTable.WEAPON_STANCE = CurTime() <= ( sched.flSweep || 0 ) && WEAPON_STANCE_AIMING || WEAPON_STANCE_PASSIVE
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
@@ -935,6 +935,6 @@ RegisterSchedule( "Combat", function( self, sched, MyTable )
 		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
 		return
 	end
-end )
+end } )
 
 include "CombatStuff.lua"
