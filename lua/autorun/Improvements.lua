@@ -7,6 +7,16 @@ if SERVER then
 	end
 end
 
+BIOLOGICAL_ONLY_DAMAGE_TYPES = {
+	[ DMG_POISON ] = true,
+	[ DMG_NERVEGAS ] = true,
+	[ DMG_PARALYZE ] = true,
+	[ DMG_RADIATION ] = true,
+	[ DMG_DROWN ] = true,
+	[ DMG_DROWNRECOVER ] = true
+	// No DMG_ACID, as armor takes damage from acid over time!
+}
+
 ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 800
 
@@ -49,7 +59,7 @@ TRAVERSES_WATER = 1
 TRAVERSES_GROUND = 2
 TRAVERSES_AIR = 4
 
-UNIVERSAL_FOV = 80
+UNIVERSAL_FOV = 60
 
 local RealTime = RealTime
 local FrameTime = FrameTime

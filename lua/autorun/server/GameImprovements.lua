@@ -451,7 +451,7 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 				v = v.OnHurtSomething
 				if v then if v( at, pEntity, dDamage ) then b = nil end end
 			end
-		elseif at.GetEnemy then at.GAME_bHurtEnemy = true end
+		elseif at.GetEnemy && dDamage:GetDamage() > 0 then at.GAME_bHurtEnemy = true end
 	end
 	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
 	local fBloodSplatter = pEntity.BloodSplatter

@@ -185,10 +185,12 @@ hook.Add( "Tick", "Director", function()
 			CEntity_SetNW2Float( ply, "GAME_flBlood", 1 )
 			CEntity_SetNW2Float( ply, "GAME_flBleeding", 0 )
 		end
+
 		// TODO: Allow others to change the view offsets
 		local f = ply:GetModelScale()
-		ply:SetViewOffset( Vector( 0, 0, 64 ) * f )
-		ply:SetViewOffsetDucked( Vector( 0, 0, 40 ) * f )
+		ply:SetViewOffset( Vector( 0, 0, 60 ) * f )
+		ply:SetViewOffsetDucked( Vector( 0, 0, 38 ) * f )
+
 		ply:SetCanZoom( false )
 		local h = ply:Health() / ply:GetMaxHealth()
 		ply:SetDSP( h <= .3 && 16 || h <= .4 && 15 || h <= .5 && 14 || 1 )

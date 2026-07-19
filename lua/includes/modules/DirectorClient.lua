@@ -404,7 +404,7 @@ function DIRECTOR_CLIENT_TICK()
 				p.m_flStartTime = SysTime()
 				local f = p.Time
 				p.m_flEndTime = f && f() || ( SysTime() + math_Rand( 120, 240 ) )
-				p.Load = p.Load || function() end
+				t.Load = t.Load || function() end
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
 				local p = DirectorContainerInternal()
