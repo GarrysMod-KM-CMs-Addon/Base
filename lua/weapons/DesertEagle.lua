@@ -27,7 +27,6 @@ SWEP.flRecoil = 5
 SWEP.sHoldType = "Pistol"
 
 if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
-	SWEP.m_bAimShootDoesntBlockNormalShoot = true
 	SWEP.ViewModelFOV = 45
 	SWEP.ViewModel = "models/weapons/c_d50.mdl"
 	SWEP.WorldModel = "models/weapons/FC3W/FC3d50w.mdl"
@@ -38,19 +37,19 @@ if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 	sound.Add {
 		name = "Weapon_Cd50.MagIn",
 		channel = CHAN_ITEM,
-		soundlevel = 80,
+		level = 80,
 		sound = "DesertEagle/MagIn.wav"
 	}
 	sound.Add {
 		name = "Weapon_Cd50.MagOut",
 		channel = CHAN_ITEM,
-		soundlevel = 80,
+		level = 80,
 		sound = "DesertEagle/MagOut.wav"
 	}
 	sound.Add {
 		name = "Weapon_Cd50.Bolt",
 		channel = CHAN_ITEM,
-		soundlevel = 80,
+		level = 80,
 		sound = "DesertEagle/Bolt.wav"
 	}
 	function SWEP:DrawWorldModel()
@@ -64,6 +63,42 @@ if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
 		self:SetRenderOrigin( tHand.Pos + vOffset )
 		self:SetRenderAngles( ang )
 		self:DrawModel()
+	end
+
+	if CLIENT then
+		local math_abs = math.abs
+		local math_sin = math.sin
+		local RealTime = RealTime
+		VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_d50.mdl" ] = {
+			reload = function( pViewModel, vTarget, vTargetAngle )
+				local flCycle = pViewModel:GetCycle()
+				if flCycle < .25 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+				elseif flCycle < .5 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+				elseif flCycle > .5 && flCycle < .8 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+				end
+				if flCycle > .68 && flCycle < .78 then vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2 end
+				if flCycle < .66 then
+					vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+				end
+			end,
+			reload_E = function( pViewModel, vTarget, vTargetAngle )
+				local flCycle = pViewModel:GetCycle()
+				if flCycle < .25 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+				elseif flCycle < .5 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+				elseif flCycle > .5 && flCycle < .8 then
+					vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+				end
+				if flCycle > .68 && flCycle < .78 then vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2 end
+				if flCycle < .66 then
+					vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+				end
+			end
+		}
 	end
 else
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_pist_deagle.mdl"

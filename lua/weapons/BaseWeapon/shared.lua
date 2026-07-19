@@ -254,7 +254,7 @@ sound.Add {
 	sound = "WeaponEmpty.wav",
 	channel = CHAN_ITEM,
 	pitch = { 90, 110 },
-	soundlevel = 60
+	level = 60
 }
 
 SWEP.sDryFire = "BaseWeaponEmpty"
