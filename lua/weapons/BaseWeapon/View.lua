@@ -365,9 +365,6 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 	return flPitchTurn, flYawTurn
 end
 
-// I know that the spring implementation sounds cool on paper, but it's shit in practice
-//	local WEAPON_SWAYVelocity = Vector()
-
 local flSwayStiffnessBoost, flSwayDampingBoost = 0, 0
 
 local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flFrameTime )
@@ -375,19 +372,6 @@ local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTur
 	local flSwayNeg = -flSway
 	local flSwayVector = flSway * ( MyTable.flSwayStabilizer * ( 1 - flMultiplier ) + .3 * flMultiplier )
 	local flSwayVectorNeg = -flSwayVector
-
-	//	local flSwayMultiplier = flSway * flMultiplier * 2
-	//	local flAsshole = math_max( math_abs( WEAPON_SWAY[ 1 ] ), math_abs( WEAPON_SWAY[ 2 ] ) )
-	//	if flAsshole > flSwayMultiplier then flAsshole = flAsshole - flSwayMultiplier else flAsshole = 0 end
-	//	
-	//	flSwayStiffnessBoost = Lerp( math_min( flFrameTime * 5, 1 ), flSwayStiffnessBoost, 1 + flAsshole * 2 )
-	//	flSwayDampingBoost = Lerp( math_min( flFrameTime * 5, 1 ), flSwayDampingBoost, 1 + flAsshole ^ .5 )
-	//	
-	//	WEAPON_SWAYVelocity:Sub( WEAPON_SWAY * 16 * flSwayStiffnessBoost * flFrameTime )
-	//	WEAPON_SWAYVelocity:Mul( math_exp( -6 * flSwayDampingBoost * flFrameTime ) )
-	//	WEAPON_SWAY:Add( WEAPON_SWAYVelocity * flFrameTime )
-
-	//	WEAPON_SWAY[ 1 ] = math_Clamp( WEAPON_SWAY[ 1 ], ( -flSway * MyTable.flSwayScale / flSway ) - flYawTurn, ( flSway * MyTable.flSwayScale / flSway ) - flYawTurn )
 
 	local flSwayScale = MyTable.flSwayScale
 
