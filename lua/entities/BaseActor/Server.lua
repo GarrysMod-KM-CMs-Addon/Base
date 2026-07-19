@@ -14,6 +14,7 @@ include "Animation.lua"
 include "Mind.lua"
 include "Pursuit.lua"
 include "Sentence.lua"
+include "Skill.lua"
 
 ENT.GAME_flThrowForce = 1024
 
@@ -190,6 +191,7 @@ function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
 local math_Rand = math.Rand
 local util_Decal = util.Decal
 function ENT:BloodSplatter( dDamage )
+	if self:GetBloodColor() != BLOOD_COLOR_RED then return end
 	local flBlood = self:GetNW2Float( "GAME_flBlood", 1 )
 	if flBlood <= 0 then return end
 	local MyTable = CEntity_GetTable( self )
@@ -407,7 +409,6 @@ function ENT:HandleTurning( MyTable )
 		else aDesAim = ( v - MyTable.GetShootPos( self, MyTable ) ):Angle() end
 	else aDesAim = Angles end
 
-	local flTurnRate = MyTable.flTurnRate
 	local vAimVelocity = MyTable.vAimVelocity
 	local sPitch = MyTable.m_sPitchPoseParameter
 	local sYaw = MyTable.m_sYawPoseParameter

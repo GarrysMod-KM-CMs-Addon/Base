@@ -16,8 +16,20 @@ function ENT:IsCurrentSchedule( sName )
 end
 
 function ENT:SetSchedule( Name, MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local pSchedule = MyTable.Schedule
+	if pSchedule then
+		local sClassName = pSchedule.m_sName || ""
+		local pScheduleClass = __SCHEDULE__[ sClassName ]
+		if pScheduleClass then
+			local fOnLeave = pScheduleClass.OnLeave
+			if fOnLeave then fOnLeave( self, pSchedule, MyTable ) end
+		end
+	end
+
 	local sched = { m_pOwner = self, m_sName = Name }
-	if MyTable then MyTable.Schedule = sched else CEntity_GetTable( self ).Schedule = sched end
+	MyTable.Schedule = sched
 	return sched
 end
 
@@ -72,7 +84,11 @@ function ENT:RunMind()
 		return
 	end
 	local Return = fExecute( self, pSchedule, MyTable )
-	if Return != nil then MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName, Return ) end
+	if Return != nil then
+		local fOnLeave = pScheduleClass.OnLeave
+		if fOnLeave then fOnLeave( self, pSchedule, MyTable ) end
+		MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName, Return )
+	end
 end
 
 ------ Include Default Schedules ------

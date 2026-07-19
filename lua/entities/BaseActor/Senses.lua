@@ -95,6 +95,14 @@ end
 // function ENT:UpdateEnemyMemory( enemy, vec ) self:SetupBullseye( enemy, vec, enemy:GetAngles() ) end
 function ENT:UpdateEnemyMemory( enemy, vec, ang ) self:SetupBullseye( enemy, vec || enemy:GetPos(), ang || enemy:GetAngles() ) end
 
+// For external senses, e.g. the GRAD's tactile laser
+function ENT:UpdateMemory( pObject )
+	if self:Disposition( pObject ) == D_HT then
+		self:SetupBullseye( pObject )
+		return "Hostile"
+	end
+end
+
 local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 local math_min = math.min

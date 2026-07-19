@@ -8,28 +8,51 @@ local function fEmpty() end
 
 // You MUST call AnimationSystemHalt before this!
 
-function ENT:PlaySequenceAndWait( sName, flSpeed )
-	local flLength = self:SetSequence( sName )
+function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset )
+	local flLength = self:SetSequence( sSequence )
+
 	self:ResetSequenceInfo()
 	self:SetCycle( 0 )
 	self:SetPlaybackRate( flSpeed )
+
+	self.sCallMeInRunBehaviour = sSequence
+	self.fCallMeInRunBehaviour = fEmpty
+
 	local flDuration = flLength / math_abs( flSpeed )
 	local flStartTime = CurTime()
 	local flEndTime = CurTime() + flDuration
 	local flInverseDuration = 1 / flDuration
-	self.sCallMeInRunBehaviour = sName
-	self.fCallMeInRunBehaviour = fEmpty
+
+	local tSequenceEvents, tCurrentSequenceEvents = self.tSequenceEvents, self.m_tSequenceEvents
 	while CurTime() <= flEndTime do
-		if self.sCallMeInRunBehaviour != sName then break end
-		self:SetSequence( sName )
+		if self.sCallMeInRunBehaviour != sSequence then break end
+
+		self:SetSequence( sSequence )
 		self:SetPlaybackRate( flSpeed )
-		self:SetCycle( ( CurTime() - flStartTime ) * flInverseDuration )
+		local flCycle = ( CurTime() - flStartTime ) * flInverseDuration
+		self:SetCycle( flCycle )
+
 		local pLocomotion = CEntity_GetTable( self ).loco
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:Approach( self:GetPos(), 1 )
+
+		local tData = tSequenceEvents[ sSequence ]
+		if tData then
+			local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
+			for flTime, fFunction in pairs( tData ) do
+				// Normal progression, passing the event time
+				if flCycle > flTime && flLastCycle <= flTime ||
+				// Already passed the event time in the new loop
+				flCycle < flLastCycle && flCycle >= flTime ||
+				// The event was at the very end of the last loop
+				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self ) end
+			end
+			tCurrentSequenceEvents[ sSequence ] = flCycle
+		end
+
 		coroutine_yield()
 	end
-	self:SetSequence( 0 )
+	if !bDontReset then self:SetSequence( 0 ) end
 end
 
 ENT.tSequences = {}
@@ -49,16 +72,16 @@ function ENT:PromoteSequenceInstant( seq, flSpeed )
 	self.tInstantlyPromote[ seq ] = flSpeed || 1
 end
 
-function ENT:PromoteMotionSequence( Sequence )
-	if isnumber( Sequence ) then Sequence = self:GetSequenceName( Sequence ) end
-	self.tPromoteSequences[ Sequence ] = GetVelocity( self ):Length() / self:GetSequenceGroundSpeed( self:LookupSequence( Sequence ) )
-end
-
 local Lerp = Lerp
 local math_min = math.min
 
+ENT.flAnimationSystemStopFor = 0
+
 function ENT:AnimationSystemTick( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
+	if CurTime() <= MyTable.flAnimationSystemStopFor then return end
+
 	local tPromote, tInstant, tSequences = MyTable.tPromoteSequences, MyTable.tInstantlyPromote, MyTable.tSequences
 	local s = self.m_sIdleSequence
 	if s && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then tPromote = { [ s ] = ( self.m_flIdleSequenceSpeed || 1 ) } end
@@ -82,17 +105,19 @@ function ENT:AnimationSystemTick( MyTable )
 		if self:GetLayerSequence( iLayer ) != s then self:SetLayerSequence( iLayer, s ) end
 		local flCycle = self:GetLayerCycle( iLayer )
 		local tData = tSequenceEvents[ sSequence ]
-		if tData then
-			local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
-			for flTime, fFunction in pairs( tData ) do
-				// Normal progression, passing the event time
-				if flCycle > flTime && flLastCycle <= flTime ||
-				// Already passed the event time in the new loop
-				flCycle < flLastCycle && flCycle >= flTime ||
-				// The event was at the very end of the last loop
-				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self ) end
+		if !tInstantData || !tInstantData[ 2 ] then
+			if tData then
+				local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
+				for flTime, fFunction in pairs( tData ) do
+					// Normal progression, passing the event time
+					if flCycle > flTime && flLastCycle <= flTime ||
+					// Already passed the event time in the new loop
+					flCycle < flLastCycle && flCycle >= flTime ||
+					// The event was at the very end of the last loop
+					flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self ) end
+				end
+				tCurrentSequenceEvents[ sSequence ] = flCycle
 			end
-			tCurrentSequenceEvents[ sSequence ] = flCycle
 		end
 		local f = tInstant[ sSequence ]
 		if f then
@@ -110,6 +135,13 @@ function ENT:AnimationSystemTick( MyTable )
 	end
 	if bReached then
 		for sSequence, iLayer in pairs( tSequences ) do
+			local f = tInstant[ sSequence ]
+			if f then
+				bReached = true
+				self:SetLayerPlaybackRate( iLayer, f )
+				self:SetLayerWeight( iLayer, 1 )
+				continue
+			end
 			local f = tPromote[ sSequence ]
 			if !f then
 				if self:GetLayerWeight( iLayer ) <= .05 then

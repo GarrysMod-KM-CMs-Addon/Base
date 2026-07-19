@@ -3,6 +3,7 @@
 function ENT:SetAimVector( v ) self.vAim = v end
 function ENT:GetAimVector() return self.vAim || self:GetForward() end
 
+// Yes, we don't use this normally, but it's for vehicles and math.rad( MyTable.flTurnRate ) checks
 ENT.flTurnRate = 128
 
 local math_AngleDifference = math.AngleDifference
