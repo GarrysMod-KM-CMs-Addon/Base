@@ -18,6 +18,7 @@ local CEntity_GetVelocity = CEntity.GetVelocity
 local CEntity_IsOnGround = CEntity.IsOnGround
 local CEntity_GetNW2Bool = CEntity.GetNW2Bool
 local CEntity_GetTable = CEntity.GetTable
+local min = math.min
 
 DEFINE_BASECLASS "weapon_base"
 
@@ -145,7 +146,6 @@ end
 SWEP.flAimShoot = 2
 if CLIENT then
 	SWEP.tShootAnimations = {}
-	SWEP.flCrosshairAlpha = 255
 	SWEP.flCurrentRecoilForGap = 0
 	SWEP.flCurrentRecoilForCrosshair = 0
 	SWEP.flRecoilCameraShake = 0
@@ -277,7 +277,7 @@ function SWEP:CanPrimaryAttack( MyTable, bIgnoreAmmo )
 		if sDryFire != "" then self:EmitSound( sDryFire ) end
 		// TODO: This is a shitty HACK!
 		// We don't have a way to set semi auto when out of ammo yet, so sticking with this for now.
-		if MyTable.Primary.Automatic then self:SetNextPrimaryFire( CurTime() + MyTable.Primary_flDelay ) end
+		if self.Primary.Automatic then self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay ) end
 		return
 	end
 
@@ -409,7 +409,7 @@ function SWEP:DoRecoil( MyTable )
 
 	local OwnerTable = CEntity_GetTable( pOwner )
 
-	local flDivisor = MyTable.Primary_flDelay
+	local flDivisor = min( MyTable.Primary_flDelay, .2 )
 	local flRecoilTwo = 2 * flRecoil
 
 	// TODO: Use this in Actor code

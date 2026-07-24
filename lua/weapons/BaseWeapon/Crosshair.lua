@@ -2,6 +2,8 @@ SWEP.flCrosshairInAccuracy = 0
 SWEP.Primary_flSpreadX = 0
 SWEP.Primary_flSpreadY = 0
 
+SWEP.flCrosshairAlpha = 255
+
 local util_TraceLine = util.TraceLine
 local cThirdPerson = GetConVar "bThirdPerson"
 local ScrW, ScrH = ScrW, ScrH
@@ -223,8 +225,8 @@ function SWEP.pCrosshairTable() return __WEAPON_CROSSHAIR_TABLE__ end
 SWEP.Primary_flDelay = 1
 SWEP.Secondary_flDelay = 1
 
-local AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT = 6, 32
-local AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT = AMMO_BAR_WIDTH * 1.33, AMMO_BAR_HEIGHT * 1.33
+local AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT = 5, 28
+local AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT = AMMO_BAR_WIDTH * ( 1 + 1 / 3 ), AMMO_BAR_HEIGHT * ( 1 + 1 / 3 )
 local AMMO_FONT = "Impact"
 
 surface.CreateFont( "BaseWeapon_AmmoBarText", {
@@ -314,16 +316,22 @@ local flLastDoDrawCrosshairCall = 0
 function SWEP:DrawSniperScope( MyTable )
 	surface_SetDrawColor( 0, 0, 0, 255 )
 	surface_SetTexture( surface_GetTextureID( MyTable.sSniperTexture || "CrosshairScope1" ) )
+
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 ) * .9
+
+	//	local flSize = flWidth * ( .6 + ( MyTable.flBarrelBack || 0 ) * .25 ) * .9
+	local flSize = flWidth * .85
+
 	surface_SetDrawColor( 255, 255, 255, 255 )
 	surface_DrawTexturedRect( flX - flSize * .5, flY - flSize * .5, flSize, flSize )
+
 	surface_SetDrawColor( 10, 10, 10, 255 )
 	surface_DrawRect( 0, 0, flX - flSize * .5 + 1, flHeight )
 	surface_DrawRect( flX + flSize * .5 - 1, 0, flWidth - flX, flHeight )
 	surface_DrawRect( flX - flSize * .5, 0, flSize, flY - flSize * .5 )
 	surface_DrawRect( flX - flSize * .5, flY + flSize * .5 - 1, flSize, flHeight - flY )
+
 	return true
 end
 
@@ -356,19 +364,13 @@ function SWEP:DoDrawCrosshair()
 		f = .8 / flDelay
 		MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 	else
-		f = .8 / ( flDelay + .1 )
+		f = .8 / ( flDelay + 1 / 30 )
 		MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 	end
 
 	if CurTime() > MyTable.flLastShot + flDelay * 2 then
-		local f
-		if MyTable.Primary.Automatic then
-			f = 2 / MyTable.Primary_flDelay
-			MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
-		else
-			f = 2 / ( MyTable.Primary_flDelay + .066 )
-			MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
-		end
+		local f = 2 / MyTable.Primary_flDelay
+		MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
 	else MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + 1 * ply:GetNW2Float( "GAME_flRecoil", 1 ) / flDelay * flFrameTime end
 
 	local flAimMultiplier = MyTable.flAimMultiplier
@@ -378,7 +380,7 @@ function SWEP:DoDrawCrosshair()
 	local flRecoilPart = Lerp(
 		math_min( 1, flDelay * 800 * flFrameTime ),
 		MyTable.flCrosshairInAccuracyRecoilPart,
-		MyTable.flCurrentRecoilForGap * ( 1 / 15 ) / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / math_min( 20, self:GetMaxClip1() * .5 ) * ( MyTable.Primary.Automatic && 1 || .05 )
+		MyTable.flCurrentRecoilForGap * ( 1 / 15 ) / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / math_min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * ( MyTable.Primary.Automatic && 1 || .05 )
 	)
 
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
@@ -414,7 +416,7 @@ function SWEP:DoDrawCrosshair()
 		if !MyTable.Primary.Automatic || cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
 			MyTable.flCrosshairAlpha = Lerp( math_min( 1, flFrameTime * 5 ), MyTable.flCrosshairAlpha, 255 )
 		else
-			local flAlpha = math_max( 0, 255 - 255 * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || ( 1 / 3 ) ) / math_min( 15, self:GetMaxClip1() ) * 3 )
+			local flAlpha = math_max( 0, 255 - 255 * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || ( 1 / 3 ) ) / math_min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * 2 )
 			MyTable.flCrosshairAlpha = flAlpha
 		end
 	end
@@ -425,12 +427,13 @@ function SWEP:DoDrawCrosshair()
 	end
 
 	if !MyTable.bDontDrawAmmo then
+		local flClip = math_max( self:Clip1(), self:GetMaxClip1() )
 		// TODO: Machine gun ammo cubes
-		if false then//self:GetMaxClip1() > 60 then
+		if false then//flClip > 60 then
 			
 		else
 			local flW, flH = ScrW() * .9, ScrH() * .9
-			surface_SetDrawColor( 32, 32, 32, 255 )
+			surface_SetDrawColor( 0, 0, 0, 255 )
 			local flWidth, flHeight, sFont
 			local b = MyTable.bDontDrawAmmoBars
 			if b || self:GetMaxClip1() <= 15 then
@@ -443,41 +446,44 @@ function SWEP:DoDrawCrosshair()
 			if a && a != "" && string.lower( a ) != "none" then
 				a = ply:GetAmmoCount( a )
 				if a > 0 then
-					draw.SimpleTextOutlined( a, sFont, flX, flY, nil, nil, nil, 1, Color( 0, 0, 0 ) )
+					draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
 				end
 			end
 			if !b then
-				for _ = 1, self:GetMaxClip1() do
-					flX = flX - flWidth - 1
-					surface_DrawRect( flX, flY, flWidth, flHeight )
-				end
+				local flTotal = flWidth * flClip
+				flX = flX - flTotal
+				surface_DrawRect( flX, flY, flTotal, flHeight )
+
 				if CurTime() <= MyTable.flReloadTime then
-					surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 4 ) ) ) )
+					surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
 					local flX, flY = flW - flWidth, flH - flHeight
-					for _ = 1, self:GetMaxClip1() do
-						flX = flX - flWidth - 1
+					for _ = 1, flClip do
+						flX = flX - flWidth
 						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
 					end
 				else
 					surface_SetDrawColor( 255, 255, 255, 255 )
 					local flX, flY = flW - flWidth, flH - flHeight
 					for _ = 1, self:Clip1() do
-						flX = flX - flWidth - 1
-						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+						flX = flX - flWidth
+						surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
 					end
-					surface_SetDrawColor( 64, 64, 64, 255 )
-					for _ = self:Clip1() + 1, self:GetMaxClip1() do
-						flX = flX - flWidth - 1
-						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+
+					surface_SetDrawColor( 32, 32, 32, 255 )
+					for _ = self:Clip1() + 1, flClip do
+						flX = flX - flWidth
+						surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
 					end
 				end
 			end
 		end
 	end
+
 	if !cThirdPerson:GetBool() then
 		if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
 		if flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
 	end
+
 	local v = __WEAPON_CROSSHAIR_TABLE__[ MyTable.Crosshair ]
 	if v != nil then
 		local EAimingAt = ply:GetNW2Int "DR_EAimingAt"
@@ -487,6 +493,7 @@ function SWEP:DoDrawCrosshair()
 			if v( MyTable, self, 0, 255, 0, MyTable.flCrosshairAlpha ) then return true end
 		elseif v( MyTable, self, 255, 255, 255, MyTable.flCrosshairAlpha ) then return true end
 	end
+
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
 	local flEnd = .002 * flHeight
@@ -494,6 +501,7 @@ function SWEP:DoDrawCrosshair()
 	for I = 0, flEnd do surface.DrawCircle( flX, flY, I, 255, 255, 255, flCrosshairAlpha ) end
 	local flTarget = flEnd + .0001 * flHeight
 	for I = flEnd, flTarget do surface.DrawCircle( flX, flY, I, 0, 0, 0, flCrosshairAlpha ) end
+
 	return true
 end
 

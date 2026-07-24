@@ -80,7 +80,7 @@ function SWEP:StartReload()
 end
 
 sound.Add {
-	name = "SPAS12_Reload",
+	name = "SPAS12Reload",
 	channel = CHAN_AUTO,
 	level = 60,
 	pitch = { 90, 110 },
@@ -95,7 +95,7 @@ function SWEP:PerformReload()
 	local owner = self:GetOwner()
 	if !IsValid( owner ) || owner.GetAmmoCount && owner:GetAmmoCount( self.Primary.Ammo ) <= 0 then return end
 	if self:Clip1() >= self.Primary.ClipSize then return end
-	self:EmitSound "SPAS12_Reload"
+	self:EmitSound "SPAS12Reload"
 	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
 	self:SetClip1( self:Clip1() + 1 )
 	self:SendWeaponAnim( ACT_VM_RELOAD )
@@ -127,7 +127,7 @@ function SWEP:Think()
 			self.flPumpTime = t
 			self:SetNextPrimaryFire( t )
 			self.bPumped = true
-			self:EmitSound "SPAS12_Pump"
+			self:EmitSound "SPAS12Pump"
 		end
 		return
 	end
@@ -155,7 +155,7 @@ function SWEP:Deploy()
 end
 
 sound.Add {
-	name = "SPAS12_Shot",
+	name = "SPAS12Shot",
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
@@ -163,22 +163,22 @@ sound.Add {
 }
 
 sound.Add {
-	name = "SPAS12_Pump",
-	channel = CHAN_AUTO, // CHAN_WEAPON changed so that it doesn't interrupt the firing sound
+	name = "SPAS12Pump",
+	channel = CHAN_ITEM,
 	level = 150,
 	pitch = { 90, 110 },
 	sound = "weapons/shotgun/shotgun_cock.wav"
 }
 
 sound.Add {
-	name = "SPAS12_DryFire",
-	channel = CHAN_AUTO,
+	name = "SPAS12DryFire",
+	channel = CHAN_ITEM,
 	level = 60,
 	pitch = { 90, 110 },
 	sound = "weapons/shotgun/shotgun_empty.wav"
 }
 
-SWEP.Primary_DryFireSound = "SPAS12_DryFire"
+SWEP.Primary_DryFireSound = "SPAS12DryFire"
 
 function SWEP:Initialize() self:SetHoldType "Shotgun" end
 
@@ -190,7 +190,7 @@ function SWEP:PrimaryAttack()
 		if self.bPumped then
 			if !self:CanPrimaryAttack() then return end
 			self.bPumped = nil
-		else self:EmitSound "SPAS12_DryFire" return end
+		else self:EmitSound "SPAS12DryFire" return end
 	end
 	local owner = self:GetOwner()
 	self:FireBullets {
@@ -210,62 +210,22 @@ function SWEP:PrimaryAttack()
 	ed:SetAttachment( 1 )
 	ed:SetFlags( 1 )
 	util.Effect( "MuzzleFlash", ed )
-	self:EmitSound "SPAS12_Shot"
+	self:EmitSound "SPAS12Shot"
 	self:TakePrimaryAmmo( 1 )
 	self.flLastShot = CurTime()
 	self:CallOnClient "LastShot"
 	self:SetNextPrimaryFire( CurTime() + self.Primary_flDelay )
 end
 
-if CLIENT then
-	local math_abs = math.abs
-	local math_sin = math.sin
-	local RealTime = RealTime
-	VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_shotgun.mdl" ] = {
-		// Raise
-		reload1 = function( pViewModel, vTarget, vTargetAngle )
-			local flCycle = pViewModel:GetCycle()
-			if flCycle < .4 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 1
-			elseif flCycle < .8 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
-			end
-			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
-		end,
-		// Insert shell
-		reload2 = function( pViewModel, vTarget, vTargetAngle )
-			local flCycle = pViewModel:GetCycle()
-			if flCycle < .33 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - .33
-			elseif flCycle < .66 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + .66
-			end
-			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
-		end,
-		// Lower
-		reload3 = function( pViewModel, vTarget, vTargetAngle )
-			local flCycle = pViewModel:GetCycle()
-			if flCycle < .33 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
-			elseif flCycle < .66 then
-				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 2
-			end
-			if flCycle < .66 then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
-			end
-		end,
-	}
-end
-
 sound.Add {
-	name = "SPAS12_SwitchPump",
+	name = "SPAS12SwitchPump",
 	channel = CHAN_AUTO,
 	level = 60,
 	pitch = { 90, 110 },
 	sound = "weapons/smg1/switch_single.wav"
 }
 sound.Add {
-	name = "SPAS12_SwitchSemi",
+	name = "SPAS12SwitchSemi",
 	channel = CHAN_AUTO,
 	level = 60,
 	pitch = { 90, 110 },
@@ -277,6 +237,63 @@ function SWEP:SecondaryAttack()
 	local b = !self.bSemi
 	if b && !self.bPumped then return end
 	self.bSemi = b
-	self:EmitSound( b && "SPAS12_SwitchSemi" || "SPAS12_SwitchPump" )
+	self:EmitSound( b && "SPAS12SwitchSemi" || "SPAS12SwitchPump" )
 	self:SetNextSecondaryFire( CurTime() + .2 )
 end
+
+if SERVER then return end
+
+
+local math_abs = math.abs
+local math_sin = math.sin
+local RealTime = RealTime
+VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_shotgun.mdl" ] = {
+	// Raise
+	reload1 = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .4 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 1
+		elseif flCycle < .8 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+		end
+		vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+	end,
+
+	// Insert shell
+	reload2 = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .33 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - .33
+		elseif flCycle < .66 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + .66
+		end
+		vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+	end,
+
+	// Lower
+	reload3 = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .33 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+		elseif flCycle < .66 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 2
+		end
+		if flCycle < .66 then
+			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_abs( math_sin( RealTime() * 6 ) ) * 2
+		end
+	end,
+
+	pump = function( pViewModel, vTarget, vTargetAngle )
+		local flCycle = pViewModel:GetCycle()
+		if flCycle < .2 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+		elseif flCycle < .6 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] - 1
+		elseif flCycle < .9 then
+			vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 2
+		end
+		if flCycle < .5 then
+			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 2
+		end
+	end,
+}
