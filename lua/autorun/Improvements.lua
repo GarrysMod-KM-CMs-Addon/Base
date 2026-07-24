@@ -59,7 +59,7 @@ TRAVERSES_WATER = 1
 TRAVERSES_GROUND = 2
 TRAVERSES_AIR = 4
 
-UNIVERSAL_FOV = 60
+UNIVERSAL_FOV = 80
 
 local RealTime = RealTime
 local FrameTime = FrameTime
@@ -85,6 +85,7 @@ local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
 local CurTime = CurTime
 local CEntity_SetVelocity = CEntity.SetVelocity
 local math_Approach = math.Approach
+local min = math.min
 
 physenv.SetGravity( Vector( 0, 0, -514.83 ) )
 
@@ -107,11 +108,13 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local flDelay, flRecoil = .1, 1
 	if IsValid( pActiveWeapon ) then
 		local WeaponTable = CEntity_GetTable( pActiveWeapon )
-		flDelay = WeaponTable.Primary_flDelay || .1
-		flRecoil = WeaponTable.flRecoil || 1
+		if WeaponTable.__WEAPON__ && WeaponTable.Primary_flDelay then
+			flDelay = min( WeaponTable.Primary_flDelay, .2 )
+			flRecoil = WeaponTable.CalculateRecoil( pActiveWeapon, ply, WeaponTable )
+		end
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( ( flDelay * .75 ) ^ 2 ) * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / ( ( flDelay * .85 ) ^ 2 ) * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp

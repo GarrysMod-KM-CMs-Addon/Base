@@ -378,9 +378,9 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
 	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
 		local v = Data.Spread
-		v[ 1 ] = v[ 1 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 15, 1 ), 1, 15 )
-		v[ 2 ] = v[ 2 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 15, 1 ), 1, 15 )
-		Data.Damage = Data.Damage * .2
+		v[ 1 ] = v[ 1 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+		v[ 2 ] = v[ 2 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+		Data.Damage = Data.Damage * ( 1 / 3 )
 	end
 	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * math_Rand( .1, .15 ), 0, .2 )
 	local flForce = math.max( Data.Force, 1 )
@@ -622,11 +622,14 @@ hook.Add( "Think", "GameImprovements", function()
 			iRemaining = iRemaining - 1
 		end
 	end
+
 	if ACTOR_QUEUE_LAST && SysTime() > flNextActorQueueCall then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
+
 		local iCalls = 0
-		local f = cActorQueueCallsPerTick:GetInt()
-		while iCalls < f && ACTOR_QUEUE_LAST != nil do
+		local flActorQueueCallsPerTick = cActorQueueCallsPerTick:GetInt()
+
+		while iCalls < flActorQueueCallsPerTick && ACTOR_QUEUE_LAST != nil do
 			local pNode = ACTOR_QUEUE_CURRENT
 			local pNext = pNode.pNext
 			local coThread = pNode.coThread
@@ -643,13 +646,16 @@ hook.Add( "Think", "GameImprovements", function()
 					ACTOR_QUEUE_CURRENT = pNext
 				end
 			else
-				ACTOR_QUEUE_CURRENT = pNext
+				// DO NOT.
+				//	ACTOR_QUEUE_CURRENT = pNext
 				if bResult != false then iCalls = iCalls + 1 end
 			end
 			if !ACTOR_QUEUE_LAST then break end
 		end
+
 		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 896 - engine_TickInterval(), 0, 1 )
 	else ACTOR_QUEUE_CURRENT = nil end
+
 	if IsValid( CascadeShadowMapping ) then
 		if SUN_ANGLES then
 			CascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )

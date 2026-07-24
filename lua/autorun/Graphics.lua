@@ -502,12 +502,12 @@ hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 	return true
 end )
 
-hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
+hook.Add( "CalcView", "Graphics", function( ply, origin, angles, _ /* fov */, znear, zfar )
 	DIRECTOR_CLIENT_TICK()
 	local view = {
 		origin = origin,
 		angles = angles,
-		fov = fov,
+		fov = UNIVERSAL_FOV,
 		znear = znear,
 		zfar = zfar,
 		drawviewer = false
