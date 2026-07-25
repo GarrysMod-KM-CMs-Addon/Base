@@ -26,5 +26,5 @@ RegisterSchedule( "PickUpGun", { Execute = function( self, sched, MyTable )
 		MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
 		MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	end
-	MyTable.MoveAlongPath( self, sched.pPath, MyTable.flRunSpeed, 1 )
+	MyTable.MoveAlongPath( self, sched.pPath, MyTable.flJogSpeed, 1 )
 end } )

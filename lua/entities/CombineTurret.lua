@@ -41,7 +41,7 @@ if !SERVER then return end
 ENT.bNightVision = true
 
 ENT.flTopSpeed = 0
-ENT.flRunSpeed = 0
+ENT.flJogSpeed = 0
 ENT.flWalkSpeed = 0
 
 ENT.bPhysics = true

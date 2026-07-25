@@ -98,7 +98,7 @@ RegisterSchedule( "TakeCoverMove", { Execute = function( self, sched, MyTable )
 	if IsValid( pEnemy ) then
 		if self.bCoverDuck == true then sched.bCoverStand = nil
 		elseif sched.bCoverStand == nil then sched.bCoverStand = math.random( 2 ) == 1 end
-		self:MoveAlongPath( sched.Path, self.flRunSpeed, 1 )
+		self:MoveAlongPath( sched.Path, self.flJogSpeed, 1 )
 	else
 		local goal = sched.Path:GetCurrentGoal()
 		if goal then

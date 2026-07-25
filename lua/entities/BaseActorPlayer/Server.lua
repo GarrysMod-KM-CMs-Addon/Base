@@ -78,7 +78,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter )
 end
 
 ENT.flTopSpeed = HUMAN_SPRINT_SPEED
-ENT.flRunSpeed = HUMAN_RUN_SPEED
+ENT.flJogSpeed = HUMAN_RUN_SPEED
 ENT.flWalkSpeed = HUMAN_WALK_SPEED
 
 function ENT:BodyUpdate() self:BodyMoveXY() end
@@ -154,7 +154,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
 	self:SetCrouchTarget( flHeight )
 	if flHeight > .5 then flSpeed = math.min( self.flTopSpeed, flSpeed )
 	else flSpeed = math.min( self.flWalkSpeed, flSpeed ) end
-	if self.flTopSpeed > self.flRunSpeed && flSpeed >= self.flTopSpeed then
+	if self.flTopSpeed > self.flJogSpeed && flSpeed >= self.flTopSpeed then
 		self:SetNW2Bool( "CTRL_bSprinting", true )
 	else self:SetNW2Bool "CTRL_bSprinting" end
 	local pLocomotion = self.loco

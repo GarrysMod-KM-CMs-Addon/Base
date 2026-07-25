@@ -8,7 +8,7 @@ function ENT:SetActivity( act ) end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 function ENT:GetRunSpeed() return CEntity_GetTable( self ).flTopSpeed end
-function ENT:GetWalkSpeed() return CEntity_GetTable( self ).flRunSpeed end
+function ENT:GetWalkSpeed() return CEntity_GetTable( self ).flJogSpeed end
 function ENT:GetSlowWalkSpeed() return CEntity_GetTable( self ).flWalkSpeed end
 
 local FL = FL_DUCKING + FL_ANIMDUCKING

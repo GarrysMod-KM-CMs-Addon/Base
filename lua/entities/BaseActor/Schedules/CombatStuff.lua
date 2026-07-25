@@ -257,11 +257,11 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 					local flDist = MyTable.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = MyTable.flRunSpeed * 4
+						local flDist = MyTable.flJogSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
 							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flJogSpeed, 1 ) end
 					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				else
 					local goal = sched.Path:GetCurrentGoal()
@@ -274,11 +274,11 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 					local flDist = self.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = MyTable.flRunSpeed * 4
+						local flDist = MyTable.flJogSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
 							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flJogSpeed, 1 ) end
 					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				end
 			else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
@@ -438,11 +438,11 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 					local flDist = MyTable.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = MyTable.flRunSpeed * 4
+						local flDist = MyTable.flJogSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
 							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flJogSpeed, 1 ) end
 					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				else
 					local goal = sched.Path:GetCurrentGoal()
@@ -455,11 +455,11 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 					local flDist = self.flWalkSpeed * 4
 					flDist = flDist * flDist
 					if self:GetPos():DistToSqr( sched.vFrom ) > flDist || sched.bDuck then
-						local flDist = MyTable.flRunSpeed * 4
+						local flDist = MyTable.flJogSpeed * 4
 						flDist = flDist * flDist
 						if self:GetPos():DistToSqr( sched.vFrom ) > flDist then
 							MyTable.MoveAlongPath( self, sched.Path, MyTable.flTopSpeed, 1 )
-						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1 ) end
+						else MyTable.MoveAlongPath( self, sched.Path, MyTable.flJogSpeed, 1 ) end
 					else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end
 				end
 			else MyTable.MoveAlongPath( self, sched.Path, MyTable.flWalkSpeed, 0 ) end

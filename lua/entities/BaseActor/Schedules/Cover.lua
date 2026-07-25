@@ -336,7 +336,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 		end
 	end
 	if IsValid( pEnemy ) then
-		MyTable.MoveAlongPath( self, sched.Path, MyTable.flRunSpeed, 1, Either( pEntity == nil, nil, { self, pEntity } ) )
+		MyTable.MoveAlongPath( self, sched.Path, MyTable.flJogSpeed, 1, Either( pEntity == nil, nil, { self, pEntity } ) )
 	else
 		local goal = sched.Path:GetCurrentGoal()
 		if goal then

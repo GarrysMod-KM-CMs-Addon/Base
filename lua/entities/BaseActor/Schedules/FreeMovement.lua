@@ -235,7 +235,7 @@ RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable
 			s.vMyEnd = sched.vMyEnd
 			return
 		end
-		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
 		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
 		MyTable.CenterTarget( self, vTarget, MyTable )
 		local pWeapon = MyTable.Weapon
@@ -280,7 +280,7 @@ RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable
 			filter = tFilter
 		}
 		if trStandToCenter.Hit && trDuckToCenter.Hit then sched.vSuppressionPoint = nil return end
-		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
 		MyTable.CenterTarget( self, vSuppressionPoint, MyTable )
 		local pWeapon = MyTable.Weapon
 		if !IsValid( pWeapon ) then return false end
@@ -598,7 +598,7 @@ RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTa
 		filter = tFilter
 	}
 	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
-		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
 		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
 		MyTable.CenterTarget( self, vTarget, MyTable )
 		local pWeapon = MyTable.Weapon
@@ -643,7 +643,7 @@ RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTa
 			filter = tFilter
 		}
 		if trStandToCenter.Hit && trDuckToCenter.Hit then sched.vSuppressionPoint = nil return end
-		MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, trStandToCenter.Hit && 0 || 1 )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
 		MyTable.CenterTarget( self, vSuppressionPoint, MyTable )
 		local pWeapon = MyTable.Weapon
 		if !IsValid( pWeapon ) then return false end

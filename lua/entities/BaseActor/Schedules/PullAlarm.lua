@@ -4,66 +4,87 @@
 ENT.tPreScheduleResetVariables.pAlarm = false
 
 RegisterSchedule( "PullAlarm", { Execute = function( self, sched, MyTable )
-	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
-	if Either( sched.bOff, !table.IsEmpty( MyTable.tEnemies ), table.IsEmpty( MyTable.tEnemies ) ) then return {} end
-	if !self:CanExpose() then self:SetSchedule "TakeCover" return end
+	local pEnemy = MyTable.Enemy
+	local bEnemyValid = IsValid( pEnemy )
+
+	MyTable.WEAPON_STANCE = bEnemyValid && MyTable.Moving_WEAPON_STANCE || WEAPON_STANCE_PASSIVE
+
+	if Either( sched.bOff, !table.IsEmpty( MyTable.tEnemies ), table.IsEmpty( MyTable.tEnemies ) ) then return false end
+
+	if !MyTable.CanExpose( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
 	local pAlarm = sched.pAlarm
-	if !IsValid( pAlarm ) then self:SetSchedule "TakeCover" return end
-	if !pAlarm.__ALARM__ || Either( sched.bOff, !pAlarm.bIsOn, pAlarm.bIsOn ) then self:SetSchedule "TakeCover" return end
+	if !IsValid( pAlarm ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
+	if !pAlarm.__ALARM__ || Either( sched.bOff, !pAlarm.bIsOn, pAlarm.bIsOn ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
 	local iAlarmClass = pAlarm:Classify()
-	if iAlarmClass != CLASS_NONE && iAlarmClass != self:Classify() then self:SetSchedule "TakeCover" return end
-	if !sched.Path then sched.Path = Path "Follow" end
+	if iAlarmClass != CLASS_NONE && iAlarmClass != self:Classify() then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
+	local pPath = sched.pPath
+	if !pPath then pPath = Path "Follow" sched.pPath = pPath end
+
 	local vAlarm = pAlarm:GetPos()
-	local _, b = self:ComputePath( sched.Path, vAlarm )
-	if b == false then self:SetSchedule "TakeCover" return end // NOT !b
-	local v = self:GetShootPos()
+
+	if LevelOfDetail( sched, "flNextPath" ) then
+		local _, b = MyTable.ComputePath( self, pPath, vAlarm )
+		if b == false then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end // NOT !b
+	end
+
+	local v = MyTable.GetShootPos( self )
 	local f = MyTable.GAME_flReach
 	if v:DistToSqr( pAlarm:NearestPoint( v ) ) <= ( f * f ) then
 		if sched.bOff then pAlarm:TurnOff( self )
 		else pAlarm:TurnOn( self ) end
-		return {}
+		return true
 	else
 		MyTable.pAlarm = sched.pAlarm
-		local tNearestEnemies = {}
-		for ent in pairs( self.tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-		table.SortByMember( tNearestEnemies, 2, true )
-		local tAllies, pEnemy = self:GetAlliesByClass()
-		for _, d in ipairs( tNearestEnemies ) do
-			local ent = d[ 1 ]
-			local v = ent:GetPos() + ent:OBBCenter()
-			local tr = util.TraceLine {
-				start = self:GetShootPos(),
-				endpos = v,
-				mask = MASK_SHOT_HULL,
-				filter = { self, ent }
-			}
-			if !tr.Hit || tr.Fraction > MyTable.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-				local b = true
-				if ent.GAME_tSuppressionAmount then
-					local flThreshold, flSoFar = ent:Health() * .1, 0
-					for other, am in pairs( ent.GAME_tSuppressionAmount ) do
-						if other == self || self:Disposition( other ) != D_LI then continue end
-						flSoFar = flSoFar + am
-						if flSoFar > flThreshold then continue end
-					end
+
+		// TODO: This is a gross oversimplification.
+		// Actors should be able to suppress too.
+		// Original old suppression code is bullshit.
+		// But I am too lazy to rewrite it.
+		// So yeah. Shit.
+		local bShoot
+
+		local v = pEnemy:GetPos() + pEnemy:OBBCenter()
+		local tr = util.TraceLine {
+			start = MyTable.GetShootPos( self, MyTable ),
+			endpos = v,
+			mask = MASK_SHOT_HULL,
+			filter = { self, pEnemy }
+		}
+
+		if !tr.Hit then
+			bShoot = true
+
+			if pEnemy.GAME_tSuppressionAmount then
+				local flThreshold, flSoFar = pEnemy:Health() * .1, 0
+				for pOther, flDamage in pairs( pEnemy.GAME_tSuppressionAmount ) do
+					if pOther == self || MyTable.Disposition( self, pOther ) != D_LI then continue end
+					flSoFar = flSoFar + flDamage
 					if flSoFar > flThreshold then continue end
 				end
-				if b then
-					MyTable.CenterTarget( self, ent:GetPos() + ent:OBBCenter(), MyTable )
-					pEnemy = ent
-					if self:CanAttackHelper( ent ) then self:RangeAttack() end
-					break
-				end
+				if flSoFar > flThreshold then bShoot = nil end
+			end
+
+			if bShoot then
+				MyTable.CenterTarget( self, v, MyTable )
+				if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+				return
 			end
 		end
-		if IsValid( pEnemy ) then self:MoveAlongPath( sched.Path, MyTable.flRunSpeed, 1 ) else
-			local goal = sched.Path:GetCurrentGoal()
-			if goal then
-				MyTable.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
+
+		if bShoot && bEnemyValid then
+			MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, 1 )
+		else
+			local pGoal = pPath:GetCurrentGoal()
+			if pGoal then
+				MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
 				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-				self:ModifyMoveAimVector( MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1 )
+				if bEnemyValid then MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1 ) end
 			end
-			self:MoveAlongPath( sched.Path, MyTable.flTopSpeed, 1 )
+			MyTable.MoveAlongPath( self, pPath, bEnemyValid && MyTable.flTopSpeed || MyTable.flJogSpeed, 1 )
 		end
 	end
 end } )

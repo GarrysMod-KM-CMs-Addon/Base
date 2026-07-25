@@ -12,7 +12,7 @@ RegisterSchedule( "CombatHeavy", { Execute = function( self, sched, MyTable )
 	local pPath = MyTable.pEnemyPath
 	if !pPath then pPath = Path "Follow" MyTable.pEnemyPath = pPath end
 	MyTable.ComputeFlankPath( self, pPath, pEnemy, MyTable )
-	MyTable.MoveAlongPath( self, pPath, MyTable.flRunSpeed, 1 )
+	MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, 1 )
 	MyTable.WEAPON_STANCE = MyTable.CombatHeavy_WEAPON_STANCE
 	local pWeapon = MyTable.Weapon
 	if !IsValid( pWeapon ) then return false end
