@@ -251,9 +251,11 @@ function SWEP:CalcView( ply, pos, ang )
 			MyTable.flFoV = f
 			return pos, ang, f
 		end
-	else MyTable.flFoV = UNIVERSAL_FOV end
+	end
 
-	return pos, ang, UNIVERSAL_FOV
+	local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, UNIVERSAL_FOV * .8 )
+	MyTable.flFoV = f
+	return pos, ang, f
 end
 
 SWEP.flViewModelSprint = 0
@@ -335,7 +337,7 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 		flHipRecoilPitchTurn = tAnimation[ 2 ] * 15 * flAimMultiplier
 		flHipRecoilYawTurn = tAnimation[ 3 ] * 30 * flAimMultiplier
 
-		flAimingRecoilBack = 7 * flAimingFireMul
+		flAimingRecoilBack = 6 * flAimingFireMul
 		flAimingRecoilPitchTurn = tAnimation[ 2 ] * 2 * flAimingFireMul
 		flAimingRecoilYawTurn = tAnimation[ 3 ] * 3.5 * flAimingFireMul
 	end
@@ -403,7 +405,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	local MyTable = CEntity_GetTable( self )
 	local ply = LocalPlayer()
 
-	MyTable.ViewModelFOV = math.deg( math.atan( math.tan( math.rad( 41.8 / 2 ) ) * math.tan( math.rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / math.tan( math.rad( UNIVERSAL_FOV / 2 ) ) ) * 2.22 )
+	MyTable.ViewModelFOV = math.deg( math.atan( math.tan( math.rad( 41.8 / 2 ) ) * math.tan( math.rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / math.tan( math.rad( MyTable.flFoV / 2 ) ) ) * 2.22 )
 
 	local f = math_Clamp( ply:Health() / ply:GetMaxHealth(), 0, 1 )
 	vBezier, vBezierAngle = Vector(), Vector()

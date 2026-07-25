@@ -1422,14 +1422,14 @@ function QuickSlide_Handle( ply )
 		local v = ply:GetAimVector()
 		v.z = 0
 		v:Normalize()
-		local flRunSpeed = ply:GetRunSpeed()
+		local flJogSpeed = ply:GetRunSpeed()
 		local t = CEntity_GetTable( ply )
-		f = f - ( ply.GAME_flSlideSpeed || flRunSpeed * 1.5 ) * ( t.CTRL_flSlideSpeedDecay || .4 ) * FrameTime()
+		f = f - ( ply.GAME_flSlideSpeed || flJogSpeed * 1.5 ) * ( t.CTRL_flSlideSpeedDecay || .4 ) * FrameTime()
 		CEntity_SetNW2Float( ply, "CTRL_flSlideSpeed", f )
 		local s = t.CTRL_pSlideLoop
 		if s then
-			s:ChangeVolume( vel:Length() / flRunSpeed )
-			local p = vel:Length() / flRunSpeed
+			s:ChangeVolume( vel:Length() / flJogSpeed )
+			local p = vel:Length() / flJogSpeed
 			s:ChangeVolume( p )
 			s:ChangePitch( math.Remap( p, 0, 1, 80, 100 ) )
 		end
@@ -1558,7 +1558,13 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		local t = ply.DR_tMusicEntities
 		if t then t[ dent ] = true
 		else ply.DR_tMusicEntities = { [ dent ] = true } end
-		if ( f >= 0 || RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
+
+		if f <= 0 then
+			ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+			continue
+		end
+
+		if ( RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
 			local flVoVait = ply.DR_flVoWait
 			if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
 				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
@@ -1569,21 +1575,25 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 				if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
 				else ply.DR_flVoDangerousWait = t end
 			end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .033, 0, DIRECTOR_MUSIC_VO_WAIT )
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end
-		if ( f >= 0 || RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
+
+		if ( RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
 			ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
 			ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
 			local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 			ply.DR_flIAmAlreadyInDangerForSomeTime = t
 			if f <= 0 then ply.DR_flVoWait = RealTime()
 			else ply.DR_flVoWait = t end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .033, 0, DIRECTOR_MUSIC_VO_WAIT )
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 			continue
 		end
+
+		f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
+		ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 	end
 	if !table_IsEmpty( tCaptionPlayers ) then
 		net_Start( "CaptionSound", false )

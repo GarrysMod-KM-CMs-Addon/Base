@@ -20,9 +20,10 @@ BIOLOGICAL_ONLY_DAMAGE_TYPES = {
 ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 800
 
-HUMAN_WALK_SPEED = 75
-HUMAN_RUN_SPEED = 275
 HUMAN_SPRINT_SPEED = 350
+HUMAN_RUN_SPEED = 275
+HUMAN_WALK_SPEED = 75
+
 HUMAN_JUMP_HEIGHT = 72
 
 // Weapon statuses and other complicated bullshit
@@ -160,30 +161,14 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
 			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
 			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
-			//	if ply.GAME_bSprint then cmd:AddKey( IN_SPEED ) end
-			//	ply.GAME_bSlid = true
 		else
-			//	if ply.GAME_bSlid then
-			//		ply.GAME_bSlid = nil
-			//		ply.GAME_bSprint = nil
-			//	else
-				if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
-				elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
-				if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
-			//	end
+			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
+			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
+			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
 			local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
 			local bVelocity = GetVelocity( ply ):LengthSqr() > 256
-			//	if b then
-			//		ply.GAME_flSprintTime = CurTime() + .1
-			//		if cmd:KeyDown( IN_SPEED ) && bVelocity then ply.GAME_bSprint = true end
-			//	else
-			//		if CurTime() > ( ply.GAME_flSprintTime || 0 ) && ( cmd:GetForwardMove() < 0 || cmd:GetSideMove() == 0 && cmd:GetForwardMove() == 0 ) then ply.GAME_bSprint = nil end
-			//	end
-			//	local p = ply:GetActiveWeapon()
-			//	if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then
-			//		ply.GAME_bSprint = nil
-			//	elseif ply.GAME_bSprint then cmd:AddKey( IN_SPEED ) end
-			if !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
+			local p = ply:GetActiveWeapon()
+			if ( !IsValid( p ) || CurTime() > p:GetNextPrimaryFire() && CurTime() > p:GetNextSecondaryFire() ) && !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
 				cmd:RemoveKey( IN_DUCK )
 				ply.GAME_bWantsToDuck = nil
 				ply.GAME_bDuckPressed = nil
