@@ -7,27 +7,49 @@ local math_max = math.max
 
 function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * 2 + 2 ) end
 
+// This is intentionally short.
+// You are almost never going to FreeMovement to suppress!
+ENT.flFreeMovementSuppressTimeMin = 0
+ENT.flFreeMovementSuppressTimeMax = 4
+
+// TODO: If the enemy left, do the following.
+// If we can see them in hold fire, look around confused and tell everyone to search.
+// If we can see them in combat, instantly transition to hold fire.
 RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
+
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
+
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
+
 	if LevelOfDetail( sched, "flNextHoldFireCheckTime" ) then if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end end
+
 	local c = MyTable.GetWeaponClipPrimary( self, MyTable )
 	if c != -1 && c <= 0 then MyTable.WeaponReload( self, MyTable ) end
+
 	local pEnemyPath = MyTable.pEnemyPath
-	if !pEnemyPath then pEnemyPath = Path "Follow" sched.pEnemyPath = pEnemyPath end
+	if !pEnemyPath then
+		pEnemyPath = Path "Follow"
+		sched.pEnemyPath = pEnemyPath
+	end
+
 	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy, MyTable ) end
+
 	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
 	if MyTable.UpdatePursuitSenses( self, pEnemy, pTrueEnemy, MyTable ) then
 		MyTable.SetSchedule( self, "FreeMovementPursuit", MyTable )
 		return
 	end
+
 	local tFilter = pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
+
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
+
 	local vPos = self:GetPos()
 	MyTable.vActualTarget = vPos
 	local vEnemyCenter = pEnemy:GetPos() + pEnemy:OBBCenter()
@@ -42,6 +64,7 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 		mask = MASK_SHOT_HULL,
 		filter = tFilter
 	}
+
 	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
 		local flHealth = pEnemy:Health()
 		local ws, w = 0 // Weapon Strength
@@ -54,8 +77,11 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 			local nws = math.abs( flHealth - 1 / ( wep.Primary.Automatic && t || t + MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax ) * d * ( wep.Primary_iNum || 1 ) )
 			if nws < ws then w, ws = wep, nws end
 		end
+
 		sched.flSuppressTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax ) * .5
+
 		sched.bGotALineOfSightBefore = true
+
 		if !trStandToCenter.Hit && !trDuckToCenter.Hit then
 			if CurTime() > ( sched.flNextDuck || 0 ) then
 				sched.bDuck = math.random() <= .5
@@ -63,10 +89,13 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 			end
 			MyTable.Stand( self, sched.bDuck && 0 || 1, MyTable )
 		else MyTable.Stand( self, trStandToCenter.Hit && 0 || 1, MyTable ) end
+
 		MyTable.vaAimTargetBody = pEnemy:GetPos() + pEnemy:OBBCenter()
 		MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+
 		local pWeapon = MyTable.Weapon
 		if !IsValid( pWeapon ) then return false end
+
 		local flRecoil = pWeapon.flRecoil
 		if flRecoil then
 			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( MyTable.vaAimTargetBody )
@@ -81,7 +110,9 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			end
 		end
+
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+
 		// TODO
 		/*if MyTable.m_bHadSmokesLast && MyTable.GAME_flSuppression > 0 && LevelOfDetail( sched, "flNextSmoke" ) then
 			local vShoot = self:GetShootPos()
@@ -90,33 +121,39 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 		end*/
 		return
 	end
+
 	if sched.bGotALineOfSightBefore then
-		local s = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
-		s.vMyStart = sched.vMyStart
-		s.vMyEnd = sched.vMyEnd
-		s.bGotALineOfSightBefore = true
+		local pSchedule = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
+		pSchedule.vMyStart = sched.vMyStart
+		pSchedule.vMyEnd = sched.vMyEnd
+		pSchedule.bGotALineOfSightBefore = true
 		return
 	end
+
 	local pPath = MyTable.pEnemyPath
 	if !pPath then
 		pPath = Path "Follow"
 		MyTable.ComputeFlankPath( self, pPath, pEnemy, MyTable )
 		MyTable.pEnemyPath = pPath
 	end
+
 	local flDistSqr = math.max( 512, math.Remap( vPos:Distance( pEnemy:GetPos() ), 0, 4096, 512, 1024 ) ) / MyTable.flCombatState
 	flDistSqr = flDistSqr * flDistSqr
 	local vSuppressionPoint = sched.vSuppressionPoint
 	// TODO: Validate the point, duh xD
 	if vSuppressionPoint then
+		// TODO: Ignore this if we are the last guy suppressing and our allies need cover
 		local flTime = sched.flSuppressTime
-		if !flTime then flTime = CurTime() + math.Rand( MyTable.flShootTimeMin, MyTable.flShootTimeMax ) sched.flSuppressTime = flTime end
+		if !flTime then flTime = CurTime() + math.Rand( MyTable.flFreeMovementSuppressTimeMin, MyTable.flFreeMovementSuppressTimeMax ) sched.flSuppressTime = flTime end
+
 		if CurTime() > flTime then
-			local s = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
-			s.vMyStart = sched.vMyStart
-			s.vMyEnd = sched.vMyEnd
-			s.bGotALineOfSightBefore = true
+			local pSchedule = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
+			pSchedule.vMyStart = sched.vMyStart
+			pSchedule.vMyEnd = sched.vMyEnd
+			pSchedule.bGotALineOfSightBefore = true
 			return
 		end
+	
 		local trStandToCenter, trDuckToCenter = util_TraceLine {
 			start = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] ),
 			endpos = vSuppressionPoint,
@@ -173,9 +210,10 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 				return
 			end
 		end
-		local s = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
-		s.vMyStart = sched.vMyStart
-		s.vMyEnd = sched.vMyEnd
+
+		local pSchedule = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
+		pSchedule.vMyStart = sched.vMyStart
+		pSchedule.vMyEnd = sched.vMyEnd
 	end
 end } )
 
@@ -229,10 +267,10 @@ RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable
 	}
 	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
 		if !sched.bGotALineOfSightBefore then
-			local s = MyTable.SetSchedule( self, "FreeMovementStand", MyTable )
-			s.bGotALineOfSightBefore = true
-			s.vMyStart = sched.vMyStart
-			s.vMyEnd = sched.vMyEnd
+			local pSchedule = MyTable.SetSchedule( self, "FreeMovementStand", MyTable )
+			pSchedule.bGotALineOfSightBefore = true
+			pSchedule.vMyStart = sched.vMyStart
+			pSchedule.vMyEnd = sched.vMyEnd
 			return
 		end
 		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
@@ -325,6 +363,7 @@ RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable
 	end
 end } )
 
+// TODO: If we didn't have a LoS before, don't go for one! Suppress instead!
 RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
 	MyTable.tCover = nil
@@ -597,12 +636,16 @@ RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTa
 		mask = MASK_SHOT_HULL,
 		filter = tFilter
 	}
+
 	if !trStandToCenter.Hit || !trDuckToCenter.Hit then
 		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, trStandToCenter.Hit && 0 || 1 )
+
 		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
 		MyTable.CenterTarget( self, vTarget, MyTable )
+
 		local pWeapon = MyTable.Weapon
 		if !IsValid( pWeapon ) then return false end
+
 		local flRecoil = pWeapon.flRecoil
 		if flRecoil then
 			local flDistance = MyTable.GetShootPos( self, MyTable ):Distance( vTarget )
@@ -617,9 +660,11 @@ RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTa
 				MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax = .2
 			end
 		end
+	
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		return
 	end
+
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
