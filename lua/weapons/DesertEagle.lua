@@ -23,11 +23,10 @@ SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.WPN_SHOOT = WPN_PISTOL
 SWEP.flSidewaysRecoilMin = -.33
 SWEP.flSidewaysRecoilMax = .33
-SWEP.flRecoil = 5
+SWEP.flRecoil = 7.5
 SWEP.sHoldType = "Pistol"
 
 if file.Exists( "models/weapons/FC3W/FC3d50w.mdl", "GAME" ) then
-	SWEP.ViewModelFOV = 45
 	SWEP.ViewModel = "models/weapons/c_d50.mdl"
 	SWEP.WorldModel = "models/weapons/FC3W/FC3d50w.mdl"
 	function SWEP:GetReloadActivity( bOneInTheChamber ) return bOneInTheChamber && ACT_VM_RELOAD || ACT_VM_RELOAD_EMPTY end

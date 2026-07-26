@@ -4,14 +4,21 @@ SWEP.Category = "Shotguns"
 SWEP.PrintName = "#BenelliM4Super90"
 SWEP.Instructions = "Primary to shoot."
 SWEP.Purpose = "Benelli M4 Super 90."
+local EReloadStart, EReload, EReloadEnd
 if IsMounted "left4dead2" then
+	EReloadStart = ACT_VM_RELOAD
+	EReload = 2047
+	EReloadEnd = ACT_VM_RELOAD_END
+
 	function SWEP:GetDrawActivity() return ACT_VM_DEPLOY end
+
 	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
 	SWEP.ViewModel = Model "models/v_models/v_autoshotgun.mdl"
-	// I know I'm not supposed to do this (it's one of my core philosophies to never
-	// touch FoV and instead use flViewModelX), but oh well, this looks way better
-	SWEP.ViewModelFOV = 51
 else
+	EReloadStart = ACT_SHOTGUN_RELOAD_START
+	EReload = ACT_VM_RELOAD
+	EReloadEnd = ACT_SHOTGUN_RELOAD_FINISH
+
 	SWEP.flViewModelY = -4
 	SWEP.flViewModelZ = .5
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_shot_xm1014.mdl"
@@ -60,9 +67,7 @@ function SWEP:StartReload()
 	if self:GetReloading() then return end
 	local owner = self:GetOwner()
 	if !IsValid( owner ) || owner.GetAmmoCount && owner:GetAmmoCount( self.Primary.Ammo ) <= 0 || self:Clip1() >= self.Primary.ClipSize then return end
-	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
-	self:SetClip1( self:Clip1() + 1 )
-	self:SendWeaponAnim( ACT_VM_RELOAD )
+	self:SendWeaponAnim( EReloadStart )
 	local f = self:SequenceDuration()
 	self:SetReloadTimer( CurTime() + f )
 	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
@@ -76,7 +81,7 @@ function SWEP:PerformReload()
 	if self:Clip1() >= self.Primary.ClipSize then return end
 	if owner.RemoveAmmo then owner:RemoveAmmo( 1, self.Primary.Ammo, false ) end
 	self:SetClip1( self:Clip1() + 1 )
-	self:SendWeaponAnim( 2047 )
+	self:SendWeaponAnim( EReload )
 	local f = self:SequenceDuration()
 	if owner:IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
 	local t = CurTime() + f
@@ -86,7 +91,7 @@ end
 
 function SWEP:FinishReload()
 	self:SetReloading( false )
-	self:SendWeaponAnim( ACT_VM_RELOAD_END )
+	self:SendWeaponAnim( EReloadEnd )
 	local f = self:SequenceDuration()
 	if self:GetOwner():IsPlayer() then self:CallOnClient( "ReloadTime", f + .1 ) end
 	local t = CurTime() + f

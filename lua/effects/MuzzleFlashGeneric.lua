@@ -75,7 +75,7 @@ function EFFECT:Init( pData )
 	self.m_pEntity = pEntity
 
 	local vVelocity = IsValid( pOwner ) && pOwner:GetVelocity() || vector_origin
-	local pEmitter = ParticleEmitter( fGetPos(), true )
+	local pEmitter = ParticleEmitter( fGetPos() )
 	local flLifeTime = 1 / pData:GetMagnitude()
 	local flScale = 1 - .75 * math_random() * math_random()
 
