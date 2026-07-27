@@ -78,9 +78,11 @@ function EFFECT:Init( pData )
 	local pEmitter = ParticleEmitter( fGetPos() )
 	local flLifeTime = 1 / pData:GetMagnitude()
 	local flScale = 1 - .75 * math_random() * math_random()
+	local flHeatHazeScale = 1
 
-	// Fun fact: realistic muzzleflashes are so big that they cover half the screen
-	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then flScale = flScale * .5 end
+	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then
+		flScale = flScale * .5
+	else flHeatHazeScale = 1 / 3 end
 
 	local aAngles = pData:GetAngles()
 	local vForward = Vector( 1, 0, 0 )
@@ -130,7 +132,7 @@ function EFFECT:Init( pData )
 		pPart:SetDieTime( flLifeTime * math_Rand( 4, 8 ) )
 		pPart:SetStartAlpha( 0 )
 		pPart:SetEndAlpha( 255 )
-		pPart:SetStartSize( math_Rand( 32, 48 ) * flScale )
+		pPart:SetStartSize( math_Rand( 32, 48 ) * flScale * flHeatHazeScale )
 		pPart:SetEndSize( 0 )
 		pPart:SetRoll( math_Rand( 180, 480 ) )
 		pPart:SetRollDelta( math_Rand( -3, 3 ) )

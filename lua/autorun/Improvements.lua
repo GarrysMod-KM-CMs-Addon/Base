@@ -133,16 +133,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
 	end
 
-	local flShake = ply:GetNW2Float( "GAME_flShellShockShake", 0 )
-	if flShake > 0 then
-		ply:SetNW2Float( "GAME_flShellShockShake", Lerp( math.min( 1, 2 * flFrameTime ), flShake, 0 ) )
-		flShake = math.min( flShake, 40 ) * ply:GetNW2Float( "GAME_flShellShockShakeScale", 1 )
-		local flBreathe = RealTime() * flShake
-		local flForce = flFrameTime * flShake
-		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe * .5 ) * flForce
-		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe ) * flForce
-	end
-
+	// TODO: Implement terror when we're near lots of bodies
 	local flTerror = ply:GetNW2Float( "BODY_flTerror", 0 )
 	if flTerror > 0 then
 		local flBreathe = RealTime() * 2 * flTerror

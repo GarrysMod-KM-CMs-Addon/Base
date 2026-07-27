@@ -18,6 +18,29 @@ HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
 HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )
 
 local bit_band = bit.band
+
+function InRangeAttack( ent )
+	if ent.IN_RANGE_ATTACK then return true end
+	if ent.IN_NOT_RANGE_ATTACK then return end
+	if ent.CapabilitiesGet then
+		local c = ent:CapabilitiesGet()
+		if bit_band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+		bit_band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+		bit_band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+	end
+	local fGetActiveWeapon = ent.GetActiveWeapon
+	if !fGetActiveWeapon then return end
+	local pWeapon = fGetActiveWeapon( ent )
+	if !IsValid( pWeapon ) then return end
+	if !pWeapon.GetCapabilities then return end
+	local c = pWeapon:GetCapabilities()
+	if bit_band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+	bit_band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+	bit_band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+	bit_band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+end
+
 function HasRangeAttack( ent )
 	if ent.HAS_RANGE_ATTACK then return true end
 	if ent.HAS_NOT_RANGE_ATTACK then return end
@@ -48,6 +71,7 @@ function HasRangeAttack( ent )
 		end
 	end
 end
+
 function HasMeleeAttack( ent )
 	if ent.HAS_MELEE_ATTACK || IsValid( ent.GAME_pVehicle ) then return true end
 	if ent.HAS_NOT_MELEE_ATTACK then return end
@@ -130,14 +154,12 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 		if ent == Owner || Owner.Disposition && Owner:Disposition( ent ) == D_LI || ent.Disposition && ent:Disposition( Owner ) == D_LI then continue end
 		local p = ent:GetPos() + ent:OBBCenter()
 		local _, v = util_DistanceToLine( vStart, vEnd, p )
-		if ent:IsPlayer() then ent:SetNW2Float( "GAME_flShellShockShake", ent:GetNW2Float "GAME_flShellShockShake" + flDamage * .05 ) end
 		if util_TraceLine( {
 			start = v,
 			endpos = p,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilter( ent )
 		} ).Hit then continue end
-		if ent:IsPlayer() then ent:SetNW2Float( "GAME_flShellShockShake", ent:GetNW2Float "GAME_flShellShockShake" + flDamage * .2 ) end
 		if ent.GAME_tSuppressionAmount then
 			ent.GAME_tSuppressionAmount[ Owner ] = ( ent.GAME_tSuppressionAmount[ Owner ] || 0 ) + flDamage
 		else ent.GAME_tSuppressionAmount = { [ Owner ] = flDamage } end
@@ -1533,74 +1555,78 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			act:OnHeardSomething( dent, Data )
 		end
 	end
-	local cColor
-	local fCaptionColor = dent.CaptionColor
-	if fCaptionColor then
-		cColor = fCaptionColor( dent )
-	else
-		local fPlayerColor = dent.GetPlayerColor
-		if fPlayerColor then
-			cColor = fPlayerColor( dent ):ToColor()
-		else cColor = color_white end
-	end
-	local dts = dt * dt
-	local tCaptionPlayers = {}
-	for _, ply in player_Iterator() do
-		if ply:EyePos():DistToSqr( vPos ) > dts then continue end
-		table_insert( tCaptionPlayers, ply )
-		if NOT_A_VOICELINE[ Data.SoundName ] then continue end
-		if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
-		local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-		ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
-		local t = ply.DR_tSpotted
-		if t then t[ dent ] = 0
-		else ply.DR_tSpotted = { [ dent ] = 0 } end
-		local t = ply.DR_tMusicEntities
-		if t then t[ dent ] = true
-		else ply.DR_tMusicEntities = { [ dent ] = true } end
 
-		if f <= 0 then
-			ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
-			continue
+	if Data.Flags != SND_CHANGE_VOL && Data.Flags != SND_CHANGE_PITCH && Data.Flags != SND_STOP then
+		local cColor
+		local fCaptionColor = dent.CaptionColor
+		if fCaptionColor then
+			cColor = fCaptionColor( dent )
+		else
+			local fPlayerColor = dent.GetPlayerColor
+			if fPlayerColor then
+				cColor = fPlayerColor( dent ):ToColor()
+			else cColor = color_white end
 		end
+		local dts = dt * dt
+		local tCaptionPlayers = {}
+		for _, ply in player_Iterator() do
+			if ply:EyePos():DistToSqr( vPos ) > dts then continue end
+			table_insert( tCaptionPlayers, ply )
+			if NOT_A_VOICELINE[ Data.SoundName ] then continue end
+			if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+			local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+			ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
+			local t = ply.DR_tSpotted
+			if t then t[ dent ] = 0
+			else ply.DR_tSpotted = { [ dent ] = 0 } end
+			local t = ply.DR_tMusicEntities
+			if t then t[ dent ] = true
+			else ply.DR_tMusicEntities = { [ dent ] = true } end
 
-		if ( RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
-			local flVoVait = ply.DR_flVoWait
-			if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
+			if f <= 0 then
 				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
-				ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
-				local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
-				ply.DR_flIAmAlreadyInCombatForSomeTime = t
-				ply.DR_flIAmAlreadyInDangerForSomeTime = t
-				if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
-				else ply.DR_flVoDangerousWait = t end
+				continue
 			end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+	
+			if ( RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
+				local flVoVait = ply.DR_flVoWait
+				if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
+					ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+					ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. Data.SoundName .. "\")" )
+					local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 )
+					ply.DR_flIAmAlreadyInCombatForSomeTime = t
+					ply.DR_flIAmAlreadyInDangerForSomeTime = t
+					if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
+					else ply.DR_flVoDangerousWait = t end
+				end
+				f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
+				continue
+			end
+	
+			if ( RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
+				ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
+				ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
+				local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+				ply.DR_flIAmAlreadyInDangerForSomeTime = t
+				if f <= 0 then ply.DR_flVoWait = RealTime()
+				else ply.DR_flVoWait = t end
+				f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
+				continue
+			end
+	
+			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
-			continue
 		end
 
-		if ( RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
-			ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
-			ply:SendLua( "Director_VoiceLineHook(\"" .. Data.SoundName .. "\")" )
-			local t = RealTime() + math.min( SoundDuration( Data.SoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-			ply.DR_flIAmAlreadyInDangerForSomeTime = t
-			if f <= 0 then ply.DR_flVoWait = RealTime()
-			else ply.DR_flVoWait = t end
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
-			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
-			continue
+		if !table_IsEmpty( tCaptionPlayers ) then
+			net_Start( "CaptionSound", false )
+				net_WriteColor( cColor, false )
+				net_WriteString( sSoundName )
+				net_WriteFloat( flDuration )
+			net_Send( tCaptionPlayers )
 		end
-
-		f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
-		ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
-	end
-	if !table_IsEmpty( tCaptionPlayers ) then
-		net_Start( "CaptionSound", false )
-			net_WriteColor( cColor, false )
-			net_WriteString( sSoundName )
-			net_WriteFloat( flDuration )
-		net_Send( tCaptionPlayers )
 	end
 	return true
 end )

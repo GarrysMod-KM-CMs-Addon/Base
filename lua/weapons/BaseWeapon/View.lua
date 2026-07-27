@@ -253,13 +253,13 @@ function SWEP:CalcView( ply, pos, ang )
 		end
 	end
 
-	local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, UNIVERSAL_FOV * .8 )
+	local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, UNIVERSAL_FOV * .9 )
 	MyTable.flFoV = f
 	return pos, ang, f
 end
 
 SWEP.flViewModelSprint = 0
-SWEP.flAimShootTurn = .033
+SWEP.flAimShootTurn = 1 / 30
 SWEP.flAimSpeed = 5
 
 local COVER_BLINDFIRE_LEFT_POSE = Vector( 0, -11, 3 )
@@ -322,7 +322,6 @@ local flAimingRecoilPistolJump, flAimingRecoilPistolJumpLerped = 0, 0
 local flHipRecoilBack, flHipRecoilBackLerped = 0, 0
 local flHipRecoilPitchTurn, flHipRecoilPitchTurnLerped = 0, 0
 local flHipRecoilYawTurn, flHipRecoilYawTurnLerped = 0, 0
-local flHipRecoilUp, flHipRecoilUpLerped = 0, 0
 
 local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
 	local flDelay = math_min( MyTable.Primary_flDelay, .2 )
@@ -338,7 +337,6 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 		// Add reliance on WPN_SHOOT, plus implement WPN_SUBMACHINEGUN
 		flHipRecoilPitchTurn = tAnimation[ 2 ] * 15 * flAimMultiplier
 		flHipRecoilYawTurn = tAnimation[ 3 ] * 30 * flAimMultiplier
-		flHipRecoilUp = math_abs( tAnimation[ 2 ] ) * 90 * flAimMultiplier
 
 		flAimingRecoilBack = 6 * flAimingFireMul
 		flAimingRecoilPitchTurn = tAnimation[ 2 ] * 2 * flAimingFireMul
@@ -358,9 +356,6 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 	flHipRecoilYawTurn = Lerp( math_min( 1, 1 / flDelay * flFrameTime ), flHipRecoilYawTurn, 0 )
 	flHipRecoilYawTurnLerped = Lerp( math_min( 1, 3 / flDelay * flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
 
-	flHipRecoilUp = Lerp( math_min( 1, 2 / flDelay * flFrameTime ), flHipRecoilUp, 0 )
-	flHipRecoilUpLerped = Lerp( math_min( 1, 2 / flDelay * flFrameTime ), flHipRecoilUpLerped, flHipRecoilUp )
-
 
 	flAimingRecoilBack = Lerp( math_min( 1, .9 / flDelay * flFrameTime ), flAimingRecoilBack, 0 )
 	flAimingRecoilBackLerped = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
@@ -377,13 +372,11 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 
 	pos:Sub( ang:Forward() * flAimingRecoilBackLerped )
 	pos:Sub( ang:Forward() * flHipRecoilBackLerped )
-	pos:Add( ang:Up() * flHipRecoilUpLerped * ( 1 / 30 ) )
 	pos:Sub( ang:Forward() * flAimingRecoilPistolJumpLerped * ( MyTable.WPN_SHOOT == WPN_PISTOL && 5 || ( MyTable.WPN_SHOOT == WPN_SHOTGUN && 3 || 0 ) ) )
 
 	flPitchTurn = flPitchTurn
 	+ flAimingRecoilPitchTurnLerped
 	+ flHipRecoilPitchTurnLerped
-	+ flHipRecoilUpLerped
 	+ flAimingRecoilPistolJumpLerped * ( MyTable.WPN_SHOOT == WPN_PISTOL && 50 || ( MyTable.WPN_SHOOT == WPN_SHOTGUN && 10 || 0 ) )
 
 	flYawTurn = flYawTurn
@@ -633,9 +626,11 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	//	if bZoom then flMultiplier = math_Approach( MyTable.flAimMultiplier, 0, MyTable.flAimSpeed * flFrameTime )
 	//	else flMultiplier = math_Approach( MyTable.flAimMultiplier, 1, MyTable.flAimSpeed * flFrameTime ) end
 	if bZoom then
-		flMultiplier = math_max( 0, flMultiplier - flMultiplier ^ .5 * MyTable.flAimSpeed * flFrameTime )
+		flMultiplier = Lerp( math_min( 1, MyTable.flAimSpeed * flFrameTime ), flMultiplier, 0 )
+		//	flMultiplier = math_max( 0, flMultiplier - flMultiplier ^ .5 * MyTable.flAimSpeed * flFrameTime )
 	else
-		flMultiplier = math_min( 1, flMultiplier + ( 1 - flMultiplier ) ^ .5 * MyTable.flAimSpeed * flFrameTime )
+		flMultiplier = Lerp( math_min( 1, MyTable.flAimSpeed * flFrameTime ), flMultiplier, 1 )
+		//	flMultiplier = math_min( 1, flMultiplier + ( 1 - flMultiplier ) ^ .5 * MyTable.flAimSpeed * flFrameTime )
 	end
 
 	MyTable.flAimMultiplier = flMultiplier
