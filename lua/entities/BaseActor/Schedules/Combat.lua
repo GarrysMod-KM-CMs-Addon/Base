@@ -1,3 +1,5 @@
+// TODO: This whole file is old, awful, and needs to be broken down into smaller files like I've done with FreeMovement!
+
 local table_IsEmpty = table.IsEmpty
 local HasRangeAttack, HasMeleeAttack = HasRangeAttack, HasMeleeAttack
 local util_TraceLine = util.TraceLine
@@ -66,6 +68,52 @@ for a = STEP, 22.5, STEP do
 	table.insert( ACTOR_PITCH_ANGLES_SHORT_RIGHT, -a )
 end
 
+function ENT:FindAlarm( MyTable )
+	local flAlarm, vPos, pAlarm = math.huge, MyTable.GetShootPos( self ), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
+	local t = __ALARMS__[ self:Classify() ]
+	if t then
+		for ent in pairs( t ) do
+			if !IsValid( ent ) || ent.bIsOn then continue end
+			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
+			// Don't go out of audible range, even if an ally alarm. Why?
+			// Because it's not funny to run kilometers away from the battlefield to it like an idiot
+			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
+			local f = ent.flCoolDown
+			if CurTime() <= f then continue end
+			local b
+			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if b then continue end
+			pAlarm, flAlarm = ent, d
+		end
+	end
+	if IsValid( pAlarm ) then return pAlarm end
+	t = __ALARMS__[ CLASS_NONE ]
+	if t then
+		for ent in pairs( t ) do
+			if !IsValid( ent ) || ent.bIsOn then continue end
+			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
+			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
+			local f = ent.flCoolDown
+			if f && CurTime() <= f then continue end
+			local b
+			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if b then continue end
+			pAlarm, flAlarm = ent, d
+		end
+	end
+	if IsValid( pAlarm ) then return pAlarm end
+end
+
+function ENT:PullAlarmIfAvailable( MyTable )
+	local pAlarm = MyTable.FindAlarm( self, MyTable )
+	if IsValid( pAlarm ) then
+		local pSchedule = MyTable.SetSchedule( self, "PullAlarm", MyTable )
+		pSchedule.pAlarm = pAlarm
+		MyTable.pAlarm = pAlarm
+		return true
+	end
+end
+
 local PLANT_TIME_MINIMUM = 1
 local PLANT_TIME_MAXIMUM = 2
 
@@ -93,29 +141,39 @@ function ENT:DLG_Charge() end
 RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 	// Remind me of this when we actually get cover animations lmao
 	MyTable.WEAPON_STANCE = CurTime() <= ( sched.flSweep || 0 ) && WEAPON_STANCE_AIMING || WEAPON_STANCE_PASSIVE
+
 	local tEnemies = sched.tEnemies || MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
+
 	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovementStand", MyTable ) return end
+
 	local enemy = MyTable.Enemy
 	if !IsValid( enemy ) then return true end
+
 	local enemy, trueenemy = MyTable.SetupEnemy( self, enemy, MyTable )
+
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
+
 	local tCover = MyTable.tCover
 	if !tCover || !MyTable.vCover then
 		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
+
 	local pEntity = tCover[ 6 ]
 	if pEntity != nil && !IsValid( pEntity ) then
 		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
+
 	local vec = MyTable.vCover
 	if !vec then
 		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
+
 	MyTable.Stand( self, sched.iStand )
+
 	if sched.bRetreat then
 		if LevelOfDetail( sched, "flNextSearch" ) then
 			local tCover = MyTable.tCover
@@ -272,7 +330,9 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		end
 		return
 	end
+
 	if MyTable.flCombatState > 0 && !sched.bBeganAdvanceSearching then
+		if MyTable.PullAlarmIfAvailable( self, MyTable ) then return end
 		sched.bBeganAdvanceSearching = true
 		ACTOR_QUEUE( function()
 			if !IsValid( self ) || !IsValid( enemy ) || MyTable.Schedule != sched || MyTable.flCombatState <= 0 then return true end
@@ -587,6 +647,7 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 			end
 		end )
 	end
+	
 	if sched.bAdvance && sched.tNextCover != nil then
 		if sched.tNextCover == false then
 			local s = MyTable.SetSchedule( self, "FreeMovementSearch", MyTable )
@@ -608,22 +669,7 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		sched.tNextCover = nil
 		return
 	end
-	if !LevelOfDetail( sched, "flNextCheck" ) then return end
-	MyTable.vActualCover = vec
-	if !sched.Path then sched.Path = Path "Follow" end
-	MyTable.ComputePath( self, sched.Path, MyTable.vCover, MyTable )
-	local tAllies = self:GetAlliesByClass()
-	if tAllies then
-		local f = self:BoundingRadius()
-		f = f * f
-		for ally in pairs( tAllies ) do
-			if self == ally then continue end
-			if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil self:SetSchedule "TakeCover" return end
-		end
-	end
-	local f = MyTable.flPathTolerance * 1.5
-	if self:GetPos():DistToSqr( vec ) > ( f * f ) then MyTable.vCover = nil MyTable.tCover = nil return end
-	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
+
 	// Don't even try to repath often!
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
@@ -631,13 +677,35 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		MyTable.ComputeFlankPath( self, pEnemyPath, enemy )
 		MyTable.pEnemyPath = pEnemyPath
 	end
+
 	pEnemyPath:MoveCursorToClosestPosition( vec )
 	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
 	pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
 	d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
 	d[ 3 ] = 0
 	d:Normalize()
+
+	local b = CurTime() > ( sched.flSweep || 0 )
+	if b && math.Rand( 0, 500 * FrameTime() ) <= 1 then sched.flSweep = CurTime() + math.Rand( .75, 2 ) end
+	MyTable.vaAimTargetBody = ( b && d || -d ):Angle()
+	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+
+	if !LevelOfDetail( sched, "flNextCheck" ) then return end
+
+	MyTable.vActualCover = vec
+
+	local pPath = sched.pPath
+	if !pPath then pPath = Path "Follow" sched.pPath = pPath end
+
+	MyTable.ComputePath( self, pPath, MyTable.vCover, MyTable )
+
+	local f = MyTable.flPathTolerance * 1.5
+	if self:GetPos():DistToSqr( vec ) > ( f * f ) then MyTable.vCover = nil MyTable.tCover = nil return end
+
+	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
+
 	if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
+
 	if !util_TraceLine( {
 		start = v,
 		endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
@@ -649,17 +717,16 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
+
 	v = vec + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
 	sched.bDuck = nil
+
 	sched.iStand = util_TraceLine( {
 		start = v,
 		endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
 		filter = self
 	} ).Hit && 1 || 0
-	local b = CurTime() > ( sched.flSweep || 0 )
-	if b && math.Rand( 0, 500 * FrameTime() ) <= 1 then sched.flSweep = CurTime() + math.Rand( .75, 2 ) end
-	MyTable.vaAimTargetBody = ( b && d || -d ):Angle()
-	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+
 	if !MyTable.CanExpose( self ) then
 		sched.bAdvance = nil
 		sched.bRetreat = nil
@@ -672,59 +739,22 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		end
 		return
 	end
+
 	if CurTime() <= ( sched.flSuppressedShort || 0 ) then return end
+
 	sched.bPinned = nil
+
 	if CurTime() <= ( sched.flSuppressed || 0 ) then return end
-	local flAlarm, vPos, pAlarm = math.huge, self:GetShootPos(), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )
-	local t = __ALARMS__[ self:Classify() ]
-	if t then
-		for ent in pairs( t ) do
-			if !IsValid( ent ) || ent.bIsOn then continue end
-			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
-			// Don't go out of audible range, even if an ally alarm. Why?
-			// Because it's not funny to run kilometers away from the battlefield to it like an idiot
-			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
-			local f = ent.flCoolDown
-			if CurTime() <= f then continue end
-			local b
-			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
-			if b then continue end
-			pAlarm, flAlarm = ent, d
-		end
-	end
-	if IsValid( pAlarm ) then
-		local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
-		s.pAlarm = pAlarm
-		MyTable.pAlarm = pAlarm
-		return
-	end
-	t = __ALARMS__[ CLASS_NONE ]
-	if t then
-		for ent in pairs( t ) do
-			if !IsValid( ent ) || ent.bIsOn then continue end
-			local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
-			if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
-			local f = ent.flCoolDown
-			if f && CurTime() <= f then continue end
-			local b
-			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
-			if b then continue end
-			pAlarm, flAlarm = ent, d
-		end
-	end
-	if IsValid( pAlarm ) then
-		local s = MyTable.SetSchedule( self, "PullAlarm", MyTable )
-		s.pAlarm = pAlarm
-		MyTable.pAlarm = pAlarm
-		return
-	end
+
 	local pPath = MyTable.pEnemyPath
 	if !pPath then pPath = Path "Follow" MyTable.pEnemyPath = pPath end
 	MyTable.ComputeFlankPath( self, pPath, enemy )
+
 	if math.Rand( 0, 1 + self.flAdvanceTimes * math.Remap( self.flCombatState, 0, 1, 4, 2 ) / self.flFireTimes ) <= 1 then
 		if MyTable.flCombatState > 0 then sched.bAdvance = true else sched.bRetreat = true end
 		return
 	end
+
 	local vStart, vEnd, bRight = tCover[ 1 ], tCover[ 2 ], tCover[ 3 ]
 	local dDirection = vEnd - vStart
 	dDirection:Normalize()
