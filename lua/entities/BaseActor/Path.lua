@@ -9,6 +9,12 @@ local math_Remap = math.Remap
 local math_Clamp = math.Clamp
 local math_max = math.max
 local math_min = math.min
+local math_Round = math.Round
+
+local Format = Format
+local IsValid = IsValid
+local sv_gravity = GetConVar "sv_gravity"
+local util_TraceLine = util.TraceLine
 
 function ENT:DontRePath( pPath, vPos, vGoal, MyTable )
 	pPath:MoveCursorToClosestPosition( vPos )
@@ -55,133 +61,6 @@ function ENT:ComputePath( Path, vGoal, Weighter )
 	end )
 end
 
-// How far do We have to move along the path to be able to suppress anyone? Can return nil
-
-function ENT:FindPathBattleLine( Path, tEnemies, flTolerance )
-	flTolerance = flTolerance || 256
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	local flSuppressionTraceFraction = self.flSuppressionTraceFraction
-	for I = 0, Path:GetLength(), flTolerance do
-		local vec = Path:GetPositionOnPath( I )
-		for enemy in pairs( tEnemies ) do
-			if !IsValid( enemy ) then continue end
-			local vShoot = enemy:GetPos() + enemy:OBBCenter()
-			local tr = util.TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-			local tr = util.TraceLine {
-				start = vec + vDuck,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-		end
-	end
-end
-
-function ENT:FindPathBattleLineNoAllies( Path, tEnemies, flTolerance )
-	flTolerance = flTolerance || 256
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	local flSuppressionTraceFraction = self.flSuppressionTraceFraction
-	for I = 0, Path:GetLength(), flTolerance do
-		local vec = Path:GetPositionOnPath( I )
-		for enemy in pairs( tEnemies ) do
-			if !IsValid( enemy ) then continue end
-			local vShoot = enemy:GetPos() + enemy:OBBCenter()
-			local tr = util.TraceLine {
-				start = vec + vStand,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-			local tr = util.TraceLine {
-				start = vec + vDuck,
-				endpos = vShoot,
-				mask = MASK_SHOT_HULL,
-				filter = { self, enemy, trueenemy }
-			}
-			if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-		end
-	end
-end
-function ENT:FindPathBattleLineNoAlliesToVector( Path, vShoot, flTolerance )
-	flTolerance = flTolerance || 256
-	local vStand, vDuck = Vector( 0, 0, self.vHullMaxs.z )
-	if self.vHullDuckMaxs && vStand.z != self.vHullDuckMaxs.z then vDuck = Vector( 0, 0, self.vHullDuckMaxs.z ) end
-	local flSuppressionTraceFraction = self.flSuppressionTraceFraction
-	for I = 0, Path:GetLength(), flTolerance do
-		local vec = Path:GetPositionOnPath( I )
-		local tr = util.TraceLine {
-			start = vec + vStand,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		}
-		if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-		local tr = util.TraceLine {
-			start = vec + vDuck,
-			endpos = vShoot,
-			mask = MASK_SHOT_HULL,
-			filter = { self, enemy, trueenemy }
-		}
-		if tr.Fraction > flSuppressionTraceFraction && tr.HitPos:Distance( vShoot ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then return I end
-	end
-end
-
-local bit_band = bit.band
-function ENT:ComputeVehiclePath( Path, vGoal )
-	local MyTable = CEntity_GetTable( self )
-	local f = MyTable.flPathTolerance
-	f = f * f
-	local veh = MyTable.GAME_pVehicle
-	Path:MoveCursorToClosestPosition( veh:GetPos() )
-	if Path:GetPositionOnPath( Path:GetCursorPosition() ):Distance2DSqr( veh:GetPos() ) <= f && Path:GetEnd():DistToSqr( vGoal ) <= f then return true end
-	local loco = MyTable.loco
-	local flStepHeight = loco:GetStepHeight()
-	local VehTable = CEntity_GetTable( veh )
-	local t = veh.TRAVERSES
-	local bDoCheck, bDisAllowWater, bDisAllowGround, bAllowWater = true
-	if bit_band( t, TRAVERSES_AIR ) == 0 then
-		bDisAllowWater, bDisAllowGround = bit_band( t, TRAVERSES_WATER ) == 0, bit_band( t, TRAVERSES_GROUND ) == 0
-		bAllowWater = !bDisAllowWater
-	else bDoCheck = nil end
-	local flStepHeightNeg
-	if bAllowWater then flStepHeightNeg = veh:BoundingRadius() end
-	local IsAreaTraversable = loco.IsAreaTraversable
-	return Path, Path:Compute( self, vGoal, function( area, from, ladder, elevator, length )
-		if !IsValid( fromArea ) then return 0 end
-		if !IsAreaTraversable( loco, area ) then return -1 end
-		local bUnderwater
-		if bDoCheck then
-			bUnderwater = area:IsUnderwater()
-			if bUnderwater then if bDisAllowWater then return -1 end
-			elseif bDisAllowGround then return -1 end
-		end
-		local dist = 0
-		if IsValid( ladder ) then
-			dist = ladder:GetLength()
-		elseif length > 0 then
-			dist = length
-		else
-			dist = ( area:GetCenter() - from:GetCenter() ):GetLength()
-		end
-		local cost = dist + from:GetCostSoFar()
-		local d = from:ComputeAdjacentConnectionHeightChange( area )
-		if ( bDoCheck && bAllowWater && bUnderwater && from:IsUnderwater() || !bDoCheck ) && ( d > flStepHeight ||
-		// Don't jump down into water as it usually results in the boat getting flipped over
-		bAllowWater && area:IsUnderwater() && d < flStepHeightNeg ) then return -1 end
-		return cost
-	end )
-end
-
 // Done really roughly and needs to be improved... but whatever
 local ACTOR_FLANK_PATHS_SPATIAL_PARTITION_CELL_SIZE = 256
 
@@ -208,12 +87,6 @@ hook.Add( "Think", "ActorFlankPath", function()
 	end
 	__ACTOR_FLANK_PATHS__, __ACTOR_FLANK_PATHS_LOCAL__ = tNew, tNew
 end )
-
-local math_Round = math.Round
-
-local Format = Format
-
-local IsValid = IsValid
 
 function ENT:ComputeFlankPath( Path, pEnemy )
 	local MyTable = CEntity_GetTable( self )
@@ -274,73 +147,81 @@ function ENT:ComputeFlankPath( Path, pEnemy )
 	return Path, bStatus
 end
 
-local sv_gravity = GetConVar "sv_gravity"
-
-local util_TraceLine = util.TraceLine
-local math_min = math.min
-
 // Tries to jump to vTarget
 function ENT:Jump( vTarget, bJumpGap, MyTable )
 	local flGravity = sv_gravity:GetFloat()
-	local loco = self.loco
-	local vVelocity = loco:GetVelocity()
-	local flOriginal // NOT flJumpHeight!!!
-	= loco:GetJumpHeight()
+
+	local pLocomotion = self.loco
+	local vVelocity = pLocomotion:GetVelocity()
+	local flJumpHeight = pLocomotion:GetJumpHeight()
+
 	local vStart = self:GetPos()
 	local vMiddle = LerpVector( .5, vStart, vTarget )
 	local flZ = vStart[ 3 ]
-	local vOriginal = Vector( 0, 0, flOriginal )
-	local flJumpHeight = flOriginal * math_min( util_TraceLine( {
+	local vJump = Vector( 0, 0, flJumpHeight )
+
+	local flTargetHeight = math_min( flJumpHeight, util_TraceLine( {
 		start = vStart,
-		endpos = vStart + vOriginal,
+		endpos = vStart + vJump,
 		mask = MASK_SOLID,
 		filter = self
 	} ).HitPos[ 3 ] - flZ, util_TraceLine( {
 		start = vMiddle,
-		endpos = vMiddle + vOriginal,
+		endpos = vMiddle + vJump,
 		mask = MASK_SOLID,
 		filter = self
 	} ).HitPos[ 3 ] - flZ, util_TraceLine( {
 		start = vTarget,
-		endpos = vTarget + vOriginal,
+		endpos = vTarget + vJump,
 		mask = MASK_SOLID,
 		filter = self
 	} ).HitPos[ 3 ] - flZ )
+
 	local flDelta = math.abs( vTarget[ 1 ] - vStart[ 1 ] )
-	if flDelta > flJumpHeight then return end
+	if flDelta > flTargetHeight then return end
+
 	local flJumpLength = vVelocity:Length() * ( 2 * flGravity * flJumpHeight ) ^ .5 / flGravity
 	if vStart:Distance2D( vTarget ) > flJumpLength then return end
-	local flDistance = vStart:Distance( vTarget )
-	local flDifference = math_max( 0, vVelocity:GetNormalized():Dot( ( vTarget - vStart ):GetNormalized() ) )
-	loco:SetJumpHeight( math_Clamp( flDelta + ( ( flDistance - flDifference * vVelocity:Length() ) * 2 * flGravity ) ^ 2 / ( 2 * flGravity ), 0, flOriginal ) )
-	loco:JumpAcrossGap( vTarget, self:GetForward() )
-	loco:SetJumpHeight( flOriginal )
+
+	pLocomotion:SetJumpHeight( math_Clamp( math.abs( vTarget[ 3 ] - flZ ) * 2, 0, flJumpHeight ) )
+	pLocomotion:JumpAcrossGap( vTarget, self:GetForward() )
+	pLocomotion:SetJumpHeight( flJumpHeight )
+
 	self.m_flJumpStartTime = CurTime()
 	self.m_bJumping = true
 end
 
 ENT.flNavigationAvoidTime = 0
 function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
-	self.loco:SetStepHeight( self.vHullMaxs[ 1 ] )
+	local pLocomotion = self.loco
+
+	pLocomotion:SetStepHeight( self.vHullMaxs[ 1 ] * .25 )
+
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
 		return
 	end
-	local goal, tNextGoal = pPath:GetCurrentGoal(), pPath:NextSegment()
-	if goal && tNextGoal then
-		if goal.type == 2 || goal.type == 3 then
+
+	local pGoal, tNextGoal = pPath:GetCurrentGoal(), pPath:NextSegment()
+	if pGoal && tNextGoal then
+		if pGoal.type == 2 || pGoal.type == 3 then
 			self:Jump( tNextGoal.pos )
 			pPath:Update( self )
 			return
 		end
 	end
+
 	if CurTime() <= self.flNavigationAvoidTime then
-		self.loco:Approach( self:GetPos() + self.vNavigationAvoidDirection, 1 )
+		pLocomotion:Approach( self:GetPos() + self.vNavigationAvoidDirection, 1 )
 		return
 	end
-	if !goal then pPath:Update( self ) return end
-	local aVelocity = goal.forward:Angle()
+
+	if !pGoal then pPath:Update( self ) return end
+
+	local aVelocity = pGoal.forward:Angle()
+
 	tFilter = tFilter || { self }
+
 	local trHull = util.TraceHull {
 		start = self:GetPos(),
 		endpos = self:GetPos() + aVelocity:Forward() * self:OBBMaxs()[ 1 ],
@@ -348,6 +229,7 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 		maxs = self:OBBMaxs(),
 		filter = tFilter
 	}
+
 	if trHull.Hit && !trHull.HitWorld then
 		local trLeft, trRight = util.TraceHull {
 			start = self:GetPos(),
@@ -362,6 +244,7 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 			maxs = self:OBBMaxs(),
 			filter = self
 		}
+
 		local bLeft, bRight = trLeft.Hit && !trLeft.HitWorld, trRight.Hit && !trRight.HitWorld
 		if bLeft && bRight then
 			if math.random( 2 ) == 1 then
@@ -369,18 +252,19 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 			else
 				self.vNavigationAvoidDirection = aVelocity:Right()
 			end
-			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
+			self.flNavigationAvoidTime = CurTime() + math.random()
 			return
 		elseif bLeft then
-			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
+			self.flNavigationAvoidTime = CurTime() + math.random()
 			self.vNavigationAvoidDirection = -aVelocity:Right()
 			return
 		else
-			self.flNavigationAvoidTime = CurTime() + math.Rand( 1, 2 )
+			self.flNavigationAvoidTime = CurTime() + math.random()
 			self.vNavigationAvoidDirection = aVelocity:Right()
 			return
 		end
 	end
+
 	pPath:Update( self )
 end
 
