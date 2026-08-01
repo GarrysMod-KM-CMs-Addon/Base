@@ -1,4 +1,4 @@
-local VELOCITY = 3072
+local VELOCITY = 6144
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 

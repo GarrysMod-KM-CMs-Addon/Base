@@ -339,7 +339,7 @@ hook.Add( "Tick", "Graphics", function()
 	flDepthOfField = Lerp(
 		math_min( 1, 5 * flFrameTime ),
 		flDepthOfField,	
-		math_Clamp( flDistance, 0, 6144 )
+		flDistance
 	)
 	flSpacing = Lerp(
 		math_min( 1, 5 * flFrameTime ),
@@ -365,8 +365,6 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		DrawBlur( flBleedingBlur )
 		DrawMotionBlur( flBleedingMotionBlurAdd, flBleedingMotionBlurDraw, 0 )
 	end
-
-	DrawMotionBlur( .66, 1, 0 )
 
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,

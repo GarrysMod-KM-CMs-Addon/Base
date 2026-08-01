@@ -919,11 +919,13 @@ local CPlayer_GetRunSpeed = CPlayer.GetRunSpeed
 local CPlayer_Give = CPlayer.Give
 local ents_Create = ents.Create
 local util_TraceHull = util.TraceHull
+
 local function BloodlossStuff( ply, cmd )
 	local flBlood = ply:GetNW2Float( "GAME_flBlood", 1 )
 	if flBlood <= .8 then cmd:RemoveKey( IN_SPEED ) end
 	if flBlood <= .6 then cmd:AddKey( IN_DUCK ) cmd:AddKey( IN_WALK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
 end
+
 function GameImprovements_StartCommand( ply, cmd )
 	if !ply:Alive() then return end
 	ply.m_iOriginalButtons = cmd:GetButtons()
@@ -1444,17 +1446,23 @@ function QuickSlide_Handle( ply )
 		local v = ply:GetAimVector()
 		v.z = 0
 		v:Normalize()
-		local flJogSpeed = ply:GetRunSpeed()
+
+		local flSpeed = ply.GAME_flSlideSpeed || ply:GetRunSpeed() * 1.5
 		local t = CEntity_GetTable( ply )
-		f = f - ( ply.GAME_flSlideSpeed || flJogSpeed * 1.5 ) * ( t.CTRL_flSlideSpeedDecay || .4 ) * FrameTime()
+		f = f - flSpeed * ( t.CTRL_flSlideSpeedDecay || ( 2 / 3 ) ) * FrameTime()
+
 		CEntity_SetNW2Float( ply, "CTRL_flSlideSpeed", f )
+
 		local s = t.CTRL_pSlideLoop
 		if s then
-			s:ChangeVolume( vel:Length() / flJogSpeed )
-			local p = vel:Length() / flJogSpeed
+			s:ChangeVolume( vel:Length() / flSpeed )
+			local p = vel:Length() / flSpeed
 			s:ChangeVolume( p )
 			s:ChangePitch( math.Remap( p, 0, 1, 80, 100 ) )
 		end
+
+		t.GAME_flNextSlide = CurTime() + 1
+
 		return v * f
 	else
 		local t = CEntity_GetTable( ply )
@@ -1466,6 +1474,7 @@ function QuickSlide_Handle( ply )
 		CEntity_SetNW2Bool( ply, "CTRL_bSliding", false )
 	end
 end
+
 function QuickSlide_Start( ply, t )
 	if ply:IsPlayer() then Achievement_Miscellaneous( ply, "Slide" ) end
 	CEntity_SetNW2Bool( ply, "CTRL_bSliding", true )
@@ -1476,11 +1485,13 @@ function QuickSlide_Start( ply, t )
 	t.CTRL_pSlideLoop = s
 	s:Play()
 end
+
 function QuickSlide_CalcLength( ply )
 	local v = ply.GAME_flSlideSpeed || ply:GetRunSpeed() * 1.5
-	local d = v * ( CEntity_GetTable( ply ).CTRL_flSlideSpeedDecay || .4 )
+	local d = v * ( CEntity_GetTable( ply ).CTRL_flSlideSpeedDecay || ( 2 / 3 ) )
 	return ( v * v ) / ( 2 * d )
 end
+
 hook.Add( "Move", "GameImprovements", function( ply, mv )
 	if ply:Alive() then
 		if !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && QuickSlide_Can( ply ) then

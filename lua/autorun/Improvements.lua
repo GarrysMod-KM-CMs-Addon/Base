@@ -95,7 +95,12 @@ hook.Add( "PlayerStepSoundTime", "Improvements", function( ply, EType, bWalk )
 	return 500
 end )
 
-function QuickSlide_Can( ply, t ) if t == nil then t = CEntity_GetTable( ply ) end return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !Either( t.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, t.CTRL_bCantSlide ) && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9 ) end
+function QuickSlide_Can( ply, t )
+	if t == nil then t = CEntity_GetTable( ply ) end
+	local flNextSlide = t.GAME_flNextSlide
+	if flNextSlide && CurTime() <= flNextSlide then return end
+	return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !Either( t.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, t.CTRL_bCantSlide ) && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9  )
+end
 
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local ang = cmd:GetViewAngles()

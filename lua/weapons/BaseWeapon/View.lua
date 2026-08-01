@@ -401,7 +401,7 @@ local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTur
 	WEAPON_SWAY[ 1 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 1 ], -flSwayScale, flSwayScale ), 0 )
 	WEAPON_SWAY[ 2 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 2 ], -flSwayScale, flSwayScale ), 0 )
 
-	flLerpSpeed = math_min( 1, 10 * flFrameTime )
+	flLerpSpeed = math_min( 1, 15 * flFrameTime )
 
 	vActualSway[ 1 ] = Lerp( flLerpSpeed, vActualSway[ 1 ], WEAPON_SWAY[ 1 ] )
 	vActualSway[ 2 ] = Lerp( flLerpSpeed, vActualSway[ 2 ], WEAPON_SWAY[ 2 ] )
