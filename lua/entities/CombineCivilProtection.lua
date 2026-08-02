@@ -44,7 +44,7 @@ function ENT:Initialize()
 end
 
 function ENT:OnKilled( ... )
-	self:EmitSentence { SOUND = "CombineCivilProtectionDeath" }
+	self:EmitSentence { sSentence = "CombineCivilProtectionDeath" }
 	self:HandleSentences()
 	return BaseClass.OnKilled( self, ... )
 end

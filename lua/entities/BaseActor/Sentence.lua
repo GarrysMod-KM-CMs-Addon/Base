@@ -30,10 +30,10 @@ function ENT:HandleSentences( MyTable )
 	if !pLast then return end
 	local pNext = MyTable.m_pNextSentence || pLast.pNext
 	local tSentence = pNext.tSentence
-	local sSentence = tSentence.SOUND
+	local sSentence = tSentence.sSentence
 	local pSound = CreateSound( self, sSentence )
 	pSound:Play()
-	MyTable.m_flSpeechTime = CurTime() + MyTable.GAME_flLastSoundDuration * ( tSentence.MULTIPLIER || .95 ) + ( tSentence.DELAY || 0 )
+	MyTable.m_flSpeechTime = CurTime() + MyTable.GAME_flLastSoundDuration * ( tSentence.flMultiplier || .95 ) + ( tSentence.flDelay || 0 )
 	if pNext.pNext == pNext then
 		MyTable.m_pLastSentence = nil
 		MyTable.m_pNextSentence = nil
