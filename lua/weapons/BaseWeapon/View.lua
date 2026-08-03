@@ -1,6 +1,7 @@
-include "FRILerpRate.lua"
+local min = math.min
+local exp = math.exp
 
-local FRILerpRate = FRILerpRate
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
 
 local CEntity = FindMetaTable "Entity"
 local CPlayer = FindMetaTable "Player"
@@ -9,7 +10,6 @@ local CEntity_GetTable = CEntity.GetTable
 local CEntity_IsOnGround = CEntity.IsOnGround
 local CEntity_GetNW2Bool = CEntity.GetNW2Bool
 local math_Clamp = math.Clamp
-local math_min = math.min
 local CPlayer_KeyDown = CPlayer.KeyDown
 local CEntity_GetVelocity = CEntity.GetVelocity
 local CPlayer_GetRunSpeed = CPlayer.GetRunSpeed
@@ -235,7 +235,7 @@ function SWEP:CalcView( ply, pos, ang )
 	pos:Sub( math_Clamp( ( flSwayVectorNeg * WEAPON_SWAY[ 2 ] / MyTable.flSwayScale ), flSwayVectorNeg, flSwayVector ) * ang:Right() )
 
 	local flRecoilCameraShake = MyTable.flRecoilCameraShake
-	local flDelay = math_min( MyTable.Primary_flDelay, .1 )
+	local flDelay = min( MyTable.Primary_flDelay, .1 )
 	flRecoilCameraShakeLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flRecoilCameraShakeLerped, flRecoilCameraShake )
 	ang[ 3 ] = ang[ 3 ] + math_sin( RealTime() * ( 2 * math.pi ) / flDelay ) * flRecoilCameraShakeLerped * MyTable.flRecoil
 	MyTable.flRecoilCameraShake = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flRecoilCameraShake, 0 )
@@ -325,7 +325,7 @@ local flHipRecoilPitchTurn, flHipRecoilPitchTurnLerped = 0, 0
 local flHipRecoilYawTurn, flHipRecoilYawTurnLerped = 0, 0
 
 local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
-	local flDelay = math_min( MyTable.Primary_flDelay, .2 )
+	local flDelay = min( MyTable.Primary_flDelay, .2 )
 
 	local flAimingFireMul = 1 - flAimMultiplier
 
@@ -528,7 +528,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 			elseif bSprinting && !MyTable.bSprintNotAnimated then
 				bWantsToSprint = true
 				local flSprint = MyTable.flViewModelSprint
-				local f = math_min( .5, CEntity_GetVelocity( ply ):Length() / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale
+				local f = min( .5, CEntity_GetVelocity( ply ):Length() / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale
 				local fFunction = SPRINT_ANIMATION_VIEWMODEL[ MyTable.WPN_SPRINT ]
 				if fFunction then fFunction( MyTable, f, MyTable.flViewModelSprint ) else SPRINT_ANIMATION_VIEWMODEL[ WPN_RIFLE ]( MyTable, f, flSprint ) end
 			else
