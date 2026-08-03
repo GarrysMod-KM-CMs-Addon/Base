@@ -292,9 +292,15 @@ hook.Add( "Tick", "Graphics", function()
 			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
 		else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
 	else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
-	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 )
-	tDrawColorModify[ "$pp_colour_brightness" ] = math_Clamp( math_Remap( flDeath, 1, .4, 0, -.35 ), -.35, 0 )
-	tDrawColorModify[ "$pp_colour_contrast" ] = math_Clamp( math_Remap( flDeath, 1, .4, 1, 1.8 ), 1, 1.8 )
+
+	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 ) ^ 1.5
+
+	tDrawColorModify[ "$pp_colour_colour" ] = flDeath
+
+	tDrawColorModify[ "$pp_colour_brightness" ] = math_Clamp( math_Remap( flDeath, 1, 0, 0, -.35 ), -.35, 0 )
+
+	tDrawColorModify[ "$pp_colour_contrast" ] = math_Clamp( math_Remap( flDeath, 1, 0, 1, 1.8 ), 1, 1.8 )
+
 	local flTerror = self:GetNW2Float( "BODY_flTerror", 0 )
 	tDrawColorModify[ "$pp_colour_brightness" ] = tDrawColorModify[ "$pp_colour_brightness" ]
 	- flTerror * .2 - math.abs( math.sin( RealTime() * .1 ) ) * flTerror * .05 - math.abs( math.sin( RealTime() * ( 1 / 3 ) ) ) ^ 3 * flTerror * .25
