@@ -33,8 +33,8 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, sched, MyTable
 	if tr.Hit && CurTime() > ( sched.flNextCheck || 0 ) then
 		local vCenter = pVehicle:GetPos() + pVehicle:OBBCenter()
 		local flBoundingRadius = pVehicle:BoundingRadius()
-		for flBias = 0, 1, math.Rand( .1, .2 ) do
-			for i = 1, 5 do
+		for flBias = 0, 1, math.Rand( .2, .4 ) do
+			for i = 1, 10 do
 				for flDistance = 0, math.Rand( 0, math.min( flBoundingRadius * 32, vCenter:Distance( vEnemy ) * 2 ) ), math.Rand( flBoundingRadius * .5, flBoundingRadius * 4 ) do
 					local d = LerpVector( 1 - flBias, VectorRand():GetNormalized(), dToEnemy ):GetNormalized()
 					local trJustToBeSafe = util.TraceLine {

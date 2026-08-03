@@ -33,7 +33,35 @@ list.Set( "NPC", "npc_combine_s", {
 	}
 } )
 
-if !SERVER then return end
+if CLIENT then
+	local MATERIAL = Material "sprites/light_glow02_add"
+	local COLOR_STANDARD = Color( 123, 182, 255 )
+	local COLOR_SHOTGUNNER = Color( 255, 123, 57 )
+	local SIZE = 8
+
+	local render_SetMaterial = render.SetMaterial
+	local render_DrawSprite = render.DrawSprite
+
+	function ENT:Draw()
+		self:DrawModel()
+
+		local v, ang = self:GetBonePosition( self:LookupBone "ValveBiped.Bip01_Head1" )
+		local vGlow = v + ang:Forward() * 4.5 + ang:Right() * 5 + ang:Up() * 1.75
+
+		render_SetMaterial( MATERIAL )
+
+		local cColor = self:GetSkin() == 0 && COLOR_STANDARD || COLOR_SHOTGUNNER
+
+		render_DrawSprite( vGlow, SIZE, SIZE, cColor )
+		render_DrawSprite( vGlow, SIZE, SIZE, cColor )
+
+		vGlow = v + ang:Forward() * 4.5 + ang:Right() * 5 + ang:Up() * -1.75
+		render_DrawSprite( vGlow, SIZE, SIZE, cColor )
+		render_DrawSprite( vGlow, SIZE, SIZE, cColor )
+	end
+
+	return
+end
 
 ENT.bNightVision = true
 

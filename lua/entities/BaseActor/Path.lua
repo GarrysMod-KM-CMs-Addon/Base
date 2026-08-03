@@ -18,7 +18,9 @@ local util_TraceLine = util.TraceLine
 
 function ENT:DontRePath( pPath, vPos, vGoal, MyTable )
 	pPath:MoveCursorToClosestPosition( vPos )
+
 	local f = MyTable.flPathTolerance
+
 	local flCursor = pPath:GetCursorPosition()
 	if pPath:GetPositionOnPath( flCursor ):DistToSqr( vPos ) <= f * f then
 		pPath:MoveCursorToClosestPosition( vGoal )
@@ -195,7 +197,7 @@ ENT.flNavigationAvoidTime = 0
 function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 	local pLocomotion = self.loco
 
-	pLocomotion:SetStepHeight( self.vHullMaxs[ 1 ] * .25 )
+	pLocomotion:SetStepHeight( self.vHullMaxs[ 1 ] * .5 )
 
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works

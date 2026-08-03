@@ -20,11 +20,6 @@ RegisterSchedule( "TakeCoverMove", { Execute = function( self, sched, MyTable )
 			if self == ally then continue end
 			if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil self.pCover = nil self:SetSchedule "TakeCover" return end
 		end
-		local n = FrameTime()
-		for pAlly in pairs( tAllies ) do
-			local f = pAlly.flAdvanceTimes
-			if f then pAlly.flAdvanceTimes = f + n end
-		end
 	end
 	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
 	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )

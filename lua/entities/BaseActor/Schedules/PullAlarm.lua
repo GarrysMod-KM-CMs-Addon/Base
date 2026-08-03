@@ -52,31 +52,13 @@ RegisterSchedule( "PullAlarm", { Execute = function( self, sched, MyTable )
 			start = MyTable.GetShootPos( self, MyTable ),
 			endpos = v,
 			mask = MASK_SHOT_HULL,
-			filter = { self, pEnemy }
+			filter = SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
 		}
 
 		if !tr.Hit then
-			bShoot = true
-
-			if pEnemy.GAME_tSuppressionAmount then
-				local flThreshold, flSoFar = pEnemy:Health() * .1, 0
-				for pOther, flDamage in pairs( pEnemy.GAME_tSuppressionAmount ) do
-					if pOther == self || MyTable.Disposition( self, pOther ) != D_LI then continue end
-					flSoFar = flSoFar + flDamage
-					if flSoFar > flThreshold then continue end
-				end
-				if flSoFar > flThreshold then bShoot = nil end
-			end
-
-			if bShoot then
-				MyTable.CenterTarget( self, v, MyTable )
-				if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
-				return
-			end
-		end
-
-		if bShoot && bEnemyValid then
 			MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, 1 )
+			MyTable.CenterTarget( self, v, MyTable )
+			if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 		else
 			local pGoal = pPath:GetCurrentGoal()
 			if pGoal then

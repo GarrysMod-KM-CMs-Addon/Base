@@ -160,7 +160,6 @@ end
 
 function ENT:OnAcquireEnemy() end
 
-local select = select
 function ENT:ClearThreatToClass( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	local t = MyTable.tThreatToClass
@@ -410,13 +409,16 @@ function ENT:HandleTurning( MyTable )
 	else aDesAim = Angles end
 
 	local vAimVelocity = MyTable.vAimVelocity
+
 	local sPitch = MyTable.m_sPitchPoseParameter
 	local sYaw = MyTable.m_sYawPoseParameter
+
 	local flPitch = CEntity_GetPoseParameter( self, sPitch )
 	local flYaw = CEntity_GetPoseParameter( self, sYaw )
 
 	local flAimStiffnessThisTick = MyTable.flOverrideAimStiffnessThisTick || MyTable.flAimStiffness
 	MyTable.flOverrideAimStiffnessThisTick = nil
+
 	local flAimDampingThisTick = MyTable.flOverrideAimDampingThisTick || MyTable.flAimDamping
 	MyTable.flOverrideAimDampingThisTick = nil
 
@@ -425,32 +427,46 @@ function ENT:HandleTurning( MyTable )
 		math_AngleDifference( aDesAim[ 2 ], Angles[ 2 ] + flYaw )
 	) * flAimStiffnessThisTick * flFrameTime )
 	vAimVelocity:Mul( math_exp( flAimDampingThisTick * flFrameTime ) )
+
 	MyTable.vAimVelocity = vAimVelocity
+
 	flPitch = flPitch + ( vAimVelocity[ 1 ] * flFrameTime )
 	CEntity_SetPoseParameter( self, sPitch, flPitch )
 	aAim[ 1 ] = aAim[ 1 ] + flPitch
+
 	flYaw = flYaw + ( vAimVelocity[ 2 ] * flFrameTime )
 	CEntity_SetPoseParameter( self, sYaw, flYaw )
 	aAim[ 2 ] = aAim[ 2 ] + flYaw
+
 	MyTable.aAim = aAim
 	MyTable.vAim = aAim:Forward()
+
 	if MyTable.bCantTurnBody then return end
+
 	local v = MyTable.vaAimTargetBody || CEntity_GetAngles( self )
 	if isangle( v ) then v = v:Forward() else v = ( v - self:GetShootPos() ):GetNormalized() end
+
 	local flYawVelocity = MyTable.flYawVelocity
 
 	local flBodyStiffnessThisTick = MyTable.flOverrideBodyStiffnessThisTick || MyTable.flBodyStiffness
 	MyTable.flOverrideBodyStiffnessThisTick = nil
+
 	local flBodyDampingThisTick = MyTable.flOverrideBodyDampingThisTick || MyTable.flBodyDamping
 	MyTable.flOverrideBodyDampingThisTick = nil
 
 	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )
+
+	CEntity_SetPoseParameter( self, sYaw, flYaw + flYawVelocity * flFrameTime )
+
 	MyTable.flYawVelocity = flYawVelocity
-	local loco = MyTable.loco
-	loco:SetMaxYawRate( math_abs( MyTable.flYawVelocity ) )
+
+	local pLocomotion = MyTable.loco
+	pLocomotion:SetMaxYawRate( math_abs( MyTable.flYawVelocity ) )
+
 	v = CEntity_GetPos( self ) + Angle( 0, Angles[ 2 ] + MyTable.flYawVelocity, 0 ):Forward() * 128
-	local fFaceTowards = loco.FaceTowards
-	for _ = 1, 8 do fFaceTowards( loco, v ) end
+
+	local fFaceTowards = pLocomotion.FaceTowards
+	for _ = 1, 8 do fFaceTowards( pLocomotion, v ) end
 end
 
 ENT.flSuppressionRecoverTime = 0

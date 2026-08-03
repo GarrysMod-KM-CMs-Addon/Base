@@ -137,11 +137,6 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 			}
 		end
 		if trStand.Hit && ( !trDuck || trDuck.Hit ) then MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable ) return end
-		local n = FrameTime()
-		for pAlly in pairs( MyTable.GetAlliesByClass( self, MyTable ) || {} ) do
-			local f = pAlly.flFireTimes
-			if f then pAlly.flFireTimes = f + n end
-		end
 		if !sched.Path then sched.Path = Path "Follow" end
 		MyTable.ComputePath( self, sched.Path, sched.vFrom, MyTable )
 		local flHealth = enemy:Health()
@@ -335,11 +330,6 @@ RegisterSchedule( "RangeAttack", { Execute = function( self, sched, MyTable )
 			end
 			MyTable.SetSchedule( self, sched.bMove && "TakeCoverMove" || "TakeCover", MyTable )
 			return
-		end
-		local n = FrameTime()
-		for pAlly in pairs( MyTable.GetAlliesByClass( self, MyTable ) || {} ) do
-			local f = pAlly.flFireTimes
-			if f then pAlly.flFireTimes = f + n end
 		end
 		if !sched.Path then sched.Path = Path "Follow" end
 		MyTable.ComputePath( self, sched.Path, sched.vFrom, MyTable )
