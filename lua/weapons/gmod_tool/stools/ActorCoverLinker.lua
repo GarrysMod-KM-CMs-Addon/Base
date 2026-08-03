@@ -20,21 +20,24 @@ function TOOL:LeftClick()
 	local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
 	if tCovers then
 		for iIndex, tCover in ipairs( tCovers ) do
-			if util.DistanceToLine( tCover[ 1 ], tCover[ 2 ], vPos ) > 4 then continue end
+			if util.DistanceToLine( tCover.vStart, tCover.vEnd, vPos ) > 4 then continue end
+
 			local pCover = self.pCover
 			if pCover then
-				local t = pCover[ 4 ]
+				local t = pCover.tLinks
 				if t then
 					local t2 = t[ pArea:GetID() ]
 					if t2 then t2[ iIndex ] = true
 					else t[ pArea:GetID() ] = { [ iIndex ] = true } end
-				else pCover[ 4 ] = { [ pArea:GetID() ] = { [ iIndex ] = true } } end
-				local t = tCover[ 4 ]
+				else pCover.tLinks = { [ pArea:GetID() ] = { [ iIndex ] = true } } end
+
+				local t = tCover.tLinks
 				if t then
 					local t2 = t[ self.iAreaID ]
 					if t2 then t2[ self.iCoverID ] = true
 					else t[ self.iAreaID ] = { [ self.iCoverID ] = true } end
-				else tCover[ 4 ] = { [ self.iAreaID ] = { [ self.iCoverID ] = true } } end
+				else tCover.tLinks = { [ self.iAreaID ] = { [ self.iCoverID ] = true } } end
+
 				self.pCover = nil
 				return
 			end
@@ -61,24 +64,28 @@ function TOOL:RightClick()
 	local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
 	if tCovers then
 		for iIndex, tCover in ipairs( tCovers ) do
-			if util.DistanceToLine( tCover[ 1 ], tCover[ 2 ], vPos ) > 4 then continue end
+			if util.DistanceToLine( tCover.vStart, tCover.vEnd, vPos ) > 4 then continue end
+
 			local pCover = self.pCover
 			if pCover then
-				local t = pCover[ 4 ]
+				local t = pCover.tLinks
 				if t then
 					local t2 = t[ pArea:GetID() ]
 					if t2 then t2[ iIndex ] = nil
 					else t[ pArea:GetID() ] = { [ iIndex ] = nil } end
-				else pCover[ 4 ] = { [ pArea:GetID() ] = { [ iIndex ] = nil } } end
-				local t = tCover[ 4 ]
+				else pCover.tLinks = { [ pArea:GetID() ] = { [ iIndex ] = nil } } end
+
+				local t = tCover.tLinks
 				if t then
 					local t2 = t[ self.iAreaID ]
 					if t2 then t2[ self.iCoverID ] = nil
 					else t[ self.iAreaID ] = { [ self.iCoverID ] = nil } end
-				else tCover[ 4 ] = { [ self.iAreaID ] = { [ self.iCoverID ] = nil } } end
+				else tCover.tLinks = { [ self.iAreaID ] = { [ self.iCoverID ] = nil } } end
 				self.pCover = nil
+
 				return
 			end
+
 			self.pCover = tCover
 			self.iAreaID = pArea:GetID()
 			self.iCoverID = iIndex
@@ -89,78 +96,84 @@ end
 
 function TOOL:Think()
 	local pOwner = self:GetOwner()
+
 	local tr = util.TraceLine {
 		start = pOwner:EyePos(),
 		endpos = pOwner:EyePos() + pOwner:GetAimVector() * 999999,
 		mask = MASK_SOLID_BRUSHONLY,
 		filter = pOwner
 	}
+
 	local vPos = tr.HitPos
+
 	local pArea = navmesh.GetNearestNavArea( vPos )
 	if !IsValid( pArea ) then return end
+
 	local tCover = self.pCover
 	if tCover then
-		local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+		local vStart, vEnd = tCover.vStart, tCover.vEnd
 		local vDirection = ( vEnd - vStart ):GetNormalized()
 		debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 0 ), true )
-		local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+		local vStart, vEnd = tCover.vStart, tCover.vEnd
 		local vCenter = ( vStart + vEnd ) * .5
 		local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-		if tCover[ 3 ] then
+		if tCover.bRight then
 			debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 0 ), true )
 		else
 			debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 0 ), true )
 		end
 	end
+
 	local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
 	if tCovers then
 		for _, tCover in ipairs( tCovers ) do
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-			local vDirection = ( vEnd - vStart ):GetNormalized()
+			local vStart, vEnd = tCover.vStart, tCover.vEnd
+
 			debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 255 ), true )
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+
 			local vCenter = ( vStart + vEnd ) * .5
+
 			local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
 			if tCover[ 3 ] then
 				debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 255 ), true )
 			else
 				debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
 			end
+
 			local t = {}
-			for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
+			for iAreaID, tIndices in pairs( tCover.tLinks || {} ) do
 				for iIndex in pairs( tIndices ) do
 					local tNewCover = __COVERS_STATIC__[ iAreaID ]
 					if tNewCover then tNewCover = tNewCover[ iIndex ] end
 					if !tNewCover || tNewCover == tCover then continue end
+
 					local t2 = t[ iAreaID ]
 					if t2 then t2[ iIndex ] = true
 					else t[ iAreaID ] = { [ iIndex ] = true } end
-					local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
-					local vDirection = ( vEnd - vStart ):GetNormalized()
+
+					local vStart, vEnd = tNewCover.vStart, tNewCover.vEnd
 					debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 255 ), true )
-					local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 					local vCenter = ( vStart + vEnd ) * .5
-					debugoverlay.Line( vCenter, ( tCover[ 1 ] + tCover[ 2 ] ) * .5, .1, Color( 0, 255, 255 ), true )
+					debugoverlay.Line( vCenter, ( tCover.vStart + tCover.vEnd ) * .5, .1, Color( 0, 255, 255 ), true )
 					local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-					if tNewCover[ 3 ] then
+					if tNewCover.bRight then
 						debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 255 ), true )
 					else
 						debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
 					end
 				end
 			end
-			tCover[ 4 ] = t
+			tCover.tLinks = t
 		end
 	end
+
 	local tCovers = __COVERS_DYNAMIC__[ pArea:GetID() ]
 	if tCovers then
 		for pEntity, tTable in pairs( tCovers ) do
 			if !IsValid( pEntity ) then continue end
 			for _, tCover in pairs( tTable ) do
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				local vDirection = ( vEnd - vStart ):GetNormalized()
+				local vStart, vEnd = tCover.vStart, tCover.vEnd
 				debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
 				local vCenter = ( vStart + vEnd ) * .5
 				local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
 				if tCover[ 3 ] then
@@ -169,7 +182,7 @@ function TOOL:Think()
 					debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 255, 255, 0 ), true )
 				end
 				local t = {}
-				for iAreaID, tIndices in pairs( tCover[ 4 ] || {} ) do
+				for iAreaID, tIndices in pairs( tCover.tLinks || {} ) do
 					for iIndex in pairs( tIndices ) do
 						local tNewCover = __COVERS_STATIC__[ iAreaID ]
 						if tNewCover then tNewCover = tNewCover[ iIndex ] end
@@ -177,10 +190,8 @@ function TOOL:Think()
 						local t2 = t[ iAreaID ]
 						if t2 then t2[ iIndex ] = true
 						else t[ iAreaID ] = { [ iIndex ] = true } end
-						local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
-						local vDirection = ( vEnd - vStart ):GetNormalized()
+						local vStart, vEnd = tNewCover.vStart, tNewCover.vEnd
 						debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
-						local vStart, vEnd = tNewCover[ 1 ], tNewCover[ 2 ]
 						local vCenter = ( vStart + vEnd ) * .5
 						debugoverlay.Line( vCenter, ( tCover[ 1 ] + tCover[ 2 ] ) * .5, .1, Color( 255, 255, 0 ), true )
 						local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
@@ -191,7 +202,7 @@ function TOOL:Think()
 						end
 					end
 				end
-				tCover[ 4 ] = t
+				tCover.tLinks = t
 			end
 		end
 	end

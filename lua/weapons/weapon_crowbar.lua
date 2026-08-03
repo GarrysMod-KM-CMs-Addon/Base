@@ -36,7 +36,7 @@ function SWEP:PrimaryAttack()
 		Src = owner:GetShootPos(),
 		Dir = self:GetAimVector(),
 		Tracer = 0,
-		Damage = ( owner.GAME_flHandDamage || 40 ) * 14,
+		Damage = ( owner.GAME_flHandDamage || 30 ) * 2,
 		Distance = ( owner.GAME_flReach || 64 )
 	}
 	owner:SetAnimation( PLAYER_ATTACK1 )

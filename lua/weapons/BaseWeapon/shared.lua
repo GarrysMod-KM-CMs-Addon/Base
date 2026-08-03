@@ -459,6 +459,10 @@ function SWEP:DrewWorldModelAndUsedRenderOverrides() self.flRemoveWorldModelOver
 
 AddCSLuaFile "View.lua"
 AddCSLuaFile "Crosshair.lua"
+
+// For View.lua
+AddCSLuaFile "FRILerpRate.lua"
+
 if CLIENT then
 	include "View.lua"
 	include "Crosshair.lua"

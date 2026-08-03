@@ -1,3 +1,7 @@
+include "FRILerpRate.lua"
+
+local FRILerpRate = FRILerpRate
+
 local CEntity = FindMetaTable "Entity"
 local CPlayer = FindMetaTable "Player"
 
@@ -85,11 +89,8 @@ local CPlayer_InVehicle = CPlayer.InVehicle
 local bOnGroundLast
 local math_Remap = math.Remap
 function SWEP:AdjustMouseSensitivity()
-	local MyTable = CEntity_GetTable( self )
-	local f = CurTime() <= ( ( MyTable.flLastShot || 0 ) + math_min( .3, MyTable.Primary_flDelay ) + ( MyTable.Primary.Automatic && 0 || .2 ) ) && ( 1 / 3 ) || 1
-	local v = MyTable.flFoV
-	if v then return v / UNIVERSAL_FOV * f end
-	return f
+	local v = CEntity_GetTable( self ).flFoV
+	if v then return v / UNIVERSAL_FOV end
 end
 local CPlayer_IsSprinting = CPlayer.IsSprinting
 local CPlayer_Crouching = CPlayer.Crouching
@@ -235,9 +236,9 @@ function SWEP:CalcView( ply, pos, ang )
 
 	local flRecoilCameraShake = MyTable.flRecoilCameraShake
 	local flDelay = math_min( MyTable.Primary_flDelay, .1 )
-	flRecoilCameraShakeLerped = Lerp( math_min( 1, 3 / flDelay * flFrameTime ), flRecoilCameraShakeLerped, flRecoilCameraShake )
+	flRecoilCameraShakeLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flRecoilCameraShakeLerped, flRecoilCameraShake )
 	ang[ 3 ] = ang[ 3 ] + math_sin( RealTime() * ( 2 * math.pi ) / flDelay ) * flRecoilCameraShakeLerped * MyTable.flRecoil
-	MyTable.flRecoilCameraShake = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flRecoilCameraShake, 0 )
+	MyTable.flRecoilCameraShake = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flRecoilCameraShake, 0 )
 
 	local v = MyTable.flCustomZoomFoV
 	if v then
@@ -347,27 +348,27 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 	MyTable.tShootAnimations = {}
 
 
-	flHipRecoilBack = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flHipRecoilBack, 0 )
-	flHipRecoilBackLerped = Lerp( math_min( 1, 1.5 / flDelay * flFrameTime ), flHipRecoilBackLerped, flHipRecoilBack )
+	flHipRecoilBack = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilBack, 0 )
+	flHipRecoilBackLerped = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flHipRecoilBackLerped, flHipRecoilBack )
 
-	flHipRecoilPitchTurn = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flHipRecoilPitchTurn, 0 )
-	flHipRecoilPitchTurnLerped = Lerp( math_min( 1, 3 / flDelay * flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
+	flHipRecoilPitchTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilPitchTurn, 0 )
+	flHipRecoilPitchTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
 
-	flHipRecoilYawTurn = Lerp( math_min( 1, 1 / flDelay * flFrameTime ), flHipRecoilYawTurn, 0 )
-	flHipRecoilYawTurnLerped = Lerp( math_min( 1, 3 / flDelay * flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+	flHipRecoilYawTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
+	flHipRecoilYawTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
 
 
-	flAimingRecoilBack = Lerp( math_min( 1, .9 / flDelay * flFrameTime ), flAimingRecoilBack, 0 )
-	flAimingRecoilBackLerped = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
+	flAimingRecoilBack = Lerp( FRILerpRate( .9 / flDelay, flFrameTime ), flAimingRecoilBack, 0 )
+	flAimingRecoilBackLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
 
-	flAimingRecoilPitchTurn = Lerp( math_min( 1, 1.5 / flDelay * flFrameTime ), flAimingRecoilPitchTurn, 0 )
-	flAimingRecoilPitchTurnLerped = Lerp( math_min( 1, 1.5 / flDelay * flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
+	flAimingRecoilPitchTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilPitchTurn, 0 )
+	flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
 
-	flAimingRecoilYawTurn = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flAimingRecoilYawTurn, 0 )
-	flAimingRecoilYawTurnLerped = Lerp( math_min( 1, 2 / flDelay * flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
+	flAimingRecoilYawTurn = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
+	flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
 
-	flAimingRecoilPistolJump = Lerp( math_min( 1, .5 / flDelay * flFrameTime ), flAimingRecoilPistolJump, 0 )
-	flAimingRecoilPistolJumpLerped = Lerp( math_min( 1, 3 / flDelay * flFrameTime ), flAimingRecoilPistolJumpLerped, flAimingRecoilPistolJump )
+	flAimingRecoilPistolJump = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilPistolJump, 0 )
+	flAimingRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPistolJumpLerped, flAimingRecoilPistolJump )
 
 
 	pos:Sub( ang:Forward() * flAimingRecoilBackLerped )
@@ -396,12 +397,12 @@ local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTur
 
 	local flSwayScale = MyTable.flSwayScale
 
-	local flLerpSpeed = math_min( 1, 3 * flFrameTime )
+	local flLerpSpeed = FRILerpRate( 3, flFrameTime )
 
 	WEAPON_SWAY[ 1 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 1 ], -flSwayScale, flSwayScale ), 0 )
 	WEAPON_SWAY[ 2 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 2 ], -flSwayScale, flSwayScale ), 0 )
 
-	flLerpSpeed = math_min( 1, 15 * flFrameTime )
+	flLerpSpeed = FRILerpRate( 15, flFrameTime )
 
 	vActualSway[ 1 ] = Lerp( flLerpSpeed, vActualSway[ 1 ], WEAPON_SWAY[ 1 ] )
 	vActualSway[ 2 ] = Lerp( flLerpSpeed, vActualSway[ 2 ], WEAPON_SWAY[ 2 ] )
@@ -456,7 +457,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	vInstantTarget:Sub( Vector( MyTable.flViewModelY, 0, MyTable.flViewModelZ ) * MyTable.flViewModelSprint )
 
 	if !MyTable.bCoverNotAnimated && bInCover then
-		MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
+		MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 )
 		if CurTime() > MyTable.flReloadTime then
 			if MyTable.__VIEWMODEL_FULLY_MODELED__ then
 				local f = CEntity_GetNW2Int( ply, "CTRL_Variants" )
@@ -506,7 +507,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 
 		local bOnGround, bWantsToSprint = CEntity_IsOnGround( ply )
 		if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then
-			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
+			MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 )
 			bOnGroundLast = true
 		elseif bOnGround then
 			if !b && CPlayer_Crouching( ply ) && !bZoom then
@@ -549,7 +550,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 				end
 			end
 		else
-			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 )
+			MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 )
 			flLandTime = RealTime() + .31
 			if bOnGroundLast then
 				flJumpTime = RealTime() + .31
@@ -585,7 +586,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 				end
 			elseif RealTime() <= flLandTime then
 				SPRING_STIFFNESS_CURRENT = SPRING_STIFFNESS_CURRENT * 1.5
-				if bWantsToSprint then MyTable.flViewModelSprint = Lerp( math_min( 1, 2 * flFrameTime ), MyTable.flViewModelSprint, 1 ) end
+				if bWantsToSprint then MyTable.flViewModelSprint = Lerp( FRILerpRate( 2, flFrameTime ), MyTable.flViewModelSprint, 1 ) end
 				local f = flLandTime - RealTime()
 				local xx = BezierY( f, 0, -4, 0 )
 				local yy = 0
@@ -600,11 +601,11 @@ function SWEP:CalcViewModelView( _, pos, ang )
 				end
 				vBezierAngle = Vector( math_cos( RealTime() * 18 ) * 2, math_sin( RealTime() * 22 ) * 4, math_sin( RealTime() * 24 ) * 2 )
 			elseif bWantsToSprint then
-				MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 1 )
-			else MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 ) end
+				MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 1 )
+			else MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 ) end
 		elseif bWantsToSprint then
-			MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 1 )
-		else MyTable.flViewModelSprint = Lerp( math_min( 1, 5 * flFrameTime ), MyTable.flViewModelSprint, 0 ) end
+			MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 1 )
+		else MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 ) end
 	end
 
 	if vAim then
@@ -626,11 +627,9 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	//	if bZoom then flMultiplier = math_Approach( MyTable.flAimMultiplier, 0, MyTable.flAimSpeed * flFrameTime )
 	//	else flMultiplier = math_Approach( MyTable.flAimMultiplier, 1, MyTable.flAimSpeed * flFrameTime ) end
 	if bZoom then
-		flMultiplier = Lerp( math_min( 1, MyTable.flAimSpeed * flFrameTime ), flMultiplier, 0 )
-		//	flMultiplier = math_max( 0, flMultiplier - flMultiplier ^ .5 * MyTable.flAimSpeed * flFrameTime )
+		flMultiplier = Lerp( FRILerpRate( MyTable.flAimSpeed, flFrameTime ), flMultiplier, 0 )
 	else
-		flMultiplier = Lerp( math_min( 1, MyTable.flAimSpeed * flFrameTime ), flMultiplier, 1 )
-		//	flMultiplier = math_min( 1, flMultiplier + ( 1 - flMultiplier ) ^ .5 * MyTable.flAimSpeed * flFrameTime )
+		flMultiplier = Lerp( FRILerpRate( MyTable.flAimSpeed, flFrameTime ), flMultiplier, 1 )
 	end
 
 	MyTable.flAimMultiplier = flMultiplier

@@ -29,7 +29,11 @@ function TOOL:LeftClick()
 				if !pArea then continue end
 				tParticipatingAreas[ pArea:GetID() ] = true
 			end
-			local tCover = { vStart, vEnd, ( vPos - vStart ):GetNormalized():Dot( vRight ) > 0 }
+			local tCover = {
+				vStart = vStart,
+				vEnd = vEnd,
+				bRight = ( vPos - vStart ):GetNormalized():Dot( vRight ) > 0
+			}
 			for ID in pairs( tParticipatingAreas ) do
 				local tCovers = __COVERS_STATIC__[ ID ]
 				if tCovers then table.insert( tCovers, tCover )
@@ -60,12 +64,12 @@ function TOOL:RightClick()
 	if tCovers then
 		local tCoversToRemove = {}
 		for iIndex, tCover in ipairs( tCovers ) do
-			if util.DistanceToLine( tCover[ 1 ], tCover[ 2 ], vPos ) > 4 then continue end
+			if util.DistanceToLine( tCover.vStart, tCover.vEnd, vPos ) > 4 then continue end
 			tCoversToRemove[ tCover ] = true
 		end
 		for tCover in pairs( tCoversToRemove ) do
 			local tParticipatingAreas = {}
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+			local vStart, vEnd = tCover.vStart, tCover.vEnd
 			local vDirection = ( vEnd - vStart ):GetNormalized()
 			for flCurrent = 0, vStart:Distance( vEnd ), 12 do
 				local vCurrent = vStart + vDirection * flCurrent
@@ -92,15 +96,19 @@ end
 
 function TOOL:Think()
 	local pOwner = self:GetOwner()
+
 	local tr = util.TraceLine {
 		start = pOwner:EyePos(),
 		endpos = pOwner:EyePos() + pOwner:GetAimVector() * 999999,
 		mask = MASK_SOLID_BRUSHONLY,
 		filter = pOwner
 	}
+
 	local vPos = tr.HitPos
+
 	local pArea = navmesh.GetNearestNavArea( vPos )
 	if !IsValid( pArea ) then return end
+
 	local vStart = self.vStart
 	if vStart then
 		vPos[ 3 ] = pArea:GetZ( vPos )
@@ -116,34 +124,40 @@ function TOOL:Think()
 			end
 		else debugoverlay.Line( vStart, vPos, .1, Color( 0, 255, 255 ), true ) end
 	end
+
 	local tCovers = __COVERS_STATIC__[ pArea:GetID() ]
 	if tCovers then
 		for _, tCover in ipairs( tCovers ) do
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-			local vDirection = ( vEnd - vStart ):GetNormalized()
+			local vStart, vEnd = tCover.vStart, tCover.vEnd
+
 			debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 255 ), true )
-			local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+
 			local vCenter = ( vStart + vEnd ) * .5
+
 			local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-			if tCover[ 3 ] then
+
+			if tCover.bRight then
 				debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 255 ), true )
 			else
 				debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
 			end
 		end
 	end
+
 	local tCovers = __COVERS_DYNAMIC__[ pArea:GetID() ]
 	if tCovers then
 		for pEntity, tTable in pairs( tCovers ) do
 			if !IsValid( pEntity ) then continue end
 			for _, tCover in pairs( tTable ) do
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
-				local vDirection = ( vEnd - vStart ):GetNormalized()
+				local vStart, vEnd = tCover.vStart, tCover.vEnd
+	
 				debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
-				local vStart, vEnd = tCover[ 1 ], tCover[ 2 ]
+
 				local vCenter = ( vStart + vEnd ) * .5
+
 				local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-				if tCover[ 3 ] then
+
+				if tCover.bRight then
 					debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 255, 255, 0 ), true )
 				else
 					debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 255, 255, 0 ), true )
