@@ -1,12 +1,27 @@
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
+local CEntity = FindMetaTable "Entity"
+local CEntity_IsOnGround = CEntity.IsOnGround
+local CEntity_GetTable = CEntity.GetTable
+local CEntity_GetNW2Bool = CEntity.GetNW2Bool
+local developer = GetConVar "developer"
+local CPlayer = FindMetaTable "Player"
+local CPlayer_IsSprinting = CPlayer.IsSprinting
+local CPlayer_KeyDown = CPlayer.KeyDown
+local surface_DrawTexturedRect = surface.DrawTexturedRect
+local util_TraceLine = util.TraceLine
+local cThirdPerson = GetConVar "bThirdPerson"
+local ScrW, ScrH = ScrW, ScrH
+
 SWEP.flCrosshairInAccuracy = 0
 SWEP.Primary_flSpreadX = 0
 SWEP.Primary_flSpreadY = 0
 
 SWEP.flCrosshairAlpha = 255
 
-local util_TraceLine = util.TraceLine
-local cThirdPerson = GetConVar "bThirdPerson"
-local ScrW, ScrH = ScrW, ScrH
 function SWEP:GatherCrosshairPosition( MyTable )
 	if cThirdPerson:GetBool() then return ScrW() * .5, ScrH() * .5 end
 	local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
@@ -300,17 +315,6 @@ sound.Add {
 
 SWEP.sAimSound = ""
 
-local CEntity = FindMetaTable "Entity"
-local CEntity_IsOnGround = CEntity.IsOnGround
-local CEntity_GetTable = CEntity.GetTable
-local CEntity_GetNW2Bool = CEntity.GetNW2Bool
-local developer = GetConVar "developer"
-local CPlayer = FindMetaTable "Player"
-local CPlayer_IsSprinting = CPlayer.IsSprinting
-local CPlayer_KeyDown = CPlayer.KeyDown
-local surface_DrawTexturedRect = surface.DrawTexturedRect
-local math_min = math.min
-local cThirdPerson = GetConVar "bThirdPerson"
 local flLastDoDrawCrosshairCall = 0
 
 function SWEP:DrawSniperScope( MyTable )
@@ -351,20 +355,23 @@ local cNoWeaponHuD = CreateConVar(
 )
 
 function SWEP:DoDrawCrosshair()
-	if cNoWeaponHuD:GetBool() then return true end
-	if developer:GetBool() then return end
 	local f = SysTime()
 	local flFrameTime = f - flLastDoDrawCrosshairCall
 	flLastDoDrawCrosshairCall = f
+
+	if cNoWeaponHuD:GetBool() then return true end
+	if developer:GetBool() then return end
+
 	local MyTable = CEntity_GetTable( self )
+
 	local ply = LocalPlayer()
 
-	local flDelay, f = math_min( MyTable.Primary_flDelay, .2 )
+	local flDelay, f = min( MyTable.Primary_flDelay, .2 )
 	if MyTable.Primary.Automatic then
-		f = .8 / flDelay
+		f = ( 2 / 3 ) / flDelay
 		MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 	else
-		f = .8 / ( flDelay + 1 / 30 )
+		f = ( 2 / 3 ) / ( flDelay + 1 / 30 )
 		MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 	end
 
@@ -374,17 +381,17 @@ function SWEP:DoDrawCrosshair()
 	else MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + 1 * ply:GetNW2Float( "GAME_flRecoil", 1 ) / flDelay * flFrameTime end
 
 	local flAimMultiplier = MyTable.flAimMultiplier
-	local flGapPart = Lerp( math_min( 1, 20 * flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033, 0, .033 ) )
+	local flGapPart = Lerp( FRILerpRate( 20, flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033, 0, .033 ) )
 	MyTable.flCrosshairInAccuracyGapPart = flGapPart
 
 	local flRecoilPart = Lerp(
-		math_min( 1, flDelay * 800 * flFrameTime ),
+		FRILerpRate( flDelay * 2000, flFrameTime ),
 		MyTable.flCrosshairInAccuracyRecoilPart,
-		MyTable.flCurrentRecoilForGap * ( 1 / 15 ) / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / math_min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * ( MyTable.Primary.Automatic && 1 || .05 )
+		MyTable.flCurrentRecoilForGap * .05 / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * ( MyTable.Primary.Automatic && 1 || .05 )
 	)
 
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
-	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart + ( MyTable.Crosshair == "Sniper" && .15 || .033 )
+	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart + ( MyTable.Crosshair == "Sniper" && .15 || ( 1 / 30 ) )
 
 	if MyTable.sAimSound && MyTable.vViewModelAim then
 		if MyTable.bAiming then
@@ -414,9 +421,9 @@ function SWEP:DoDrawCrosshair()
 		MyTable.flCrosshairAlpha = 0
 	else
 		if cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
-			MyTable.flCrosshairAlpha = Lerp( math_min( 1, flFrameTime * 5 ), MyTable.flCrosshairAlpha, 255 )
+			MyTable.flCrosshairAlpha = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flCrosshairAlpha, 255 )
 		else
-			local flAlpha = math_max( 0, 255 - 255 * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || ( 1 / 3 ) ) / math_min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * 2 )
+			local flAlpha = math_max( 0, 255 - ( 255 * 4 ) * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || .1 ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) )
 			MyTable.flCrosshairAlpha = flAlpha
 		end
 	end
@@ -428,52 +435,48 @@ function SWEP:DoDrawCrosshair()
 
 	if !MyTable.bDontDrawAmmo then
 		local flClip = math_max( self:Clip1(), self:GetMaxClip1() )
-		// TODO: Machine gun ammo cubes
-		if false then//flClip > 60 then
-			
+
+		local flW, flH = ScrW() * .9, ScrH() * .9
+		surface_SetDrawColor( 0, 0, 0, 255 )
+		local flWidth, flHeight, sFont
+		local b = MyTable.bDontDrawAmmoBars
+		if b || self:GetMaxClip1() <= 15 then
+			flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
 		else
-			local flW, flH = ScrW() * .9, ScrH() * .9
-			surface_SetDrawColor( 0, 0, 0, 255 )
-			local flWidth, flHeight, sFont
-			local b = MyTable.bDontDrawAmmoBars
-			if b || self:GetMaxClip1() <= 15 then
-				flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
-			else
-				flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
+			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
+		end
+		local flX, flY = flW - flWidth, flH - flHeight
+		local a = self.Primary.Ammo
+		if a && a != "" && string.lower( a ) != "none" then
+			a = ply:GetAmmoCount( a )
+			if a > 0 then
+				draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
 			end
-			local flX, flY = flW - flWidth, flH - flHeight
-			local a = self.Primary.Ammo
-			if a && a != "" && string.lower( a ) != "none" then
-				a = ply:GetAmmoCount( a )
-				if a > 0 then
-					draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
+		end
+		if !b then
+			local flTotal = flWidth * flClip
+			flX = flX - flTotal
+			surface_DrawRect( flX, flY, flTotal, flHeight )
+
+			if CurTime() <= MyTable.flReloadTime then
+				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, flClip do
+					flX = flX - flWidth
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
 				end
-			end
-			if !b then
-				local flTotal = flWidth * flClip
-				flX = flX - flTotal
-				surface_DrawRect( flX, flY, flTotal, flHeight )
+			else
+				surface_SetDrawColor( 255, 255, 255, 255 )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, self:Clip1() do
+					flX = flX - flWidth
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
+				end
 
-				if CurTime() <= MyTable.flReloadTime then
-					surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
-					local flX, flY = flW - flWidth, flH - flHeight
-					for _ = 1, flClip do
-						flX = flX - flWidth
-						surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
-					end
-				else
-					surface_SetDrawColor( 255, 255, 255, 255 )
-					local flX, flY = flW - flWidth, flH - flHeight
-					for _ = 1, self:Clip1() do
-						flX = flX - flWidth
-						surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
-					end
-
-					surface_SetDrawColor( 32, 32, 32, 255 )
-					for _ = self:Clip1() + 1, flClip do
-						flX = flX - flWidth
-						surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
-					end
+				surface_SetDrawColor( 32, 32, 32, 255 )
+				for _ = self:Clip1() + 1, flClip do
+					flX = flX - flWidth
+					surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
 				end
 			end
 		end
