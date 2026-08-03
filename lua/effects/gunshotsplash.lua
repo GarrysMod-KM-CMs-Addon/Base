@@ -67,8 +67,8 @@ function EFFECT:Init( pData )
 	for i = 1, 3 do
 		local pPart = pEmitter:Add( "particles/smokey", vPos )
 		if pPart then
-			pPart:SetVelocity( VectorRand() * 6 * flScale + Vector( 0, 0, 4 ) * flScale )
-			pPart:SetDieTime( Rand( .8, 1.4 ) )
+			pPart:SetVelocity( VectorRand() * 4 * flScale + Vector( 0, 0, 4 ) * flScale )
+			pPart:SetDieTime( Rand( 1, 2 ) )
 			pPart:SetStartAlpha( 60 )
 			pPart:SetEndAlpha( 0 )
 			pPart:SetStartSize( 1 * flScale )

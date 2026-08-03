@@ -200,6 +200,10 @@ function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
 	return tFilter
 end
 
+function SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
+	return pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
+end
+
 local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
 RANGE_ATTACK_SUPPRESSION_BOUND_SIZE = 512
 function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )

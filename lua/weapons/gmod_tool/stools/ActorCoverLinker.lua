@@ -166,44 +166,4 @@ function TOOL:Think()
 			tCover.tLinks = t
 		end
 	end
-
-	local tCovers = __COVERS_DYNAMIC__[ pArea:GetID() ]
-	if tCovers then
-		for pEntity, tTable in pairs( tCovers ) do
-			if !IsValid( pEntity ) then continue end
-			for _, tCover in pairs( tTable ) do
-				local vStart, vEnd = tCover.vStart, tCover.vEnd
-				debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
-				local vCenter = ( vStart + vEnd ) * .5
-				local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-				if tCover[ 3 ] then
-					debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 255, 255, 0 ), true )
-				else
-					debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 255, 255, 0 ), true )
-				end
-				local t = {}
-				for iAreaID, tIndices in pairs( tCover.tLinks || {} ) do
-					for iIndex in pairs( tIndices ) do
-						local tNewCover = __COVERS_STATIC__[ iAreaID ]
-						if tNewCover then tNewCover = tNewCover[ iIndex ] end
-						if !tNewCover || tNewCover == tCover then continue end
-						local t2 = t[ iAreaID ]
-						if t2 then t2[ iIndex ] = true
-						else t[ iAreaID ] = { [ iIndex ] = true } end
-						local vStart, vEnd = tNewCover.vStart, tNewCover.vEnd
-						debugoverlay.Line( vStart, vEnd, .1, Color( 255, 255, 0 ), true )
-						local vCenter = ( vStart + vEnd ) * .5
-						debugoverlay.Line( vCenter, ( tCover[ 1 ] + tCover[ 2 ] ) * .5, .1, Color( 255, 255, 0 ), true )
-						local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-						if tNewCover[ 3 ] then
-							debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 255, 255, 0 ), true )
-						else
-							debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 255, 255, 0 ), true )
-						end
-					end
-				end
-				tCover.tLinks = t
-			end
-		end
-	end
 end
