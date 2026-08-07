@@ -221,9 +221,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 192 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 192 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 192 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 192 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 192 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 192 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )
@@ -334,9 +334,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 192 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 192 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 192 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 192 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 192 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 192 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )
@@ -391,9 +391,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 230 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 213 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 186 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 230 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 213 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 186 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )
@@ -434,9 +434,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 143 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 151 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 121 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 143 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 151 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 121 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )
@@ -464,9 +464,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 125 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 80 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 25 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 125 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 80 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 25 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )
@@ -508,9 +508,9 @@ local EFFECTS = {
 					local vPos = pPart:GetPos()
 					local vColor = render_GetLightColor( vPos )
 					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ .33, 0, 166 ),
-						Lerp( vColor[ 2 ] ^ .33, 0, 150 ),
-						Lerp( vColor[ 3 ] ^ .33, 0, 130 )
+						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 166 ),
+						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 150 ),
+						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 130 )
 					)
 					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
 						pPart:SetGravity( vGravity )

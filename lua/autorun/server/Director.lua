@@ -4,6 +4,11 @@
 
 require "DirectorShared"
 
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local player_Iterator = player.Iterator
@@ -17,7 +22,6 @@ local math_abs = math.abs
 local math_AngleDifference = math.AngleDifference
 local math_Approach = math.Approach
 local math_max = math.max
-local math_min = math.min
 local util_TraceLine = util.TraceLine
 local MASK_SHOT_HULL = MASK_SHOT_HULL
 local CEntity_SetNW2Int = CEntity.SetNW2Int
@@ -129,7 +133,7 @@ hook.Add( "Tick", "Director", function()
 			if pEntity:Classify() != ply:Classify() then
 				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
 				if flStart && flEnd then
-					flReinforcements = math_min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
+					flReinforcements = min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
 				end
 				local f = pEntity.flCoolDown
 				if f && CurTime() < f then bAlarmCoolDown = true end
@@ -137,7 +141,7 @@ hook.Add( "Tick", "Director", function()
 		end
 		CEntity_SetNW2Float( ply, "ALARM_flHostileReinforcements", flReinforcements || 0 )
 		if CurTime() > ( PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME || 0 ) then
-			CEntity_SetNW2Float( ply, "DIRECTOR_MUSIC_VO_WAIT", math_Clamp( Lerp( math_min( 1, .5 * FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
+			CEntity_SetNW2Float( ply, "DIRECTOR_MUSIC_VO_WAIT", math_Clamp( Lerp( FRILerpRate( .5, FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
 		end
 		CEntity_SetNW2Float( ply, "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 72 )
 		if ply:Alive() then
@@ -278,8 +282,8 @@ hook.Add( "Tick", "Director", function()
 		if !tonumber( sIntensity ) then sIntensity = "0" end
 		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. sIntensity )
 		local flTension = PlyTable.DR_flMusicTension || 0
-		if flTension > flIntensity then flTension = Lerp( .1 * FrameTime(), flTension || 0, flIntensity )
-		else flTension = Lerp( .25 * FrameTime(), flTension || 0, flIntensity ) end
+		if flTension > flIntensity then flTension = Lerp( FRILerpRate( .1, FrameTime() ), flTension || 0, flIntensity )
+		else flTension = Lerp( FRILerpRate( .25, FrameTime() ), flTension || 0, flIntensity ) end
 		if flTension != flTension then flTension = 0 end // nan
 		PlyTable.DR_flMusicTension = flTension
 		local sTension = tostring( flTension )

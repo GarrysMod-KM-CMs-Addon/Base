@@ -149,6 +149,9 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 
 	cmd:SetViewAngles( ang )
 
+	if CurTime() >= ( ply.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then ply.GAME_flSpamPenalty = CurTime() + .1 end
+	if CurTime() <= ( ply.GAME_flSpamPenalty || 0 ) then cmd:RemoveKey( IN_ATTACK ) end
+
 	if CLIENT then
 		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
 		elseif ply.GAME_bWalkPressed then ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk ply.GAME_bWalkPressed = nil end

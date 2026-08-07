@@ -9,6 +9,11 @@ function GetBrightnessVector( v ) return v[ 1 ]  * .2126 + v[ 2 ] * .7152  + v[ 
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
 if SERVER then
 	util.AddNetworkString "UpdateLuminosity"
 	util.AddNetworkString "EphemeralLight"
@@ -56,7 +61,6 @@ local math_Remap = math.Remap
 local math_Approach = math.Approach
 local math_max = math.max
 local math_abs = math.abs
-local math_min = math.min
 local render_GetLightColor = render.GetLightColor
 local render_ComputeDynamicLighting = render.ComputeDynamicLighting
 local FrameTime = FrameTime
@@ -88,13 +92,12 @@ local draw_NoTexture = draw.NoTexture
 local surface_DrawRect = surface.DrawRect
 local draw_DrawText = draw.DrawText
 
-// Better not do this, in case it's ever updated,
-// or if the module is refreshed via lua_run_cl -
-// we don't want to run two different directors at once! xD
-//	local DIRECTOR_CLIENT_TICK = DIRECTOR_CLIENT_TICK
+local DIRECTOR_CLIENT_TICK = DIRECTOR_CLIENT_TICK
 
 hook.Add( "DrawDeathNotice", "Graphics", function() return true end )
-//	timer_Simple( 0, function() GAMEMODE.DrawDeathNotice = nil end )
+hook.Add( "HUDDrawTargetID", "Graphics", function() return true end )
+hook.Add( "HUDWeaponPickedUp", "Graphics", function() return true end )
+hook.Add( "HUDItemPickedUp", "Graphics", function() return true end )
 
 local iEphemeralIndexLast = 0
 function EphemeralLight( tData )
@@ -324,11 +327,11 @@ hook.Add( "Tick", "Graphics", function()
 	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
 	flFogG = math_Approach( flFogG || 255, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
 	flFogB = math_Approach( flFogB || 255, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
-	flFogDistance = Lerp( math_min( 1, 2 * flFrameTime ), flFogDistance, Lerp( flTerror,
+	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, Lerp( flTerror,
 		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 8192 ),
 		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 1536 ) || math_Remap( flColor, 0, 1, 512, 1024 ) ) )
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
-	flBloom = Lerp( math_min( 1, flFrameTime * .5 ), flBloom || 0, 1 - flColor )
+	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
 	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
@@ -343,19 +346,19 @@ hook.Add( "Tick", "Graphics", function()
 	}
 	local flDistance = tr.HitPos:Distance( EyePos() ) * Lerp( self:GetNW2Float( "BODY_flTerror", 0 ), 1.2, .8 )
 	flDepthOfField = Lerp(
-		math_min( 1, 5 * flFrameTime ),
+		FRILerpRate( 5, flFrameTime ),
 		flDepthOfField,	
 		flDistance
 	)
 	flSpacing = Lerp(
-		math_min( 1, 5 * flFrameTime ),
+		FRILerpRate( 5, flFrameTime ),
 		flSpacing,
 		math_Clamp( flDistance, 0, 1024 )
 	)
 	if tr.HitSky then
-		flActualDoFBegin = Lerp( math_min( 1, 1.5 * flFrameTime ), flActualDoFBegin, math_Clamp( ( flDepthOfField / flDistance ) ^ 10 * 5, 0, 5 ) )
+		flActualDoFBegin = Lerp( FRILerpRate( 1.5, flFrameTime ), flActualDoFBegin, math_Clamp( ( flDepthOfField / flDistance ) ^ 10 * 5, 0, 5 ) )
 	else
-		flActualDoFBegin = Lerp( math_min( 1, 1.5 * flFrameTime ), flActualDoFBegin, 0 )
+		flActualDoFBegin = Lerp( FRILerpRate( 1.5, flFrameTime ), flActualDoFBegin, 0 )
 	end
 end )
 
@@ -456,32 +459,32 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	vDirection:Normalize()
 	aDirection = vDirection:Angle()
 	local flActualBiggerMove = math.max( math.abs( cmd:GetForwardMove() ), math.abs( cmd:GetSideMove() ) )
-	local f = math.min( pPlayer:GetRunSpeed(), flActualBiggerMove )
+	local f = min( pPlayer:GetRunSpeed(), flActualBiggerMove )
 	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
 	local bSpecial = pPlayer:WaterLevel() > 0
 	if RealTime() <= flThirdPersonAttackTime then
-		cmd:SetViewAngles( LerpAngle( math.min( 1, 22.5 * FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		cmd:SetViewAngles( LerpAngle( FRILerpRate( 22.5, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
 		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
 	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
-		local r = LerpAngle( math.min( 1, 5 * FrameTime() ), cmd:GetViewAngles(), a )
+		local r = LerpAngle( FRILerpRate( 5, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
 	elseif bSpecial then
-		cmd:SetViewAngles( LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		cmd:SetViewAngles( LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
 	elseif flActualBiggerMove > 0 then
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
-		local r = LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a )
+		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
 	else
 		local a = Angle( aAim )
 		a[ 0 ] = 0
-		local r = LerpAngle( math.min( 1, FrameTime() ), cmd:GetViewAngles(), a )
+		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
 	end
@@ -550,7 +553,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, _ /* fov */, zn
 					// Nothing
 				end
 			end
-			vThirdPersonCameraOffset = LerpVector( 3 * FrameTime(), vThirdPersonCameraOffset, vTarget )
+			vThirdPersonCameraOffset = LerpVector( FRILerpRate( 3, FrameTime() ), vThirdPersonCameraOffset, vTarget )
 			local v = Vector( vThirdPersonCameraOffset )
 			v:Rotate( aThirdPerson )
 			local f = ply:GetFOV() * .33
@@ -668,7 +671,7 @@ hook.Add( "HUDPaint", "Graphics", function()
 	end
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
 	if f <= 0 then flProgress = 0 return end
-	flProgress = Lerp( math.min( 1, RealFrameTime() ), flProgress, f )
+	flProgress = Lerp( FRILerpRate( 1, RealFrameTime() ), flProgress, f )
 	draw_NoTexture()
 	local flHeight, flWidth = ScrH(), ScrW()
 	local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05

@@ -27,6 +27,8 @@ WPN_SNIPER = 5
 DIRECTOR_MUSIC_TENSION = 0
 DIRECTOR_THREAT = DIRECTOR_THREAT_NULL
 
+local abs = math.abs
+local sin = math.sin
 local sound_Add = sound.Add
 local CHAN_STATIC = CHAN_STATIC
 local timer_Simple = timer.Simple
@@ -36,7 +38,6 @@ local math_Rand = math.Rand
 local SysTime = SysTime
 local table_insert = table.insert
 local math_Approach = math.Approach
-local Lerp = Lerp
 local math_max = math.max
 local pairs = pairs
 local math_random = math.random
@@ -183,15 +184,26 @@ local __VARNAME__ = {
 	[ DIRECTOR_THREAT_COMBAT ] = "DIRECTOR_NUM_COMBAT_THEMES"
 }
 
-function DirectorContainerInternal() return { tHandles = {}, m_flVolume = 0 } end
+function DirectorContainerInternal()
+	return {
+		tHandles = {},
+		m_flVolume = 0,
+		m_flLastExecute = SysTime()
+	}
+end
+
 local DirectorContainerInternal = DirectorContainerInternal
 
 function PlayMusic( self, Index, sName, flVolume, flPitch )
 	local pSound = CreateSound( LocalPlayer(), sName )
+
 	flVolume = flVolume || 1
 	flPitch = flPitch || 100
+
 	StopMusic( self, Index )
+
 	pSound:PlayEx( math_max( SOUND_PATCH_ABSOLUTE_MINIMUM, flVolume * self.m_flVolume ), flPitch )
+
 	self.tHandles[ Index ] = { pSound, flVolume, flPitch, SoundDuration( sound_GetProperties( sName ).sound ), SysTime(), sName }
 end
 
@@ -240,19 +252,19 @@ DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade"
 	Execute = function( self, flInterval, flVolumeA, flVolumeB, bCorrect )
 		if !bCorrect then
 			if flVolumeB > 0 then
-				flVolumeB = flVolumeB < .05 && math_Approach( flVolumeB, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 0 )
+				flVolumeB = math_Approach( flVolumeB, 0, flInterval )
 				return false, flVolumeA, flVolumeB
 			end
 			if self.m_ELayerFrom == DIRECTOR_THREAT_NULL || flVolumeA >= 1 then return 0 end
-			flVolumeA = flVolumeA > .95 && math_Approach( flVolumeA, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 1 )
+			flVolumeA = math_Approach( flVolumeA, 1, flInterval )
 			return false, flVolumeA, flVolumeB
 		end
 		if flVolumeA > 0 then
-			flVolumeA = flVolumeA < .05 && math_Approach( flVolumeA, 0, flInterval ) || Lerp( .1 * flInterval, flVolumeA, 0 )
+			flVolumeA = math_Approach( flVolumeA, 0, flInterval )
 			return false, flVolumeA, flVolumeB
 		end
 		if self.m_ELayerTo == DIRECTOR_THREAT_NULL || flVolumeB >= 1 then return true end
-		flVolumeB = flVolumeB > .95 && math_Approach( flVolumeB, 1, flInterval ) || Lerp( .1 * flInterval, flVolumeB, 1 )
+		flVolumeB = math_Approach( flVolumeB, 1, flInterval )
 		return false, flVolumeA, flVolumeB
 	end
 } )
@@ -266,31 +278,15 @@ function DirectorUpdateContainerInternal( self, ... )
 	// since we also technically simulate the next tick
 	local t = self.m_pTable
 	local flInterval = SysTime() - LAST_DIRECTOR_CLIENT_TICK
-	// TODO: This isn't the actual interval between the executes
-	t.Execute( self, flInterval, ... )
+
+	t.Execute( self, SysTime() - self.m_flLastExecute, ... )
+	self.m_flLastExecute = SysTime()
+
 	local tHandles = self.tHandles
 	local flVolume = self.m_flVolume
-	//	for Index, tData in pairs( tHandles ) do
-	//		local pSound = tData[ 1 ]
-	//		f = flVolume * tData[ 2 ]
-	//		if f <= SOUND_PATCH_ABSOLUTE_MINIMUM then
-	//			tData[ 5 ] = SysTime()
-	//			pSound:ChangeVolume( SOUND_PATCH_ABSOLUTE_MINIMUM )
-	//			pSound:ChangePitch( 0 )
-	//			continue
-	//		else
-	//			pSound:ChangeVolume( f )
-	//			pSound:ChangePitch( tData[ 3 ] )
-	//		end
-	//		local flPitch = pSound:GetPitch()
-	//		local f = 0
-	//		if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
-	//		if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
-	//		tData[ 4 ] = f
-	//		tData[ 5 ] = SysTime()
-	//	end
+
 	local ply = LocalPlayer()
-	local h = ply:Health() / ply:GetMaxHealth()
+
 	if flVolume <= SOUND_PATCH_ABSOLUTE_MINIMUM then
 		for Index, tData in pairs( tHandles ) do
 			local pSound = tData[ 1 ]
@@ -300,21 +296,23 @@ function DirectorUpdateContainerInternal( self, ... )
 		end
 	else
 		local flPitcher = ply:GetNW2Float( "BODY_flTerror", 0 )
-		flPitcher = 1 - flPitcher * .2 - flPitcher * .6 * math.abs( math.sin( SysTime() * .1 ) )
+		flPitcher = 1 - flPitcher * .2 - flPitcher * .6 * abs( sin( SysTime() * .1 ) )
 		for Index, tData in pairs( tHandles ) do
 			local pSound = tData[ 1 ]
-			f = flVolume * tData[ 2 ]
+			local f = flVolume * tData[ 2 ]
 			pSound:ChangeVolume( math_max( f, SOUND_PATCH_ABSOLUTE_MINIMUM ) )
 			pSound:ChangePitch( tData[ 3 ] * flPitcher )
 			local flPitch = pSound:GetPitch()
-			local f = 0
 			if flPitch > 0 then f = tData[ 4 ] - ( SysTime() - tData[ 5 ] ) * ( flPitch / 100 ) end
 			if tData[ 4 ] <= flInterval then tHandles[ Index ] = nil tData[ 1 ]:Stop() continue end
 			tData[ 4 ] = f
 			tData[ 5 ] = SysTime()
 		end
 	end
-	return t.Execute( self, flInterval, ... )
+
+	local flLastExecute = self.m_flLastExecute
+	self.m_flLastExecute = SysTime()
+	return t.Execute( self, SysTime() - flLastExecute, ... )
 end
 
 local DirectorUpdateContainerInternal = DirectorUpdateContainerInternal
@@ -357,21 +355,27 @@ function Director_VoiceLineHook(
 		flDuration ) // sName - This is actually a String of the sound's name ( Data.SoundName )
 	flDuration = SoundDuration( flDuration )
 	if !flDuration then return end
+
 	if SysTime() <= DIRECTOR_MUSIC_VO_TIME && DIRECTOR_MUSIC_IN_VO_HF then return end
+
 	local f = LocalPlayer():GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 	if f <= 0 then DIRECTOR_MUSIC_VO_TIME = SysTime()
 	else DIRECTOR_MUSIC_VO_TIME = SysTime() + math.min( flDuration, 8 ) + f end
+	
 	DIRECTOR_MUSIC_IN_VO = true
 	DIRECTOR_MUSIC_IN_VO_HF = nil
 end
 
 function Director_VoiceLineHookToCombat( flDuration )
 	if DIRECTOR_TRANSITION && DIRECTOR_TRANSITION.m_bIntroOfATrack then return end
+
 	flDuration = SoundDuration( flDuration )
 	if !flDuration then return end
+
 	local f = LocalPlayer():GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 	if f <= 0 then DIRECTOR_MUSIC_VO_TIME = SysTime()
 	else DIRECTOR_MUSIC_VO_TIME = SysTime() + math.min( flDuration, 8 ) end
+	
 	DIRECTOR_MUSIC_IN_VO = true
 	DIRECTOR_MUSIC_IN_VO_HF = true
 end
@@ -386,8 +390,6 @@ hook.Add( "PostCleanupMap", "Director", function()
 end )
 
 function DIRECTOR_CLIENT_TICK()
-	// Not now! I'm a dumbass.
-	// LAST_DIRECTOR_CLIENT_TICK = SysTime()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then LAST_DIRECTOR_CLIENT_TICK = SysTime() return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -733,8 +735,12 @@ HUD_SHOULD_NOT_DRAW = {
 	CHudGeiger = true,
 	CHudDamageIndicator = true,
 	CHudHealth = true,
-	CHudHistoryResource = true
+	CHudHistoryResource = true,
+	CHUDQuickInfo = true
 }
+
+local HUD_SHOULD_NOT_DRAW = HUD_SHOULD_NOT_DRAW
+local DIRECTOR_CLIENT_TICK = DIRECTOR_CLIENT_TICK
 
 hook.Add( "HUDShouldDraw", "Director", function( sName )
 	DIRECTOR_CLIENT_TICK()
