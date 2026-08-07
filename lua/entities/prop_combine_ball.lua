@@ -103,6 +103,11 @@ function ENT:Initialize()
 	end
 end
 
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
 function ENT:Think()
 	if CurTime() > self.flLifeTime then
 		self.bDead = true
@@ -112,7 +117,7 @@ function ENT:Think()
 	local p = self:GetPhysicsObject()
 	if IsValid( p ) then
 		p:SetVelocity( p:GetVelocity():GetNormalized() * self.ROCKET_flSpeed )
-		p:SetAngleVelocity( LerpVector( math.min( 1, 100 * FrameTime() ), p:GetAngleVelocity(), vector_origin ) )
+		p:SetAngleVelocity( LerpVector( FRILerpRate( 100, FrameTime() ), p:GetAngleVelocity(), vector_origin ) )
 	else self:Remove() return end
 	local pSoundLoop = self.pSoundLoop
 	if pSoundLoop then

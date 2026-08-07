@@ -6,6 +6,11 @@ local coroutine_yield = coroutine.yield
 
 local function fEmpty() end
 
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
 // You MUST call AnimationSystemHalt before this!
 
 function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
@@ -77,7 +82,7 @@ function ENT:PromoteSequenceInstant( seq, flSpeed )
 end
 
 local Lerp = Lerp
-local math_min = math.min
+local min = min
 
 ENT.flAnimationSystemStopFor = 0
 
@@ -138,7 +143,7 @@ function ENT:AnimationSystemTick( MyTable )
 		local f = tPromote[ sSequence ]
 		if f then
 			self:SetLayerPlaybackRate( iLayer, f )
-			f = Lerp( math_min( flFrameTime * 5, 1 ), self:GetLayerWeight( iLayer ), 1 )
+			f = Lerp( FRILerpRate( 5, flFrameTime ), self:GetLayerWeight( iLayer ), 1 )
 			self:SetLayerWeight( iLayer, f )
 			if f >= .95 then bReached = true end
 		end
@@ -161,7 +166,7 @@ function ENT:AnimationSystemTick( MyTable )
 					tSequences[ sSequence ] = nil
 					continue
 				end
-				f = Lerp( math_min( flFrameTime * 5, 1 ), self:GetLayerWeight( iLayer ), 0 )
+				f = Lerp( FRILerpRate( 5, flFrameTime ), self:GetLayerWeight( iLayer ), 0 )
 				self:SetLayerWeight( iLayer, f )
 			end
 		end
@@ -180,7 +185,6 @@ function ENT:AnimationSystemHalt( MyTable )
 end
 
 local math_max = math.max
-local math_min = math.min
 local math_AngleDifference = math.AngleDifference
 
 function ENT:CenterTarget( vTarget, MyTable )
@@ -192,7 +196,7 @@ function ENT:CenterTarget( vTarget, MyTable )
 	local vPos = self:GetPos() + self:OBBCenter()
 	local flYawComfortableMin, flYawComfortableMax = self:GetPoseParameterRange( iYawPoseParameter )
 	flYawComfortableMin = math_max( flYawComfortableMin, -45 )
-	flYawComfortableMax = math_min( flYawComfortableMax, 45 )
+	flYawComfortableMax = min( flYawComfortableMax, 45 )
 	local flDelta = math_AngleDifference( aAlongPath[ 2 ], ( vTarget - vPos ):Angle()[ 2 ] )
 	if flDelta > flYawComfortableMin && flDelta < flYawComfortableMax then
 		MyTable.vaAimTargetBody = aAlongPath

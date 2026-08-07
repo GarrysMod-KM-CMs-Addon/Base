@@ -191,6 +191,8 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 		return
 	end
 
+	MyTable.WEAPON_STANCE = WEAPON_STANCE_PASSIVE
+
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"

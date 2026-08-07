@@ -16,6 +16,11 @@ include "Pursuit.lua"
 include "Sentence.lua"
 include "Skill.lua"
 
+local min = math.min
+local exp = math.exp
+
+local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
+
 ENT.GAME_flThrowForce = 1024
 
 function ENT:ModifyMoveAimVector() end
@@ -137,7 +142,7 @@ function ENT:OnKilled( dmg )
 	local l = v:Length()
 	v:Normalize()
 	// To prevent crazy physics... when in reality a ragdoll flying with an impulse of 4096 * 85 is perfectly fine
-	v:Mul( math.min( l, 2048 * 32 ) )
+	v:Mul( min( l, 2048 * 32 ) )
 	dmg:SetDamageForce( v )
 	for wep in pairs( self.tWeapons ) do self:DropWeapon( wep ) end
 	local pAttacker = dmg:GetAttacker()
@@ -473,7 +478,6 @@ ENT.flSuppressionRecoverTime = 0
 ENT.flCombatStateSuppressionRecoverTime = 0
 
 local Lerp = Lerp
-local math_min = math.min
 
 ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
@@ -482,41 +486,35 @@ function ENT:RunBehaviour( MyTable )
 			local flNow = CurTime()
 			local flLast = MyTable.m_flLastRunBehaviourCall || flNow
 			local flFrameTime = flNow - flLast
+
 			MyTable.m_flLastRunBehaviourCall = flNow
 			MyTable.m_flFrameTime = flFrameTime
+
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
+
 			local f = MyTable.fCallMeInRunBehaviour
 			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
-			MyTable.CalcCombatState( self, MyTable ) // Important to call this before the lower thing, as it calculates flSquadHealth
+
+			MyTable.CalcCombatState( self, MyTable )
+
 			if CurTime() > MyTable.flSuppressionRecoverTime then
-				MyTable.GAME_flSuppression = Lerp( math_min( flFrameTime * 2, 1 ), MyTable.GAME_flSuppression, 0 )
+				MyTable.GAME_flSuppression = Lerp( FRILerpRate( 2, flFrameTime ), MyTable.GAME_flSuppression, 0 )
 			end
+
 			if CurTime() > MyTable.flCombatStateSuppressionRecoverTime then
-				MyTable.flCombatStateSuppression = Lerp( math_min( flFrameTime * .1, 1 ), MyTable.flCombatStateSuppression, 0 )
+				MyTable.flCombatStateSuppression = Lerp( FRILerpRate( .1, flFrameTime ), MyTable.flCombatStateSuppression, 0 )
 			end
+
 			MyTable.HandleSentences( self, MyTable )
 			MyTable.HandleTurning( self, MyTable )
 			MyTable.Look( self, MyTable )
 			MyTable.Behaviour( self, MyTable )
+
 			coroutine_yield()
 		end
 	end )
 end
 
-/*
-ENT.bCanClimbLadders = false
-// Note that this is NOT climbing ladders, it's climbing ANYTHING, like Left 4 Dead 2 infected
-ENT.bCanClimb = false
-
-ENT.bSimpleDuck = false // Can only duck very simply as the name suggests - either ducked, or not ducked
-ENT.bCanMove = false
-ENT.bCanMoveShoot = false
-ENT.bCanDuck = false
-ENT.bCanDuckShoot = false
-ENT.bCanDuckMove = false
-ENT.bCanDuckMoveShoot = false
-*/
-
-function ENT:Crouching() return self:GetCrouchTarget() < .5 end
+function ENT:Crouching() return self:GetCrouchTarget() <= .5 end
 function ENT:SetCrouchTarget( flTarget ) end
 function ENT:GetCrouchTarget() return 1 end
