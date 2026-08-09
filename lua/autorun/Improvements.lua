@@ -547,11 +547,3 @@ function AddVelocity( ent, vVelocity )
 		if IsValid( phys ) then phys:AddVelocity( vVelocity ) end
 	end
 end
-
-for _, n in ipairs( file.Find( "Player/*.lua", "LUA" ) ) do ProtectedCall( function() include( "Player/" .. n ) end ) end
-
-// Assumes there is only one sound file, and that everything is valid
-function SoundScriptDuration( sSound ) return SoundDuration( sound.GetProperties( sSound ).sound ) end
-
-local sPath = "Map/" .. game.GetMap() .. ".lua"
-if file.Exists( sPath, "LUA" ) then include( sPath ) end
