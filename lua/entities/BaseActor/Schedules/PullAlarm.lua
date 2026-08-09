@@ -52,7 +52,7 @@ RegisterSchedule( "PullAlarm", { Execute = function( self, sched, MyTable )
 			start = MyTable.GetShootPos( self, MyTable ),
 			endpos = v,
 			mask = MASK_SHOT_HULL,
-			filter = SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
+			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		}
 
 		if !tr.Hit then

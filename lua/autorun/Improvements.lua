@@ -8,20 +8,21 @@ if SERVER then
 end
 
 local IsValid = IsValid
+local insert = table.insert
 
 function SimpleRelatedFilter( pEntity )
 	local tFilter = { pEntity }
 	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	if IsValid( pVehicle ) then insert( tFilter, pVehicle ) end
 	return tFilter
 end
 
 function SimpleRelatedFilterDouble( pEntity, pEnemy )
 	local tFilter = { pEntity, pEnemy }
 	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	if IsValid( pVehicle ) then insert( tFilter, pVehicle ) end
 	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	if IsValid( pEnemy ) then insert( tFilter, pEnemy ) end
 	return tFilter
 end
 
@@ -35,15 +36,15 @@ end
 function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
 	local tFilter = { pEntity, pEnemy, pBullseye }
 	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	if IsValid( pVehicle ) then insert( tFilter, pVehicle ) end
 	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	if IsValid( pEnemy ) then insert( tFilter, pEnemy ) end
 	return tFilter
 end
 
 local SimpleRelatedFilterTriple = SimpleRelatedFilterTriple
 
-function SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
+function SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 	return pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
 end
 
