@@ -9,6 +9,16 @@ local LocalPlayer = LocalPlayer
 local vTemp = Vector()
 local vTemp2 = Vector()
 
+local EyePos = EyePos
+local CreateSound = CreateSound
+
+sound.Add {
+	name = "BulletWhizLoop",
+	sound = ")ambient/gas/cannister_loop.wav",
+	level = 500,
+	channel = CHAN_BODY
+}
+
 function EFFECT:Init( pData )
 	local pWeapon = pData:GetEntity()
 	local pOwner = pWeapon:GetOwner()
@@ -28,6 +38,8 @@ function EFFECT:Init( pData )
 		end
 	end
 
+	MyTable.m_pOwner = pOwner
+
 	MyTable.vStart = v
 	MyTable.vEnd = vEnd
 
@@ -46,9 +58,14 @@ function EFFECT:Init( pData )
 	MyTable.flDieTime = CurTime() + flLifeTime
 end
 
-function EFFECT:Think()
-	local MyTable = CEntity_GetTable( self )
+local BULLET_WHIZ_DISTANCE_VISIBLE = 4096
+local BULLET_WHIZ_DISTANCE_OBSCURED = 512
 
+local util_TraceLine = util.TraceLine
+
+local sqrt = math.sqrt
+
+local function Update( self, MyTable, bDontUpdateSound )
 	local flLifeTime = MyTable.flLifeTime
 	vTemp:Set( MyTable.vStart )
 
@@ -59,7 +76,69 @@ function EFFECT:Think()
 
 	self:SetPos( vTemp )
 
-	return CurTime() <= CEntity_GetTable( self ).flDieTime
+	if bDontUpdateSound then return end
+
+	local vEyePos = EyePos()
+	local flDistSqr = vEyePos:DistToSqr( vTemp )
+	if flDistSqr > BULLET_WHIZ_DISTANCE_VISIBLE * BULLET_WHIZ_DISTANCE_VISIBLE then
+		local pWhiz = MyTable.m_pWhiz
+		if pWhiz then pWhiz:Stop() MyTable.m_pWhiz = nil end
+		return
+	end
+
+	local pOwner = MyTable.m_pOwner
+
+	local ply = LocalPlayer()
+
+	local bUseShort
+	local tFilter = ( IsValid( pOwner ) && pOwner != ply ) && { ply, pOwner } || { ply }
+	local pViewEntity = ply:GetViewEntity()
+	if IsValid( pViewEntity ) then table.insert( tFilter, pViewEntity ) end
+
+	if util_TraceLine( {
+		start = vEyePos,
+		endpos = vTemp,
+		filter = tFilter,
+		mask = MASK_VISIBLE_AND_NPCS
+	} ).Hit then
+		if flDistSqr > BULLET_WHIZ_DISTANCE_OBSCURED * BULLET_WHIZ_DISTANCE_OBSCURED then
+			local pWhiz = MyTable.m_pWhiz
+			if pWhiz then pWhiz:Stop() MyTable.m_pWhiz = nil end
+			return
+		end
+		bUseShort = true
+	end
+
+	local pWhiz = MyTable.m_pWhiz
+	if !pWhiz then
+		pWhiz = CreateSound( self, "BulletWhizLoop" )
+		pWhiz:PlayEx( 0, 0 )
+		MyTable.m_pWhiz = pWhiz
+	end
+
+	local flDot = MyTable.dDirection:Dot( ( vEyePos - vTemp ):GetNormalized() )
+
+	pWhiz:ChangeVolume( 1 - sqrt( flDistSqr ) / ( bUseShort && BULLET_WHIZ_DISTANCE_OBSCURED || BULLET_WHIZ_DISTANCE_VISIBLE ) )
+	pWhiz:ChangePitch( 150 + flDot * 50 )
+end
+
+function EFFECT:Think()
+	local MyTable = CEntity_GetTable( self )
+
+	if MyTable.m_bFirstPersonTracer then
+		local pWhiz = MyTable.m_pWhiz
+		if pWhiz then pWhiz:Stop() MyTable.m_pWhiz = nil end
+		return false
+	end
+
+	Update( self, MyTable )
+
+	if CurTime() > CEntity_GetTable( self ).flDieTime then
+		local pWhiz = MyTable.m_pWhiz
+		if pWhiz then pWhiz:Stop() MyTable.m_pWhiz = nil end
+		return false
+	end
+	return true
 end
 
 local mMaterial = Material "effects/ar2_altfire1b"
@@ -73,17 +152,13 @@ local DynamicLight = DynamicLight
 function EFFECT:Render()
 	local MyTable = CEntity_GetTable( self )
 
-	if MyTable.m_bFirstPersonTracer then return end
+	if MyTable.m_bFirstPersonTracer then
+		local pWhiz = MyTable.m_pWhiz
+		if pWhiz then pWhiz:Stop() MyTable.m_pWhiz = nil end
+		return
+	end
 
-	local flLifeTime = MyTable.flLifeTime
-	vTemp:Set( MyTable.vStart )
-
-	vTemp2:Set( MyTable.dDirection )
-	vTemp2:Mul( MyTable.flDistance * ( flLifeTime - ( MyTable.flDieTime - CurTime() ) ) / flLifeTime )
-
-	vTemp:Add( vTemp2 )
-
-	self:SetPos( vTemp )
+	Update( self, MyTable, true )
 
 	local vPos = self:GetPos()
 	local dDirection = MyTable.dDirection

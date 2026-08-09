@@ -162,10 +162,12 @@ end
 
 function DrawBlur( flIntensity ) DrawBokehDOF( flIntensity, 0, 0 ) end
 
-local MAX_WATER_BLUR = 3
-// [ 0, 1 ], Not [ 0, MAX_WATER_BLUR ]!
+local MAX_WATER_BLUR = 6
+local MAX_WATER_BLUR_REFRACT = .05
+
+// [ 0, 1 ], not [ 0, MAX_WATER_BLUR ]!
 local WATER_BLUR_CHANGE_SPEED_TO = .8
-local WATER_BLUR_CHANGE_SPEED_FROM = .2
+local WATER_BLUR_CHANGE_SPEED_FROM = .5
 
 include "postprocess/bloom.lua"
 local DrawBloom = DrawBloom
@@ -200,8 +202,9 @@ local flBleedingBlur = 0
 local flBleedingMotionBlurAdd = 0
 local flBleedingMotionBlurDraw = 0
 
+WATER_BLUR = 0
+
 local bWaterBlur
-local flWaterBlur = 0
 local flWaterBlurDirect = 0
 local flWaterBlurRefractAmount = 0
 
@@ -223,6 +226,15 @@ local flActualDoFBegin = 0
 local flNextSendLuminosity = 0
 
 local TERROR_VECTOR_COLOR = Vector( 1 / 3, 0, 0 )
+
+function RecalculateWaterBlurAmounts()
+	if WATER_BLUR > 1 then WATER_BLUR = 1 end
+
+	flWaterBlurDirect = WATER_BLUR * MAX_WATER_BLUR
+	flWaterBlurRefractAmount = WATER_BLUR * MAX_WATER_BLUR_REFRACT
+end
+
+local RecalculateWaterBlurAmounts = RecalculateWaterBlurAmounts
 
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
@@ -315,11 +327,10 @@ hook.Add( "Tick", "Graphics", function()
 		flBleedingMotionBlurDraw = math_Clamp( 1 - f, 0, 1 ) * f
 	else bBleedingBlur = nil end
 	if self:WaterLevel() >= 3 then
-		flWaterBlur = math_Approach( flWaterBlur || 0, 1, WATER_BLUR_CHANGE_SPEED_TO * flFrameTime )
-	else flWaterBlur = math_Approach( flWaterBlur || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * flFrameTime ) end
-	bWaterBlur = flWaterBlur > 0
-	flWaterBlurDirect = flWaterBlur * MAX_WATER_BLUR
-	flWaterBlurRefractAmount = flWaterBlur * .01
+		WATER_BLUR = math_Approach( WATER_BLUR || 0, 1, WATER_BLUR_CHANGE_SPEED_TO * flFrameTime )
+	else WATER_BLUR = math_Approach( WATER_BLUR || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * flFrameTime ) end
+	bWaterBlur = WATER_BLUR > 0
+	RecalculateWaterBlurAmounts()
 	local vTargetColor = LerpVector( ( flColorSum * ( 1 / 3 ) ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
 	vTargetColor = LerpVector( flTerror, vColor, TERROR_VECTOR_COLOR )
 	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )

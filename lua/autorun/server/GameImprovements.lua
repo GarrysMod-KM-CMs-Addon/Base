@@ -175,35 +175,6 @@ function EntityUniqueIdentifier( ent )
 	return ent.__UNIQUE_IDENTIFIER__
 end
 
-function SimpleRelatedFilter( pEntity )
-	local tFilter = { pEntity }
-	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
-	return tFilter
-end
-
-function SimpleRelatedFilterDouble( pEntity, pEnemy )
-	local tFilter = { pEntity, pEnemy }
-	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
-	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
-	return tFilter
-end
-
-function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
-	local tFilter = { pEntity, pEnemy, pBullseye }
-	local pVehicle = pEntity.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
-	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
-	return tFilter
-end
-
-function SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
-	return pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
-end
-
 local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
 RANGE_ATTACK_SUPPRESSION_BOUND_SIZE = 512
 function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )

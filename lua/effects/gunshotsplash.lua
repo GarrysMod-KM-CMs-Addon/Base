@@ -3,6 +3,9 @@ local ParticleEmitter = ParticleEmitter
 local random = math.random
 local Rand = math.Rand
 local sv_gravity = GetConVar "sv_gravity"
+local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+local EyePos = EyePos
+local sqrt = math.sqrt
 
 sound.Add {
 	name = "GunshotSplash",
@@ -99,4 +102,16 @@ end
 
 function EFFECT:Think() return false end
 
-function EFFECT:Render() end
+local GUNSHOTSPLASH_BLUR_DISTANCE = 512
+
+function EFFECT:Render()
+	local MyTable = CEntity_GetTable( self )
+	if MyTable.m_bCalculatedBlur then return end
+	MyTable.m_bCalculatedBlur = true
+
+	local flDistSqr = EyePos():DistToSqr( self:GetPos() )
+	if flDistSqr > GUNSHOTSPLASH_BLUR_DISTANCE * GUNSHOTSPLASH_BLUR_DISTANCE then return end
+
+	WATER_BLUR = WATER_BLUR + ( 1 - sqrt( flDistSqr ) / GUNSHOTSPLASH_BLUR_DISTANCE ) ^ 2
+	RecalculateWaterBlurAmounts()
+end

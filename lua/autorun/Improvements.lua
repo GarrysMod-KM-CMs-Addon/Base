@@ -7,6 +7,46 @@ if SERVER then
 	end
 end
 
+local IsValid = IsValid
+
+function SimpleRelatedFilter( pEntity )
+	local tFilter = { pEntity }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	return tFilter
+end
+
+function SimpleRelatedFilterDouble( pEntity, pEnemy )
+	local tFilter = { pEntity, pEnemy }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	local pVehicle = pEnemy.GAME_pVehicle
+	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	return tFilter
+end
+
+local SimpleRelatedFilter = SimpleRelatedFilter
+local SimpleRelatedFilterDouble = SimpleRelatedFilterDouble
+
+function SimpleRelatedFilterSingleDouble( pEntity, pOptional )
+	return IsValid( pOptional ) && SimpleRelatedFilterDouble( pEntity, pOptional ) || SimpleRelatedFilter( pEntity )
+end
+
+function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
+	local tFilter = { pEntity, pEnemy, pBullseye }
+	local pVehicle = pEntity.GAME_pVehicle
+	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
+	local pVehicle = pEnemy.GAME_pVehicle
+	if IsValid( pEnemy ) then table.insert( tFilter, pEnemy ) end
+	return tFilter
+end
+
+local SimpleRelatedFilterTriple = SimpleRelatedFilterTriple
+
+function SimpleRelatedFilterDoubleTriple( self, pEnemy, pTrueEnemy )
+	return pEnemy == pTrueEnemy && SimpleRelatedFilterDouble( self, pEnemy ) || SimpleRelatedFilterTriple( self, pEnemy, pTrueEnemy )
+end
+
 BIOLOGICAL_ONLY_DAMAGE_TYPES = {
 	[ DMG_POISON ] = true,
 	[ DMG_NERVEGAS ] = true,
@@ -272,8 +312,6 @@ function CalculateAcceleration( vVelocity, vTarget, flAcceleration, flFrameTime 
 	if flDistance == 0 then return Vector() end
 	return vDelta:GetNormalized() * math.min( flDistance, flAcceleration * ( flFrameTime || FrameTime() ) )
 end
-
-local IsValid = IsValid
 
 local hook = hook
 local hook_Add = hook.Add
