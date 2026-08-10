@@ -153,15 +153,23 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 
 	local pActiveWeapon = ply:GetActiveWeapon()
 	local flDelay, flRecoil = .1, 1
+	local bAutomatic
 	if IsValid( pActiveWeapon ) then
 		local WeaponTable = CEntity_GetTable( pActiveWeapon )
-		if WeaponTable.__WEAPON__ && WeaponTable.Primary_flDelay then
-			flDelay = min( WeaponTable.Primary_flDelay, .2 )
-			flRecoil = WeaponTable.CalculateRecoil( pActiveWeapon, ply, WeaponTable )
+
+		local tPrimary = WeaponTable.Primary
+		if tPrimary then bAutomatic = tPrimary.Automatic end
+
+		if WeaponTable.__WEAPON__ then
+			flDelay = WeaponTable.Primary_flDelay || flDelay
+			if flDelay then
+				flDelay = min( flDelay, .2 )
+				flRecoil = WeaponTable.CalculateRecoil( pActiveWeapon, ply, WeaponTable )
+			end
 		end
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( ( flDelay * .85 ) ^ 2 ) * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * .85 ) ^ 2 * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
@@ -190,8 +198,12 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 
 	cmd:SetViewAngles( ang )
 
-	if CurTime() >= ( ply.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then ply.GAME_flSpamPenalty = CurTime() + .1 end
-	if CurTime() <= ( ply.GAME_flSpamPenalty || 0 ) then cmd:RemoveKey( IN_ATTACK ) end
+	// No, this is not a mistake. Only automatic weapons get the penalty.
+	// Why? Idunno, it just feels better.
+	if bAutomatic then
+		if CurTime() >= ( PlyTable.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then PlyTable.GAME_flSpamPenalty = CurTime() + .085 end
+		if CurTime() <= ( PlyTable.GAME_flSpamPenalty || 0 ) then cmd:RemoveKey( IN_ATTACK ) end
+	end
 
 	if CLIENT then
 		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true

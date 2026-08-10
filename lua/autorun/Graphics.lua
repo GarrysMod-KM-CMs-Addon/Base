@@ -163,7 +163,7 @@ end
 function DrawBlur( flIntensity ) DrawBokehDOF( flIntensity, 0, 0 ) end
 
 local MAX_WATER_BLUR = 6
-local MAX_WATER_BLUR_REFRACT = .05
+local MAX_WATER_BLUR_REFRACT = .02
 
 // [ 0, 1 ], not [ 0, MAX_WATER_BLUR ]!
 local WATER_BLUR_CHANGE_SPEED_TO = .8
