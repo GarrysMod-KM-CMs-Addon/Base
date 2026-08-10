@@ -396,7 +396,7 @@ ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
 
 ENT.flAimStiffness = 24
-ENT.flAimDamping = -2
+ENT.flAimDamping = -8
 
 ENT.flBodyStiffness = 14
 ENT.flBodyDamping = -12
