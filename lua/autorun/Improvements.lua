@@ -266,13 +266,14 @@ if SERVER then
 		[ TRAVERSES_AIR ] = {}
 	}
 else
+	// TODO: Maybe add a server option to replace this with the sound duration of the source?
 	ReadSpeed = CreateClientConVar(
 		"ReadSpeed",
-		6,
+		10,
 		true,
 		true,
 		"How fast can you read? In characters per second.",
-		2.220446049250313e-16 // Epsilon to avoid division by zero
+		6
 	)
 
 	local ReadSpeed = ReadSpeed
