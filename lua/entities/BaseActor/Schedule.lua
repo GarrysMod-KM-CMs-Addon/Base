@@ -98,6 +98,7 @@ include "Schedules/CombatHeavy/Main.lua"
 
 include "Schedules/Idle.lua"
 include "Schedules/Combat.lua"
+include "Schedules/Peek.lua"
 include "Schedules/Cover.lua"
 include "Schedules/PullAlarm.lua"
 include "Schedules/Startle.lua"

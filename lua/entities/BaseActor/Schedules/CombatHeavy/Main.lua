@@ -23,7 +23,7 @@ RegisterSchedule( "CombatHeavy", { Execute = function( self, sched, MyTable )
 		start = self:GetShootPos(),
 		endpos = vEnemy,
 		mask = MASK_SHOT_HULL,
-		filter = SimpleRelatedFilterDouble( self, pEnemy )
+		filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 	} ).Hit then
 		MyTable.vaAimTargetBody = vEnemy
 		MyTable.vaAimTargetPose = MyTable.vaAimTargetBody

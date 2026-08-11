@@ -9,14 +9,15 @@ function ENT:GetEnemy() return CEntity_GetTable( self ).Enemy end
 
 local IsValid = IsValid
 
-function ENT:SetupEnemy( enemy )
-	local ent = enemy
-	if ent.__ACTOR_BULLSEYE__ then
-		while ent.__ACTOR_BULLSEYE__ && IsValid( ent.Enemy ) do
-			ent = ent.Enemy
+function ENT:SetupEnemy( pBullseye )
+	local pEnemy = pBullseye
+	if pEnemy.__ACTOR_BULLSEYE__ then
+		while pEnemy.__ACTOR_BULLSEYE__ && IsValid( pEnemy.Enemy ) do
+			pEnemy = pEnemy.Enemy
 		end
 	end
-	return enemy, ent
+
+	return pBullseye, pEnemy
 end
 
 local util_TraceLine = util.TraceLine
@@ -25,7 +26,7 @@ local math = math
 local math_abs = math.abs
 local math_AngleDifference = math.AngleDifference
 
-local table_insert = table.insert
+local insert = table.insert
 
 local MASK_VISIBLE_AND_NPCS = MASK_VISIBLE_AND_NPCS
 
@@ -55,10 +56,10 @@ function ENT:CanSee( vec, MyTable )
 		vec = CEntity_GetPos( vec ) + CEntity_OBBCenter( vec )
 	end
 	local t = { self }
-	if IsValid( ent ) then table_insert( t, ent ) end
-	if IsValid( veh ) then table_insert( t, veh ) end
+	if IsValid( ent ) then insert( t, ent ) end
+	if IsValid( veh ) then insert( t, veh ) end
 	veh = self.GAME_pVehicle
-	if IsValid( veh ) then table_insert( t, veh ) end
+	if IsValid( veh ) then insert( t, veh ) end
 	if MyTable.bVisNot360 then
 		local des, aim = ( vec - MyTable.GetShootPos( self ) ):Angle(), MyTable.aAim || CEntity_GetAngles( self )
 		if math_abs( math_AngleDifference( des.y, aim.y ) ) > MyTable.flVisionYaw then return end
@@ -73,7 +74,7 @@ function ENT:CanSee( vec, MyTable )
 end
 
 ENT.tEnemies = {} // Entity ( Even InValid, will be Filtered ) -> true
-ENT.tBullseyes = {} // EntityUniqueIdentifier -> { BaseActorBullseye ( Even InValid ), Source Entity ( Even InValid ), Entity ( Even InValid ) }
+ENT.tBullseyes = {} // EntityUniqueIdentifier -> { BaseActorBullseye, Source Entity (Even invalid), Entity (even invalid) }
 
 local CEntity_Remove = CEntity.Remove
 function ENT:ReportPositionAsClear( vec, MyTable )
@@ -139,6 +140,27 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 	BullseyeTable.GAME_BoundMins = ent:OBBMins()
 	BullseyeTable.GAME_BoundMaxs = ent:OBBMaxs()
 	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
+
+	local fGetAimVector = ent.GetAimVector
+	if fGetAimVector then
+		local v = fGetAimVector( ent )
+		function BullseyeTable:GetAimVector() return v end
+	end
+
+	local fGetShootPos = ent.GetShootPos
+	if fGetShootPos then
+		local v = fGetShootPos( ent )
+		function BullseyeTable:GetShootPos() return v end
+	end
+
+	if InRangeAttack( ent ) then
+		BullseyeTable.IN_RANGE_ATTACK = true
+		BullseyeTable.IN_NOT_RANGE_ATTACK = nil
+	else
+		BullseyeTable.IN_RANGE_ATTACK = nil
+		BullseyeTable.IN_NOT_RANGE_ATTACK = true
+	end
+
 	if HasRangeAttack( ent ) then
 		BullseyeTable.HAS_RANGE_ATTACK = true
 		BullseyeTable.HAS_NOT_RANGE_ATTACK = nil
@@ -146,6 +168,7 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		BullseyeTable.HAS_RANGE_ATTACK = nil
 		BullseyeTable.HAS_NOT_RANGE_ATTACK = true
 	end
+
 	if HasMeleeAttack( ent ) then
 		BullseyeTable.HAS_MELEE_ATTACK = true
 		BullseyeTable.HAS_NOT_MELEE_ATTACK = nil
@@ -153,8 +176,10 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		BullseyeTable.HAS_MELEE_ATTACK = nil
 		BullseyeTable.HAS_NOT_MELEE_ATTACK = true
 	end
+
 	beye:SetHealth( enemy:Health() )
 	beye:SetMaxHealth( enemy:GetMaxHealth() )
+
 	return beye
 end
 
@@ -211,7 +236,7 @@ local math_Clamp = math.Clamp
 
 local CurTime = CurTime
 
-// The name is a fluke lmao - you should handle the picking up code here too.
+// The name is a fluke lmao - you should handle the picking up code here too
 function ENT:ShouldPickUpGun( pWeapon, vEyePos, TheirTable, MyTable )
 	if MyTable.bCannotCarryWeapons || pWeapon:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 9437184/*3072*/ then return end
 	local pSchedule = MyTable.Schedule
@@ -245,22 +270,27 @@ ENT.flNextLookTime = 0
 //
 // 1 / seconds to lose completely
 ENT.flLoseSpeed = .2 // 5
-ENT.tVisionStrength = {} // Entity ( Even invalid, will be filtered ) -> Float [ 0, 1 ]
+ENT.tVisionStrength = {} // Entity (even invalid, will be filtered) -> Float [ 0, 1 ]
 ENT.tAlertEntities = {} // Entities that we might wanna be concerned about, such as enemies who won't attack first
 ENT.tNextWeaponCheck = {}
+
 local ipairs = ipairs
+
+ENT.tLastVisionEntities = {}
+
 function ENT:Look( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
 	if MyTable.m_bScript then return end
-	if CurTime() <= MyTable.flNextLookTime then return end
-	MyTable.flNextLookTime = CurTime() + math_Rand( .08, .12 )
+
+	local flFrameTime = math_abs( CurTime() - MyTable.flLastLookTime )
+
 	local tVisionStrength = {}
 	local tVisibleEnemies = {}
 	local tAlertEntities = {}
 	local iNumEnemies = table_Count( MyTable.tEnemies )
 	local tEnemies = {}
 	local tOldVisionStrength = MyTable.tVisionStrength
-	local flFrameTime = math_abs( CurTime() - MyTable.flLastLookTime )
 	local flVisionDistSqr = MyTable.flMaxVisionRange * MyTable.flMaxVisionRange
 	local vEyePos = MyTable.GetShootPos( self )
 	local tAllies = MyTable.GetAlliesByClass( self )
@@ -271,19 +301,12 @@ function ENT:Look( MyTable )
 	local bNotClear = !bClear
 	local bMelee, bRange
 	local tWeapons = {}
-	for _, ent in ipairs(
-		// This is the piece of shit that is necessary but absolutely CONSUMES the CPU!
-		// I am 100% sure, and I have tested it.
-		// If you. for example, add
-		// if true then ents_FindInPVS( self ) return end
-		// below
-		// MyTable.flNextLookTime = CurTime() + math_Rand( .08, .12 )
-		// it will not become less CPU consuming than it is already.
-		// So sadly, major optimizations cannot be done without making the Actors blinder,
-		// and that is not something that I will ever do
-		ents_FindInPVS( self )
-	) do
+
+	for _, ent in ipairs( MyTable.tLastVisionEntities ) do
+		if !IsValid( ent ) then continue end
+
 		if vEyePos:DistToSqr( CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) ) > flVisionDistSqr then continue end
+
 		local TheirTable = CEntity_GetTable( ent )
 		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( ent ) ) then
 			if TheirTable.__PROJECTILE__ ||
@@ -291,10 +314,11 @@ function ENT:Look( MyTable )
 			!MyTable.IsHateDisposition( self, ent ) ||
 			!MyTable.CanSee( self, ent ) then continue end
 		end
+
 		if tOldVisionStrength[ ent ] then
 			if TheirTable.__WEAPON__ && !IsValid( CEntity_GetOwner( ent ) ) then
 				if CurTime() > ( MyTable.tNextWeaponCheck[ ent ] || 0 ) && tOldVisionStrength[ ent ] >= 1 then // Omagad, a gun!!!
-					table_insert( tWeapons, { ent, ent:GetPos():DistToSqr( vEyePos ) } )
+					insert( tWeapons, { ent, ent:GetPos():DistToSqr( vEyePos ) } )
 					MyTable.tNextWeaponCheck[ ent ] = CurTime() + 2
 					continue
 				end
@@ -316,7 +340,7 @@ function ENT:Look( MyTable )
 						end
 					else
 						// Slower so they have some time to reappear before the combat is cancelled
-						tVisionStrength[ ent ] = math_Clamp( f - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * .1 * flFrameTime, 0, 1 )
+						tVisionStrength[ ent ] = math_Clamp( f - flFrameTime * .1 + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime * .1, 0, 1 )
 					end
 				end
 			else
@@ -340,18 +364,24 @@ function ENT:Look( MyTable )
 			end
 		else tVisionStrength[ ent ] = 0 end
 	end
+
 	table.SortByMember( tWeapons, 2, true )
 	for _, t in ipairs( tWeapons ) do
 		local ent = t[ 1 ]
 		if !IsValid( ent ) then continue end
 		MyTable.ShouldPickUpGun( self, ent, vEyePos, TheirTable, MyTable )
 	end
+
 	MyTable.tAlertEntities = tAlertEntities
+
 	local f = MyTable.flLoseSpeed
 	for ent, flt in pairs( tOldVisionStrength ) do
 		if !IsValid( ent ) || flt <= 0 || tVisionStrength[ ent ] then continue end
 		tVisionStrength[ ent ] = flt - f * FrameTime()
 	end
+
+	MyTable.tVisionStrength = tVisionStrength
+
 	local tBullseyes = {}
 	for id, data in pairs( MyTable.tBullseyes ) do
 		local ent = data[ 1 ]
@@ -362,24 +392,53 @@ function ENT:Look( MyTable )
 		if !bRange && HasRangeAttack( ent ) then bRange = true end
 		tEnemies[ ent ] = true
 	end
+
 	MyTable.bEnemiesHaveMeleeAttack = bMelee
 	MyTable.bEnemiesHaveRangeAttack = bRange
+
 	MyTable.tBullseyes = tBullseyes
-	local ned, ne = math.huge
-	for ent in pairs( MyTable.tEnemies ) do
-		if !IsValid( ent ) then continue end
-		local d = ( CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) ):DistToSqr( vEyePos )
-		if d >= ned then continue end
-		ne, ned = ent, d
-	end
-	MyTable.Enemy = ne
 	MyTable.tEnemies = tEnemies
+
+	local tNextWeaponCheck = MyTable.tNextWeaponCheck
+	for pWeapon, flTime in pairs( tNextWeaponCheck ) do
+		if !IsValid( pWeapon ) then
+			tNextWeaponCheck[ pWeapon ] = nil
+		end
+	end
+
 	MyTable.flLastLookTime = CurTime()
-	MyTable.tVisionStrength = tVisionStrength
-	if bClear && IsValid( ne ) then MyTable.OnAcquireEnemy( self, ne, MyTable ) end
-	local t = {}
-	for ent, flTime in pairs( MyTable.tNextWeaponCheck ) do if IsValid( ent ) then t[ ent ] = flTime end end
-	MyTable.tNextWeaponCheck = t
+
+	if CurTime() <= MyTable.flNextLookTime then return end
+
+	MyTable.flNextLookTime = CurTime() + math_Rand( .08, .12 )
+
+	local tLastVisionEntities = {}
+
+	for _, pEntity in ipairs( ents_FindInPVS( self ) ) do
+		if vEyePos:DistToSqr( CEntity_GetPos( pEntity ) + CEntity_OBBCenter( pEntity ) ) > flVisionDistSqr then continue end
+
+		local TheirTable = CEntity_GetTable( pEntity )
+		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( pEntity ) ) then
+			if TheirTable.__PROJECTILE__ ||
+			!TheirTable.__ACTOR_BULLSEYE__ &&
+			!MyTable.IsHateDisposition( self, pEntity ) ||
+			!MyTable.CanSee( self, pEntity ) then continue end
+		end
+
+		insert( tLastVisionEntities, pEntity )
+	end
+
+	MyTable.tLastVisionEntities = tLastVisionEntities
+
+	local flNearestDistSqr, pNearestEnemy = math.huge
+	for _, tData in pairs( tBullseyes ) do
+		local pBullseye = tData[ 1 ]
+		local flDistSqr = ( CEntity_GetPos( pBullseye ) + CEntity_OBBCenter( pBullseye ) ):DistToSqr( vEyePos )
+		if flDistSqr >= flNearestDistSqr then continue end
+		pNearestEnemy, flNearestDistSqr = pBullseye, flDistSqr
+	end
+
+	MyTable.Enemy = pNearestEnemy
 end
 
 function ENT:GetStartleSoundLevel( sName )

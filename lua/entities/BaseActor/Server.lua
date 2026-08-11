@@ -163,8 +163,6 @@ function ENT:OnKilled( dmg )
 	hook.Run( "OnNPCKilled", self, dmg:GetAttacker(), dmg:GetInflictor() )
 end
 
-function ENT:OnAcquireEnemy() end
-
 function ENT:ClearThreatToClass( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	local t = MyTable.tThreatToClass

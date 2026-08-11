@@ -1,5 +1,3 @@
-// TODO: This whole file is old, awful, and needs to be broken down into smaller files like I've done with FreeMovement!
-
 local table_IsEmpty = table.IsEmpty
 local HasRangeAttack, HasMeleeAttack = HasRangeAttack, HasMeleeAttack
 local util_TraceLine = util.TraceLine
@@ -9,6 +7,45 @@ local random = math.random
 local Rand = math.Rand
 local unpack = unpack
 local CurTime = CurTime
+
+ENT.tPreScheduleResetVariables.bSuppressing = false
+ENT.tPreScheduleResetVariables.bWantsCover = false
+
+function ENT:RangeAttack()
+	if self.bHoldFire then return end
+	self:WeaponPrimaryVolley()
+	self.flWeaponPrimaryVolleyTimeMin = 0
+	self.flWeaponPrimaryVolleyTimeMax = 3
+	self.flWeaponPrimaryVolleyBreakMin = 0
+	self.flWeaponPrimaryVolleyBreakMax = 1
+	self.flWeaponPrimaryVolleyNonAutomaticDelayMin = 0
+	self.flWeaponPrimaryVolleyNonAutomaticDelayMax = .4
+	return true
+end
+
+// Small suppressed, does NOT want someone else to help yet
+function ENT:DLG_Suppressed() end
+// Large suppressed, DOES want someone else to help now
+// No functionality here for now, but it'll be here, so do BaseClass.DLG_Pinned( self, MyTable )
+function ENT:DLG_Pinned( MyTable ) end
+
+// See the code, I have no easy way of explaining this one
+ENT.flSuppressionTraceFraction = .8
+
+local util_TraceLine = util.TraceLine
+local util_TraceHull = util.TraceHull
+
+ENT.flHoldFireTime = 48
+
+function ENT:DLG_HoldFire()
+	self.bHoldFire = true
+	local tAllies = self:GetAlliesByClass()
+	if tAllies then
+		for ent in pairs( tAllies ) do
+			if IsValid( ent ) then ent.bHoldFire = true end
+		end
+	end
+end
 
 ENT.Moving_WEAPON_STANCE = WEAPON_STANCE_DEFAULT
 
@@ -126,7 +163,8 @@ ENT.flPathStabilizer = 16
 
 function ENT:DLG_Charge() end
 
-// Fixes a certain bug that I am too lazy to describe rn
+// Fixes a certain bug that I'm too lazy to describe rn
+// Maybe on the docs, sometime?
 function ENT:IsValidCoverCandidate( tCover, pEnemyPath, MyTable )
 	local vStart = tCover.vStart
 	local vEnd = tCover.vEnd
@@ -140,7 +178,8 @@ function ENT:IsValidCoverCandidate( tCover, pEnemyPath, MyTable )
 	dTowards[ 3 ] = 0
 	dTowards:Normalize()
 
-	return ( tCover.bRight && ( vEnd - vStart ):Angle():Right() || -( vEnd - vStart ):Angle():Right() ):Dot( dTowards ) < 0
+	local flDot = ( vEnd - vStart ):Angle():Right():Dot( dTowards )
+	if tCover.bRight then return flDot < 0 else return flDot > 0 end
 end
 
 function ENT:IsValidCoverPoint( vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs /* Optional as you may have precomputed them */ )
@@ -306,5 +345,3 @@ RegisterSchedule( "Combat", { Execute = function( self, sched, MyTable )
 
 	MyTable.vActualCover = vCover
 end } )
-
-include "CombatStuff.lua"
