@@ -22,8 +22,8 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
-SWEP.Crosshair = "SubMachineGun"
-SWEP.sAimSound = "BaseWeapon_Aim_SubMachineGun"
+SWEP.Crosshair = "SubmachineGun"
+SWEP.sAimSound = "BaseWeapon_Aim_SubmachineGun"
 SWEP.sHoldType = "SMG"
 
 if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then

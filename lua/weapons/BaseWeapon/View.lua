@@ -152,8 +152,13 @@ function SWEP:CalcView( ply, pos, ang )
 		else
 			local flVelocity = CEntity_GetVelocity( ply ):Length()
 			if flVelocity > 10 then
-				local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale * ( 1 - MyTable.flAimMultiplier )
+				local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale
+
 				local flBreathe = RealTime() * 12
+
+				vTargetAngle:Add( Vector( math_sin( flBreathe ), math_cos( flBreathe * .5 ) ) * f * MyTable.flAimMultiplier )
+				
+				f = f * ( 1 - MyTable.flAimMultiplier )
 				vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .33, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
 				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * .33 )
 			end
@@ -261,7 +266,7 @@ end
 
 SWEP.flViewModelSprint = 0
 SWEP.flAimShootTurn = 1 / 30
-SWEP.flAimSpeed = 5
+SWEP.flAimSpeed = 7
 
 local COVER_BLINDFIRE_LEFT_POSE = Vector( 0, -11, 3 )
 local COVER_BLINDFIRE_LEFT_POSE_ANGLE = Vector( 0, 0, -30 )
@@ -278,9 +283,11 @@ local flLastCalcViewModelViewCall = SysTime()
 local SPRINT_ANIMATION_VIEWMODEL = {
 	[ WPN_PISTOL ] = function( MyTable, f, flViewModelSprint )
 		local flBreathe = RealTime() * 8
+
 		vTarget:Add( MyTable.vSprint || WEAPON_SPRINT_PISTOL_DEFAULT * flViewModelSprint )
 		vTargetAngle:Add( MyTable.vSprintAngle || WEAPON_SPRINT_PISTOL_DEFAULT_ANGLE * flViewModelSprint )
-		vTarget:Add( Vector( math_cos( flBreathe ) * -1, 2, math_cos( flBreathe ) * -2 ) * flViewModelSprint )
+
+		vTarget:Add( Vector( math_cos( flBreathe ) * -1, 2, math_cos( flBreathe ) * -2 + math_cos( RealTime() * 10 ) * 2 ) * flViewModelSprint )
 		vTargetAngle:Add( Vector( math_cos( flBreathe ) * 22.5, math_cos( flBreathe ) * 11.25, 0 ) * flViewModelSprint )
 	end,
 
@@ -335,7 +342,7 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 		flHipRecoilBack = 4 * flAimMultiplier
 		// TODO: These are generic settings.
 		// Rifles use 15/30 and should also have a jump. SMGs 30/60.
-		// Add reliance on WPN_SHOOT, plus implement WPN_SUBMACHINEGUN
+		// Add reliance on WPN_SHOOT, plus implement WPN_SubmachineGun
 		flHipRecoilPitchTurn = tAnimation[ 2 ] * 15 * flAimMultiplier
 		flHipRecoilYawTurn = tAnimation[ 3 ] * 30 * flAimMultiplier
 
@@ -366,6 +373,8 @@ local function ApplyRecoil( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang
 
 	flAimingRecoilYawTurn = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
 	flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
+
+	flDelay = min( MyTable.Primary_flDelay, .05 )
 
 	flAimingRecoilPistolJump = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilPistolJump, 0 )
 	flAimingRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPistolJumpLerped, flAimingRecoilPistolJump )
@@ -624,12 +633,10 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	end
 
 	local flMultiplier = MyTable.flAimMultiplier
-	//	if bZoom then flMultiplier = math_Approach( MyTable.flAimMultiplier, 0, MyTable.flAimSpeed * flFrameTime )
-	//	else flMultiplier = math_Approach( MyTable.flAimMultiplier, 1, MyTable.flAimSpeed * flFrameTime ) end
 	if bZoom then
-		flMultiplier = Lerp( FRILerpRate( MyTable.flAimSpeed, flFrameTime ), flMultiplier, 0 )
+		flMultiplier = math_max( 0, MyTable.flAimMultiplier - MyTable.flAimSpeed * flMultiplier ^ .8 * flFrameTime )
 	else
-		flMultiplier = Lerp( FRILerpRate( MyTable.flAimSpeed, flFrameTime ), flMultiplier, 1 )
+		flMultiplier = min( 1, MyTable.flAimMultiplier + MyTable.flAimSpeed * ( 1 - flMultiplier ) ^ .8 * flFrameTime )
 	end
 
 	MyTable.flAimMultiplier = flMultiplier

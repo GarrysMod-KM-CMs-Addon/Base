@@ -226,11 +226,19 @@ hook.Add( "Tick", "Director", function()
 			local ETheirThreat = Director_GetThreat( ply, pEntity )
 			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
 			if pEntity:Visible( ply ) || IsValid( pVehicle ) && pEntity:Visible( pVehicle ) then
-				local f = pEntity.GetEnemy
-				if f then
-					f = f( pEntity )
-					if IsValid( f ) && f == ply then
-						table.insert( tThreatDirections, pEntity )
+				if pEntity.__ACTOR__ then
+					local pEnemy = pEntity.Enemy
+					if IsValid( pEnemy ) then
+						local pEnemy, pTrueEnemy = pEntity:SetupEnemy( pEnemy )
+						if pTrueEnemy == ply then table.insert( tThreatDirections, pEntity ) end
+					end
+				else
+					local f = pEntity.GetEnemy
+					if f then
+						f = f( pEntity )
+						if IsValid( f ) && f == ply then
+							table.insert( tThreatDirections, pEntity )
+						end
 					end
 				end
 			end

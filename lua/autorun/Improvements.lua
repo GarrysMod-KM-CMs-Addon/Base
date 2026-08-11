@@ -274,21 +274,23 @@ else
 		"How fast can you read? In characters per second.",
 		2.220446049250313e-16 // Epsilon to avoid division by zero
 	)
-	
+
 	local ReadSpeed = ReadSpeed
 
 	local table_concat = table.concat
 	local tBuffer = { "<I>", "", "", "<I>" }
 	local gui_AddCaption = gui.AddCaption
 	local language_GetPhrase = language.GetPhrase
-	local string_gsub = string.gsub
+	local gsub = string.gsub
 	local math_min = math.min
 	local Format = Format
+	local random = math.random
+	local string_Explode = string.Explode
 	
 	local net_ReadColor = net.ReadColor
 	local net_ReadString = net.ReadString
 	local net_ReadFloat = net.ReadFloat
-	
+
 	net.Receive( "CaptionSound", function()
 		local cColor = net_ReadColor( false )
 		local sSound = net_ReadString()
@@ -296,9 +298,17 @@ else
 		sSound = "Caption_" .. sSound
 		local sCaption = language_GetPhrase( sSound )
 		if sCaption == sSound then return end
+
+		sCaption = gsub( sCaption, "%[(.-)%]", function( sMatch )
+			local tOptions = string_Explode( "/", sMatch )
+			return tOptions[ random( #tOptions ) ]
+		end )
+
 		tBuffer[ 2 ] = Format( "<clr:%d,%d,%d>", cColor.r, cColor.g, cColor.b )
 		tBuffer[ 3 ] = sCaption
-		local sLength = #string_gsub( sCaption, "<.->", "" ) // For measuring actual length
+
+		local sLength = #gsub( sCaption, "<.->", "" ) // For measuring actual length
+
 		gui_AddCaption( table_concat( tBuffer ), math_min( flDuration, sLength / ReadSpeed:GetFloat() ) )
 	end )
 end

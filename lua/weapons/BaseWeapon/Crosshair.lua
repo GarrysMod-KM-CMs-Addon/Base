@@ -23,16 +23,17 @@ SWEP.Primary_flSpreadY = 0
 SWEP.flCrosshairAlpha = 255
 
 function SWEP:GatherCrosshairPosition( MyTable )
-	if cThirdPerson:GetBool() then return ScrW() * .5, ScrH() * .5 end
-	local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
-	local tr = util_TraceLine {
-		start = LocalPlayer():GetShootPos(),
-		endpos = LocalPlayer():GetShootPos() + self:GetAimVector() * 999999,
-		mask = MASK_SOLID,
-		filter = IsValid( v ) && { LocalPlayer(), v } || LocalPlayer()
-	}
-	local t = tr.HitPos:ToScreen()
-	return t.x, t.y
+	return ScrW() * .5, ScrH() * .5
+	//	if cThirdPerson:GetBool() then return ScrW() * .5, ScrH() * .5 end
+	//	local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
+	//	local tr = util_TraceLine {
+	//		start = LocalPlayer():GetShootPos(),
+	//		endpos = LocalPlayer():GetShootPos() + self:GetAimVector() * 999999,
+	//		mask = MASK_SOLID,
+	//		filter = IsValid( v ) && { LocalPlayer(), v } || LocalPlayer()
+	//	}
+	//	local t = tr.HitPos:ToScreen()
+	//	return t.x, t.y
 end
 
 local math_max = math.max
@@ -136,7 +137,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
-	SubMachineGun = function( MyTable, self, R, G, B )
+	SubmachineGun = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
 		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
@@ -291,14 +292,14 @@ sound.Add {
 	}
 }
 sound.Add {
-	name = "BaseWeapon_Aim_SubMachineGun",
+	name = "BaseWeapon_Aim_SubmachineGun",
 	channel = CHAN_STATIC,
 	sound = {
-		"Aim/SubMachineGun/1.wav",
-		"Aim/SubMachineGun/2.wav",
-		"Aim/SubMachineGun/3.wav",
-		"Aim/SubMachineGun/4.wav",
-		"Aim/SubMachineGun/5.wav",
+		"Aim/SubmachineGun/1.wav",
+		"Aim/SubmachineGun/2.wav",
+		"Aim/SubmachineGun/3.wav",
+		"Aim/SubmachineGun/4.wav",
+		"Aim/SubmachineGun/5.wav",
 	}
 }
 sound.Add {

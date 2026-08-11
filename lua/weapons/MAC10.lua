@@ -22,7 +22,7 @@ SWEP.AdminOnly = false
 SWEP.Weight = 1
 SWEP.Slot = 2
 SWEP.DrawAmmo = true
-SWEP.Crosshair = "SubMachineGun"
+SWEP.Crosshair = "SubmachineGun"
 
 sound.Add {
 	name = "MAC10Shot",

@@ -643,10 +643,18 @@ hook.Add( "Think", "GameImprovements", function()
 			ent:SetNW2Float( "GAME_flBlood", flBlood )
 		end
 
-		local fGetEnemy = ent.GetEnemy
-		if fGetEnemy then
-			local pEnemy = fGetEnemy( ent )
-			if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !ent:Visible( pEnemy ) then ent.GAME_bHurtEnemy = nil end
+		if ent.__ACTOR__ then
+			local pEnemy = ent.Enemy
+			if IsValid( pEnemy ) then
+				local pEnemy, pTrueEnemy = ent:SetupEnemy( pEnemy )
+				if pTrueEnemy:Health() <= 0 || !ent:Visible( pTrueEnemy ) then ent.GAME_bHurtEnemy = nil end
+			else ent.GAME_bHurtEnemy = nil end
+		else
+			local fGetEnemy = ent.GetEnemy
+			if fGetEnemy then
+				local pEnemy = fGetEnemy( ent )
+				if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !ent:Visible( pEnemy ) then ent.GAME_bHurtEnemy = nil end
+			end
 		end
 
 		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end

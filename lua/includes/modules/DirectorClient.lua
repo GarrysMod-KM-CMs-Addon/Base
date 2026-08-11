@@ -215,8 +215,6 @@ function StopMusic( self, Index )
 	if pSound then pSound[ 1 ]:Stop() end
 end
 
-RegisterTrack( "MUS_Transition_Instant", "Music/Default/Transition_Instant.wav" )
-
 // We have switched to HOLD_FIRE... do we even need these anymore?
 DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT = DIRECTOR_MUSIC_TRANSITIONS_TO_COMBAT || {}
 DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT = DIRECTOR_MUSIC_TRANSITIONS_FROM_COMBAT || {}

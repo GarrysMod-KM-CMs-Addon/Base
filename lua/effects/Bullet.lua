@@ -28,7 +28,11 @@ EFFECT.m_flLastTruePitch = 0
 function EFFECT:Init( pData )
 	local pWeapon = pData:GetEntity()
 	local pOwner = pWeapon:GetOwner()
+
 	local MyTable = CEntity_GetTable( self )
+
+	if !IsValid( pOwner ) then pOwner = pWeapon end
+	if !IsValid( pOwner ) then MyTable.m_bFirstPersonTracer = true return end
 
 	if pOwner == LocalPlayer() then
 		MyTable.m_bNoSound = true
