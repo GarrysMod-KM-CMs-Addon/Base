@@ -1,8 +1,8 @@
-// This whole file is a TODO!
-
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
 local __SCHEDULE__ = __SCHEDULE__
+
+local CurTime = CurTime
 
 function ENT:GAME_SomeoneIsPeekingMe( pAttacker )
 	local MyTable = CEntity_GetTable( self )
@@ -14,6 +14,26 @@ function ENT:GAME_SomeoneIsPeekingMe( pAttacker )
 			local fSomeoneIsPeekingMe = pScheduleClass.SomeoneIsPeekingMe
 			if fSomeoneIsPeekingMe then fSomeoneIsPeekingMe( self, pSchedule, MyTable ) end
 		end
+	end
+end
+
+function ENT:PeekInVertical( MyTable, pSchedule )
+	local flPeekTime = CurTime() + .25
+
+	return function( self, MyTable, pSchedule )
+		MyTable.Stand( self, 1 )
+
+		return CurTime() >= flPeekTime
+	end
+end
+
+function ENT:PeekOutVertical( MyTable, pSchedule )
+	local flPeekTime = CurTime() + .25
+
+	return function( self, MyTable, pSchedule )
+		MyTable.Stand( self, 1 )
+
+		return CurTime() >= flPeekTime
 	end
 end
 
@@ -32,6 +52,43 @@ RegisterSchedule( "PeekIn", {
 			end
 		end
 
+		MyTable.vActualCover = MyTable.vCover
+
+		local tCover = MyTable.tCover
+
+		local dBodyTarget = ( tCover.vEnd - tCover.vStart ):Angle():Right()
+		if !tCover.bRight then dBodyTarget:Negate() end
+		MyTable.vaAimTargetBody = dBodyTarget:Angle()
+
+		if pSchedule.bAtThem then
+			local v = pEnemy:GetPos()
+			v:Add( pEnemy:OBBCenter() )
+			MyTable.vaAimTargetPose = v
+		else MyTable.vaAimTargetPose = pSchedule.vSuppress end
+
+		if pSchedule.bVertical then
+			MyTable.vActualTarget = MyTable.vCover
+
+			local fFunction = pSchedule.fFunction
+			if !fFunction then
+				fFunction = MyTable.PeekInVertical( self, MyTable )
+				pSchedule.fFunction = fFunction
+			end
+
+			if fFunction( self, MyTable, pSchedule ) then
+				local pPeek = MyTable.SetSchedule( self, "Peek", MyTable )
+				pPeek.bVertical = true
+				pPeek.bAtThem = pSchedule.bAtThem
+				pPeek.vSuppress = pSchedule.vSuppress
+			end
+
+			return
+		end
+	end
+} )
+
+RegisterSchedule( "PeekOut", {
+	Execute = function( self, pSchedule, MyTable )
 		MyTable.tActualCover = MyTable.vCover
 
 		local tCover = MyTable.tCover
@@ -44,18 +101,23 @@ RegisterSchedule( "PeekIn", {
 			local v = pEnemy:GetPos()
 			v:Add( pEnemy:OBBCenter() )
 			MyTable.vaAimTargetPose = v
-		else
-		end
+		else MyTable.vaAimTargetPose = pSchedule.vSuppress end
 
-		if pSchedule.bUnDuckPeek then
+		if pSchedule.bVertical then
+			MyTable.vActualTarget = MyTable.vCover
+
+			local fFunction = pSchedule.fFunction
+			if !fFunction then
+				fFunction = MyTable.PeekOutVertical( self, MyTable )
+				pSchedule.fFunction = fFunction
+			end
+
+			if fFunction( self, MyTable, pSchedule ) then
+				MyTable.SetSchedule( self, "Combat", MyTable )
+			end
+
 			return
 		end
-	end
-} )
-
-RegisterSchedule( "PeekOut", {
-	Execute = function( self, pSchedule, MyTable )
-		MyTable.tActualCover = MyTable.vCover
 	end
 } )
 
@@ -75,7 +137,7 @@ If you've played Splinter Cell: Blacklist,
 this is more of a Navy SEAL going "COVER! COVER!!",
 or an American accented hostile "WATCH IT!"
 */
-function ENT:DLG_PeekLeaveSomeoneIsPeekingMe() end
+function ENT:DLG_PeekLeavePreShotAt() end
 
 RegisterSchedule( "Peek", {
 	Execute = function( self, pSchedule, MyTable )
@@ -87,7 +149,7 @@ RegisterSchedule( "Peek", {
 	end,
 
 	SomeoneIsPeekingMe = function( self, pSchedule, MyTable )
-		MyTable.DLG_PeekLeaveSomeoneIsPeekingMe( self, MyTable )
+		MyTable.DLG_PeekLeavePreShotAt( self, MyTable )
 		MyTable.SetSchedule( self, "PeekOut", MyTable )
 	end
 } )

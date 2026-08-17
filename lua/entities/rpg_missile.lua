@@ -24,7 +24,7 @@ function ENT:Initialize()
 end
 
 ENT.__PROJECTILE_EXPLOSION__ = true
-ENT.EXPLOSION_flDamage = 32768
+ENT.EXPLOSION_flDamage = 2800
 ENT.EXPLOSION_flRadius = 512
 
 ENT.__PROJECTILE_ROCKET__ = true

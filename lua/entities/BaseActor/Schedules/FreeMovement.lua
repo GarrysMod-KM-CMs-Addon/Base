@@ -716,6 +716,8 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 				coroutine.yield()
 			end
 
+			if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != sched then return true end
+
 			if util_TraceLine( {
 				start = vPoint + vSimpleOffset,
 				endpos = vPoint + vDuckOffset,
