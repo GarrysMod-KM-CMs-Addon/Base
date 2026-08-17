@@ -102,7 +102,7 @@ end
 
 function EFFECT:Think() return false end
 
-local GUNSHOTSPLASH_BLUR_DISTANCE = 512
+local GUNSHOTSPLASH_BLUR_DISTANCE = 192
 
 function EFFECT:Render()
 	local MyTable = CEntity_GetTable( self )

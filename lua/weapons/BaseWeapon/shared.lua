@@ -98,6 +98,7 @@ function SWEP:TranslateActivity( EIntendedActivity )
 					return ACT_HL2MP_WALK_CROUCH
 				end
 			end
+
 		elseif pOwner.__ACTOR__ then
 			local WEAPON_STANCE = pOwner:GetNW2Int( "WEAPON_STANCE", WEAPON_STANCE_DEFAULT )
 			if WEAPON_STANCE == WEAPON_STANCE_PASSIVE then

@@ -78,7 +78,7 @@ WEAPON_STANCE_AIMING = 1
 // EVERYTHING but pistols/revolvers/etc at the hip
 WEAPON_STANCE_HIP = 2
 // EVERYTHING but pistols/revolvers/etc shouldered
-WEAPON_STANCE_SHOULDER = 34
+WEAPON_STANCE_SHOULDER = 3
 
 COVER_PEEK_NONE = 0
 COVER_BLINDFIRE_UP = 1
@@ -245,10 +245,10 @@ function LevelOfDetail( pContainer, Key, flMultiplier )
 	if cDisableLevelOfDetail:GetBool() then pContainer[ sKey ] = 0 return true end
 	local f = pContainer[ Key ]
 	if f then
-		if SysTime() <= f then return end
-		pContainer[ Key ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 )
+		if CurTime() <= f then return end
+		pContainer[ Key ] = CurTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 )
 		return true
-	else pContainer[ Key ] = SysTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 ) end
+	else pContainer[ Key ] = CurTime() + math_min( ( physenv_GetLastSimulationTime() * 7500 ) ^ 1.1 * ( flMultiplier || 1 ), 6 ) end
 end
 
 physenv.SetPerformanceSettings {
