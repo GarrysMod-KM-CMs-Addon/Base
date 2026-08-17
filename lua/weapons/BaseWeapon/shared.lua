@@ -143,7 +143,7 @@ function SWEP:TranslateActivity( EIntendedActivity )
 	end
 	return EActivity
 end
-SWEP.flAimShoot = 2
+
 if CLIENT then
 	SWEP.tShootAnimations = {}
 	SWEP.flCurrentRecoilForGap = 0
@@ -445,10 +445,10 @@ function SWEP:ShootEffects()
 			local iSequence = pViewModel:SelectWeightedSequence( iActivity )
 			if iSequence != -1 then
 				pViewModel:SendViewModelMatchingSequence( iSequence )
-			elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
+			elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
 				self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 			end
-		elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !self.flAimShoot || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
+		elseif !self.m_bNoNormalShootAnimation && ( self.m_bAimShootDoesntBlockNormalShoot || self.bSniper || !( pOwner:IsPlayer() && pOwner:KeyDown( IN_ZOOM ) && pOwner:IsOnGround() ) ) then
 			self:SendWeaponAnim( ACT_VM_PRIMARYATTACK )
 		end
 	end

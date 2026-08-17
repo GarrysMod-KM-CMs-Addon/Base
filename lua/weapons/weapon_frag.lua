@@ -29,7 +29,7 @@ local util_Effect = util.Effect
 SWEP.GRENADE_flRadius = 384
 
 SWEP.__PROJECTILE_EXPLOSION__ = true
-SWEP.EXPLOSION_flDamage = 4096
+SWEP.EXPLOSION_flDamage = 1600
 
 SWEP.flNextTick = 0
 

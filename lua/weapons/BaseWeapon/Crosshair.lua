@@ -446,7 +446,18 @@ function SWEP:DoDrawCrosshair()
 		else
 			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
 		end
+
+		local flSpacing = flWidth
+		local flVertical = 1
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN then
+			flSpacing = flSpacing * 1.5
+			flWidth = flWidth * 1.25
+		elseif MyTable.WPN_SHOOT == WPN_PISTOL then
+			flVertical = flVertical * 12
+		end
+
 		local flX, flY = flW - flWidth, flH - flHeight
+
 		local a = self.Primary.Ammo
 		if a && a != "" && string.lower( a ) != "none" then
 			a = ply:GetAmmoCount( a )
@@ -454,30 +465,31 @@ function SWEP:DoDrawCrosshair()
 				draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
 			end
 		end
+
 		if !b then
-			local flTotal = flWidth * flClip
+			local flTotal = flSpacing * flClip
 			flX = flX - flTotal
-			surface_DrawRect( flX, flY, flTotal, flHeight )
+			surface_DrawRect( flX, flY + 1.25 * flVertical - 1, flTotal, flHeight - 2 * flVertical + 2 )
 
 			if CurTime() <= MyTable.flReloadTime then
 				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
 				local flX, flY = flW - flWidth, flH - flHeight
 				for _ = 1, flClip do
-					flX = flX - flWidth
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 2, flHeight - 2 )
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 2, flHeight - 2 * flVertical )
 				end
 			else
 				surface_SetDrawColor( 255, 255, 255, 255 )
 				local flX, flY = flW - flWidth, flH - flHeight
 				for _ = 1, self:Clip1() do
-					flX = flX - flWidth
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
 				end
 
 				surface_SetDrawColor( 32, 32, 32, 255 )
 				for _ = self:Clip1() + 1, flClip do
-					flX = flX - flWidth
-					surface_DrawRect( flX + 1, flY + 1, flWidth - 1, flHeight - 2 )
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
 				end
 			end
 		end

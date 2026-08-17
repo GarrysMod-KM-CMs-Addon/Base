@@ -32,7 +32,6 @@ SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.sHoldType = "AR2"
 
 if IsMounted "left4dead2" then
-	SWEP.flAimShoot = 6
 	SWEP.ViewModel = Model "models/v_models/v_rifle_ak47.mdl"
 	function SWEP:GetDrawActivity() return ACT_VM_DEPLOY end
 	SWEP.__VIEWMODEL_FULLY_MODELED__ = true
@@ -41,7 +40,6 @@ if IsMounted "left4dead2" then
 	SWEP.flViewModelZ = .5
 	SWEP.vViewModelAim = Vector( -8 - SWEP.flViewModelX, -6.8 - SWEP.flViewModelY, 2.1 - SWEP.flViewModelZ )
 else
-	SWEP.flAimShoot = 2
 	SWEP.ViewModel = Model "models/weapons/cstrike/c_rif_ak47.mdl"
 	SWEP.flViewModelX = -10
 	SWEP.flViewModelY = -3
