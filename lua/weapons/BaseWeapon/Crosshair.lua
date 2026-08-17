@@ -187,12 +187,12 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
-	// HACK: This is actually the RPG crosshair, which is four parts at square edges, like this:
+	// HACK: This is actually the RPG crosshair, which is four circle parts at square edges, like this:
 	//               /         \
 	//
 	//
 	//               \         /
-	// But since I have zero idea how to possibly draw that, we use the Requiem's crosshair as a placeholder
+	// But since I have zero idea how to possibly draw that, we use this as a placeholder
 	Open = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		flSpreadX = flSpreadX * .5
@@ -212,27 +212,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		// Bottom right
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 45 )
 		return true
-	end,
-	Requiem = function( MyTable, self, R, G, B )
-		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
-		flSpreadX = flSpreadX * .5
-		flSpreadY = flSpreadY * .5
-		local flHeight, flWidth = ScrH(), ScrW()
-		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-		local flSpreadHorizontal = flSpreadX * flWidth * ( 90 / MyTable.flFoV ) * .5
-		local flSpreadVertical = flSpreadY * flHeight * ( 90 / MyTable.flFoV ) * .5 * ( flWidth / flHeight )
-		surface_SetTexture( surface_GetTextureID "Crosshair" )
-		surface_SetDrawColor( R, G, B, MyTable.flCrosshairAlpha )
-		// Top left
-		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 225 )
-		// Top right
-		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY - flSpreadVertical - CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 135 )
-		// Bottom left
-		surface_DrawTexturedRectRotated( flX - flSpreadHorizontal - CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 315 )
-		// Bottom right
-		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_LARGE_SUB, flY + flSpreadVertical + CROSSHAIR_PART_SIZE_LARGE_SUB, CROSSHAIR_PART_SIZE_LARGE_WIDTH, CROSSHAIR_PART_SIZE_LARGE, 45 )
-		return true
-	end,
+	end
 }
 local __WEAPON_CROSSHAIR_TABLE__ = __WEAPON_CROSSHAIR_TABLE__
 
