@@ -1331,9 +1331,13 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		local tCaptionPlayers = {}
 		for _, ply in player_Iterator() do
 			if ply:EyePos():DistToSqr( vPos ) > dts then continue end
+
 			table_insert( tCaptionPlayers, ply )
+
 			if NOT_A_VOICELINE[ sRealSound ] then continue end
+
 			if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+
 			local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 			ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
 			local t = ply.DR_tSpotted
@@ -1342,6 +1346,8 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			local t = ply.DR_tMusicEntities
 			if t then t[ dent ] = true
 			else ply.DR_tMusicEntities = { [ dent ] = true } end
+
+			if ply.DR_EThreat == DIRECTOR_THREAT_COMBAT then continue end
 
 			if f <= 0 then
 				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT

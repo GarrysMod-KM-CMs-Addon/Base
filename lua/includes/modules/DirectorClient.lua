@@ -496,23 +496,6 @@ function DIRECTOR_CLIENT_TICK()
 	elseif DIRECTOR_MUSIC_IN_VO && ( !DIRECTOR_TRANSITION || !DIRECTOR_TRANSITION.m_bIntroOfATrack ) then
 		DIRECTOR_MUSIC_LAST_THREAT = DIRECTOR_THREAT_COMBAT
 		if DIRECTOR_MUSIC_IN_VO_HF then
-			// Doesn't work like that anymore!
-			//	local t = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ].m_pTable
-			//	local f = t.CheckIntro
-			//	if f && f "HoldFire" then
-			//		DIRECTOR_MUSIC_IN_VO = nil
-			//		DIRECTOR_TRANSITION = DirectorContainerInternal()
-			//		DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
-			//		DIRECTOR_TRANSITION.m_flVolume = 1
-			//		DIRECTOR_TRANSITION.m_bToCombat = true
-			//		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
-			//		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
-			//		DIRECTOR_TRANSITION.m_bIntroOfATrack = true
-			//		DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
-			//		net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-			//		LAST_DIRECTOR_CLIENT_TICK = SysTime()
-			//		return
-			//	end
 			DIRECTOR_MUSIC_WAS_HOLD_FIRE = true
 			if SysTime() <= DIRECTOR_MUSIC_VO_TIME then
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -586,6 +569,7 @@ function DIRECTOR_CLIENT_TICK()
 		if DIRECTOR_TRANSITION.m_bToCombat then
 			b = DIRECTOR_THREAT >= DIRECTOR_THREAT_COMBAT
 		else b = DIRECTOR_THREAT < DIRECTOR_THREAT_COMBAT end
+	
 		local ELayerFrom, ELayerTo, flInitialVolumeA, flInitialVolumeB = DIRECTOR_TRANSITION.m_ELayerFrom, DIRECTOR_TRANSITION.m_ELayerTo
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if ELayer == ELayerFrom then
@@ -595,13 +579,23 @@ function DIRECTOR_CLIENT_TICK()
 			end
 			if flInitialVolumeA && flInitialVolumeB then break end
 		end
+
 		local Done, flVolumeA, flVolumeB = DirectorUpdateContainerInternal( DIRECTOR_TRANSITION, flInitialVolumeA || 0, flInitialVolumeB || 0, b )
 		flVolumeA = flVolumeA || 0
 		flVolumeB = flVolumeB || 1
+
 		if Done then
-			if Done == 0 then DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom else DIRECTOR_MUSIC_LAST_THREAT = ELayerTo end
+			if Done == 0 then
+				DIRECTOR_THREAT = ELayerFrom
+				DIRECTOR_MUSIC_LAST_THREAT = ELayerFrom
+			else
+				DIRECTOR_THREAT = ELayerTo
+				DIRECTOR_MUSIC_LAST_THREAT = ELayerTo
+			end
+
 			DIRECTOR_TRANSITION = nil
 		end
+
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
 				if ELayer == ELayerFrom then
@@ -614,28 +608,13 @@ function DIRECTOR_CLIENT_TICK()
 				DirectorUpdateContainerInternal( pContainer )
 			end
 		end
+
 		LAST_DIRECTOR_CLIENT_TICK = SysTime()
+
 		return
+
 	elseif DIRECTOR_THREAT == DIRECTOR_THREAT_HOLD_FIRE then
 		local pSource = DIRECTOR_MUSIC[ DIRECTOR_THREAT_COMBAT ]
-		// Doesn't work like that anymore!
-		//	local t = pSource.m_pTable
-		//	local f = t.CheckIntro
-		//	if f && f "HoldFire" then
-		//		DIRECTOR_TRANSITION = DirectorContainerInternal()
-		//		DIRECTOR_TRANSITION.m_pTable = { Execute = t.Intro }
-		//		DIRECTOR_TRANSITION.m_pSource = pSource
-		//		DIRECTOR_TRANSITION.m_flVolume = 1
-		//		DIRECTOR_TRANSITION.m_bToCombat = true
-		//		DIRECTOR_TRANSITION.m_ELayerFrom = DIRECTOR_THREAT_HOLD_FIRE
-		//		DIRECTOR_TRANSITION.m_ELayerTo = DIRECTOR_THREAT_COMBAT
-		//		DIRECTOR_TRANSITION.m_bIntroOfATrack = true
-		//		DIRECTOR_THREAT = DIRECTOR_THREAT_COMBAT
-		//		DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil
-		//		net.Start "DR_ClientWantsToBeInCombat" net.SendToServer()
-		//		LAST_DIRECTOR_CLIENT_TICK = SysTime()
-		//		return
-		//	end
 		for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 			local pContainer = DIRECTOR_MUSIC[ ELayer ]
 			if pContainer then

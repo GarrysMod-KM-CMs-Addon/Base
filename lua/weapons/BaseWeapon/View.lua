@@ -354,11 +354,11 @@ local tApplyRecoil = {
 		local flPitchTurn, flYawTurn = 0, 0
 	
 		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			flHipRecoilBack = 4 * flAimMultiplier
+			flHipRecoilBack = 2 * flAimMultiplier
 			flHipRecoilPitchTurn = tAnimation[ 2 ] * 15 * flAimMultiplier
 			flHipRecoilYawTurn = tAnimation[ 3 ] * 30 * flAimMultiplier
 	
-			flAimingRecoilBack = 3 * flAimingFireMul
+			flAimingRecoilBack = 2.5 * flAimingFireMul
 			flAimingRecoilPitchTurn = tAnimation[ 2 ] * 2 * flAimingFireMul
 			flAimingRecoilYawTurn = tAnimation[ 3 ] * 3.5 * flAimingFireMul
 		end
@@ -771,6 +771,16 @@ function SWEP:CalcViewModelView( _, pos, ang )
 		else MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 ) end
 	end
 
+	vInstantTarget:Add( Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ ) )
+
+	ang:RotateAroundAxis( ang:Right(), vInstantTargetAngle[ 1 ] )
+	ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle[ 2 ] )
+	ang:RotateAroundAxis( ang:Forward(), vInstantTargetAngle[ 3 ] )
+
+	pos:Add( vInstantTarget[ 1 ] * ang:Forward() )
+	pos:Add( vInstantTarget[ 2 ] * ang:Right() )
+	pos:Add( vInstantTarget[ 3 ] * ang:Up() )
+
 	if vAim then
 		local f = MyTable.flIronsightCloseness
 		if f then pos:Sub( f * ( 1 - MyTable.flAimMultiplier ) * ang:Forward() ) end
@@ -816,8 +826,6 @@ function SWEP:CalcViewModelView( _, pos, ang )
 
 	ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flFrameTime )
 
-	vInstantTarget:Add( Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ ) )
-
 	vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 	vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
 	vFinal = vFinal + vFinalVel * flFrameTime
@@ -829,10 +837,6 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	ang:RotateAroundAxis( ang:Right(), vFinalAngle[ 1 ] )
 	ang:RotateAroundAxis( ang:Up(), vFinalAngle[ 2 ] )
 	ang:RotateAroundAxis( ang:Forward(), vFinalAngle[ 3 ] )
-
-	ang:RotateAroundAxis( ang:Right(), vInstantTargetAngle[ 1 ] )
-	ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle[ 2 ] )
-	ang:RotateAroundAxis( ang:Forward(), vInstantTargetAngle[ 3 ] )
 
 	vFinalRatherQuickVel = vFinalRatherQuickVel + ( vTargetRatherQuick - vFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 	vFinalRatherQuickVel = vFinalRatherQuickVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
@@ -849,9 +853,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	pos:Add( vFinal[ 1 ] * ang:Forward() )
 	pos:Add( vFinal[ 2 ] * ang:Right() )
 	pos:Add( vFinal[ 3 ] * ang:Up() )
-	pos:Add( vInstantTarget[ 1 ] * ang:Forward() )
-	pos:Add( vInstantTarget[ 2 ] * ang:Right() )
-	pos:Add( vInstantTarget[ 3 ] * ang:Up() )
+
 	pos:Add( vFinalRatherQuick[ 1 ] * ang:Forward() )
 	pos:Add( vFinalRatherQuick[ 2 ] * ang:Right() )
 	pos:Add( vFinalRatherQuick[ 3 ] * ang:Up() )

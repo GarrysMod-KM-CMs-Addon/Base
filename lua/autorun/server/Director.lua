@@ -51,9 +51,16 @@ net.Receive( "DR_ClientWantsToBeInCombat", function( _, ply )
 end )
 
 function Director_GetThreat( pPlayer, pEntity )
+	if pEntity.__ALARM__ then
+		if pEntity.bIsOn then return DIRECTOR_THREAT_HOLD_FIRE end
+		return DIRECTOR_THREAT_NULL
+	end
+
 	if IsValid( pEntity.Enemy ) then return DIRECTOR_THREAT_HOLD_FIRE end
+
 	local f = pEntity.GetEnemy
 	if f && IsValid( f( pEntity ) ) then return DIRECTOR_THREAT_HOLD_FIRE end
+
 	local f = pEntity.GetNPCState
 	if f then
 		f = f( pEntity )
@@ -75,6 +82,7 @@ function Director_GetThreat( pPlayer, pEntity )
 			if f == D_FR || f == D_HT then return DIRECTOR_THREAT_HEAT end
 		end
 	end
+
 	return DIRECTOR_THREAT_NULL
 end
 
@@ -123,20 +131,17 @@ hook.Add( "Tick", "Director", function()
 			end
 		end
 		if b then CEntity_SetNW2Int( ply, "DR_EAimingAt", nil ) end
-		local flReinforcements, bAlarm, bAlarmCoolDown
+		local flReinforcements
 		local b = !cVisibleHostileReinforcementCountDown:GetBool()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
 			if !IsValid( pEntity ) then continue end
 			if pEntity:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 16777216/*4096*/ then continue end
-			bAlarm = true
 			if b then continue end
 			if pEntity:Classify() != ply:Classify() then
 				local flStart, flEnd = pEntity.flReinforcementStartTime, pEntity.flReinforcementEndTime
 				if flStart && flEnd then
 					flReinforcements = min( 1 - ( CurTime() - flStart ) / ( flEnd - flStart ), flReinforcements || 1 )
 				end
-				local f = pEntity.flCoolDown
-				if f && CurTime() < f then bAlarmCoolDown = true end
 			end
 		end
 		CEntity_SetNW2Float( ply, "ALARM_flHostileReinforcements", flReinforcements || 0 )
@@ -259,6 +264,9 @@ hook.Add( "Tick", "Director", function()
 			if f then if CurTime() > f then EThreat = ETheirThreat end
 			else tSpotted[ pEntity ] = CurTime() + DIRECTOR_MUSIC_VO_WAIT end
 		end
+
+		if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
+
 		local i = 1
 		while true do
 			local sI = tostring( i )
@@ -285,7 +293,6 @@ hook.Add( "Tick", "Director", function()
 		if flIntensity != flIntensity then flIntensity = 0 end // nan
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
 		if EThreat >= DIRECTOR_THREAT_HOLD_FIRE then Achievement_Miscellaneous( ply, "Combat" ) end
-		if bAlarm || PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
 		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		local sIntensity = tostring( flIntensity )
