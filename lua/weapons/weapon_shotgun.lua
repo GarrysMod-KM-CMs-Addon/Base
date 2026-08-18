@@ -4,9 +4,8 @@ SWEP.Category = "Shotguns"
 SWEP.PrintName = "#weapon_shotgun"
 SWEP.Instructions = "Primary to shoot, secondary to switch semi-automatic and pump-action, reload to pump (when in pump-action)."
 SWEP.Purpose = "Franchi Special Purpose Automatic Shotgun 12."
-SWEP.ViewModel = Model "models/weapons/c_shotgun.mdl"
-SWEP.UseHands = true
-SWEP.WorldModel = Model "models/weapons/w_shotgun.mdl"
+SWEP.ViewModel = "models/weapons/c_shotgun.mdl"
+SWEP.WorldModel = "models/weapons/w_shotgun.mdl"
 SWEP.Primary.ClipSize = 9
 SWEP.Primary.DefaultClip = 9
 SWEP.Primary.Automatic = false
@@ -32,7 +31,8 @@ SWEP.flSidewaysRecoilMin = -.45
 SWEP.flSidewaysRecoilMax = .45
 SWEP.flUpwardsRecoilMin = .6
 SWEP.flUpwardsRecoilMax = 1
-SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
+SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
+
 SWEP.WPN_SPRINT = WPN_RIFLE
 SWEP.WPN_SHOOT = WPN_SHOTGUN
 
