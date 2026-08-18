@@ -65,8 +65,14 @@ end
 
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
-ENT.vHullDuckMins = HULL_HUMAN_MINS // HULL_HUMAN_DUCK_MINS
-ENT.vHullDuckMaxs = HULL_HUMAN_MAXS // HULL_HUMAN_DUCK_MAXS
+
+ENT.vHullDuckMins = HULL_HUMAN_DUCK_MINS
+ENT.vHullDuckMaxs = HULL_HUMAN_DUCK_MAXS
+
+ENT.vViewOffset = Vector( 0, 0, 60 )
+ENT.vViewOffsetDucked = Vector( 0, 0, 38 )
+function ENT:GetViewOffset( MyTable ) return ( MyTable || CEntity_GetTable( self ) ).vViewOffset end
+function ENT:GetViewOffsetDucked( MyTable ) return ( MyTable || CEntity_GetTable( self ) ).vViewOffsetDucked end
 
 ENT.GAME_flReach = 64
 

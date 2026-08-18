@@ -1,7 +1,7 @@
 local table_IsEmpty = table.IsEmpty
 
 ENT.m_sDefaultIdleSchedule = "Idle"
-ENT.m_sDefaultCombatSchedule = "Combat"
+ENT.m_sDefaultCombatSchedule = "Cover"
 
 function ENT:SelectSchedule( MyTable )
 	if table_IsEmpty( MyTable.tEnemies ) then

@@ -16,11 +16,6 @@ ENT.bCanSlide = true
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
-ENT.m_vViewOffset = Vector( 0, 0, 74.666672 )
-ENT.m_vViewOffsetDucked = Vector( 0, 0, 53.333336 )
-function ENT:GetViewOffset( MyTable ) return ( MyTable || CEntity_GetTable( self ) ).m_vViewOffset end
-function ENT:GetViewOffsetDucked( MyTable ) return ( MyTable || CEntity_GetTable( self ) ).m_vViewOffsetDucked end
-
 local FL_DUCKING = FL_DUCKING
 function ENT:GetShootPos()
 	local vPos = self:GetPos()
