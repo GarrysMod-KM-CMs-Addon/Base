@@ -27,9 +27,6 @@ SWEP.Weight = 1
 SWEP.Slot = 3
 SWEP.DrawAmmo = true
 SWEP.Crosshair = "Shotgun"
-SWEP.flSidewaysRecoilMin = -.33
-SWEP.flSidewaysRecoilMax = .33
-SWEP.flAimRoll = 22.5
 SWEP.flRecoil = 6.8
 SWEP.flSidewaysRecoilMin = -.45
 SWEP.flSidewaysRecoilMax = .45
@@ -49,6 +46,9 @@ SWEP.flViewModelY = -6.5
 SWEP.flViewModelZ = 2.5
 
 SWEP.vViewModelAim = Vector( -12 - SWEP.flViewModelX, -8.955 - SWEP.flViewModelY, 4.2 - SWEP.flViewModelZ )
+
+SWEP.vSprint = Vector( -4, 8, -10 )
+SWEP.vSprintAngle = Vector( -2, 30, -30 )
 
 function SWEP:SetupDataTables()
 	self:NetworkVar( "Bool", 0, "Reloading" )
@@ -84,11 +84,7 @@ sound.Add {
 	channel = CHAN_AUTO,
 	level = 60,
 	pitch = { 90, 110 },
-	sound = {
-		"weapons/shotgun/shotgun_reload1.wav",
-		"weapons/shotgun/shotgun_reload2.wav",
-		"weapons/shotgun/shotgun_reload3.wav"
-	}
+	sound = "SPAS12/Insert.wav"
 }
 
 function SWEP:PerformReload()
@@ -159,7 +155,7 @@ sound.Add {
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^SPAS12Shot.wav"
+	sound = "^SPAS12/Fire.wav"
 }
 
 sound.Add {
@@ -167,7 +163,7 @@ sound.Add {
 	channel = CHAN_ITEM,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "weapons/shotgun/shotgun_cock.wav"
+	sound = "SPAS12/Pump.wav"
 }
 
 sound.Add {
@@ -243,7 +239,6 @@ end
 
 if SERVER then return end
 
-
 local math_abs = math.abs
 local math_sin = math.sin
 local RealTime = RealTime
@@ -295,5 +290,5 @@ VIEWMODEL_CAMERA_ANIMATIONS[ "models/weapons/c_shotgun.mdl" ] = {
 		if flCycle < .5 then
 			vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 2
 		end
-	end,
+	end
 }

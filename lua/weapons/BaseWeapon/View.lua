@@ -564,7 +564,7 @@ local function CoverPose( MyTable, ply, vTarget, vTargetAngle )
 	if !MyTable.__VIEWMODEL_FULLY_MODELED__ then
 		vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 45
 		vTarget[ 1 ] = vTarget[ 1 ] - 10 - MyTable.flViewModelX + ( MyTable.flCoverY || 0 )
-		vTarget[ 2 ] = vTarget[ 2 ] + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 )
+		vTarget[ 2 ] = vTarget[ 2 ] + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 ) - MyTable.flViewModelY * .5
 		vTarget[ 3 ] = vTarget[ 3 ] - 10 - MyTable.flViewModelZ
 		return
 	end
@@ -636,7 +636,6 @@ function SWEP:CalcViewModelView( _, pos, ang )
 
 	vInstantTarget, vInstantTargetAngle = Vector(), Vector()
 	if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
-	vInstantTarget:Sub( Vector( MyTable.flViewModelY, 0, MyTable.flViewModelZ ) * MyTable.flViewModelSprint )
 
 	if !MyTable.bCoverNotAnimated && bInCover then
 		MyTable.flViewModelSprint = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flViewModelSprint, 0 )
@@ -820,8 +819,8 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	end
 
 	if bSliding then
-		vTarget:Add( WEAPON_SPRINT_RIFLE_DEFAULT )
-		vTargetAngle:Add( WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
+		vTarget:Add( MyTable.vSprint || WEAPON_SPRINT_RIFLE_DEFAULT )
+		vTargetAngle:Add( MyTable.vSprintAngle || WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
 	end
 
 	ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flFrameTime )

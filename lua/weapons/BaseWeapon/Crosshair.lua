@@ -50,13 +50,14 @@ function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	end
 	return flSpreadX + flInaccuracy, flSpreadY + flInaccuracy
 end
+
 function SWEP:GatherCrosshairSpreadIdeal( MyTable, bForceIdentical )
 	local flSpreadX, flSpreadY
 	local v = MyTable.Primary_flSpreadX
 	if v then flSpreadX = v end
 	local v = MyTable.Primary_flSpreadY
 	if v then flSpreadY = v end
-	local flInaccuracy = MyTable.flCrosshairInAccuracyGapPart * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) * ( 1 / 3 )
+	local flInaccuracy = MyTable.flCrosshairInAccuracyGapPart * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) * ( 1 / 4 )
 	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
 		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX ) + flInaccuracy
 		return v, v
@@ -99,6 +100,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawCircle( flX, flY, flRadius + 1, R, G, B, flCrosshairAlpha )
 		return true
 	end,
+
 	// I should technically call this one "Generic" from now on, but the name "Rifle" just stuck,
 	// and I don't want to change it, even though it would be easy
 	Rifle = function( MyTable, self, R, G, B )
@@ -119,6 +121,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+
 	Sniper = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -137,6 +140,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+
 	SubmachineGun = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -155,6 +159,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+
 	Pistol = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -171,6 +176,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+
 	Revolver = function( MyTable, self, R, G, B )
 		local flSpreadX, flSpreadY = MyTable.GatherCrosshairSpread( self, MyTable )
 		local flHeight, flWidth = ScrH(), ScrW()
@@ -187,6 +193,7 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		surface_DrawTexturedRectRotated( flX + flSpreadHorizontal + CROSSHAIR_PART_SIZE_SUB, flY, CROSSHAIR_PART_SIZE_WIDTH, CROSSHAIR_PART_SIZE, 90 )
 		return true
 	end,
+
 	// HACK: This is actually the RPG crosshair, which is four circle parts at square edges, like this:
 	//               /         \
 	//
@@ -362,7 +369,7 @@ function SWEP:DoDrawCrosshair()
 	else MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + 1 * ply:GetNW2Float( "GAME_flRecoil", 1 ) / flDelay * flFrameTime end
 
 	local flAimMultiplier = MyTable.flAimMultiplier
-	local flGapPart = Lerp( FRILerpRate( 20, flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * .033, 0, .033 ) )
+	local flGapPart = Lerp( FRILerpRate( 20, flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * 1 / 30, 0, 1 / 30 ) )
 	MyTable.flCrosshairInAccuracyGapPart = flGapPart
 
 	local flRecoilPart = Lerp(
@@ -401,7 +408,7 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		if cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN || cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
 			MyTable.flCrosshairAlpha = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flCrosshairAlpha, 255 )
 		else
 			local flAlpha = math_max( 0, 255 - ( 255 * 4 ) * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || .1 ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) )

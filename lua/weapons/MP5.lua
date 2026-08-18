@@ -25,7 +25,7 @@ SWEP.DrawAmmo = true
 SWEP.Crosshair = "SubmachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubmachineGun"
 SWEP.sHoldType = "SMG"
-
+
 if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
 	SWEP.ViewModelFOV = 45
 	SWEP.ViewModel = "models/weapons/c_mp5.mdl"
