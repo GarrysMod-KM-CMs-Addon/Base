@@ -29,7 +29,9 @@ end
 
 ENT.PrintName = "#SimpleSiren"
 
-if !SERVER then return end
+if CLIENT then return end
+
+NOT_A_VOICELINE[ "AirRaidSirenOscillatorLoop.wav" ] = true
 
 ENT.CATEGORIZE = { Siren = true }
 
