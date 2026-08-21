@@ -13,7 +13,6 @@ There are only two requirements.
 
 1. Keep it absurdly canonical and realistic (if it's a real gun, use real life stats). Even if it means being unbalanced.
 2. Keep the damage high. Since Source Engine doesn't have a realistic injury system, setting a gun to two shot someone for realism is okay. In fact, most guns here will.
-In fact in fact, most guns here need slight damage changes that I am too lazy to do.
 
 # Replacing direct key access for entities with MyTable
 
