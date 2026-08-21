@@ -493,12 +493,21 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 			end
 		elseif at.GetEnemy && dDamage:GetDamage() > 0 then at.GAME_bHurtEnemy = true end
 	end
+
 	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
+
 	local fBloodSplatter = pEntity.BloodSplatter
 	if fBloodSplatter then fBloodSplatter( pEntity, dDamage ) end
+
 	if pEntity:GetClass() == "prop_ragdoll" && pEntity.GAME_flOldMaxHealth then
 		pEntity:SetNW2Float( "GAME_flBleeding", pEntity:GetNW2Float( "GAME_flBleeding", 0 ) +
 		dDamage:GetDamage() / ( pEntity.GAME_flOldMaxHealth * 112 ) )
+	end
+
+	if pEntity.__WEAPON__ then
+		local flHealth = pEntity:Health() - dDamage:GetDamage()
+		pEntity:SetHealth( flHealth )
+		if flHealth <= 0 then pEntity:Remove() end
 	end
 end )
 

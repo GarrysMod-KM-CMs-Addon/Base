@@ -33,6 +33,7 @@ local CWeapon_SetHoldType = CWeapon.SetHoldType
 local CWeapon_SetClip1 = CWeapon.SetClip1
 
 function SWEP:Initialize()
+	BaseClass.Initialize( self )
 	CWeapon_SetHoldType( self, "Grenade" )
 	CWeapon_SetClip1( self, 1 )
 end

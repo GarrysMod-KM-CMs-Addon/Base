@@ -64,3 +64,9 @@ CreateConVar(
 	"Does hunger exist? Some entities cannot be hungry even with this enabled.",
 	0, 1
 )
+
+ACTOR_STATE_IDLE = -1
+ACTOR_STATE_PATROL = 0
+ACTOR_STATE_SOFTALERT = 1
+ACTOR_STATE_ALERT = 2
+ACTOR_STATE_COMBAT = 3

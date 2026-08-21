@@ -62,7 +62,7 @@ ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 800
 
 HUMAN_SPRINT_SPEED = 350
-HUMAN_RUN_SPEED = 275
+HUMAN_JOG_SPEED = 200 + 1 / .03
 HUMAN_WALK_SPEED = 75
 
 HUMAN_JUMP_HEIGHT = 72
@@ -456,7 +456,7 @@ function SetHumanPlayer( ply )
 	ply:SetHealth( 100 )
 	ply:SetMaxHealth( 100 )
 	ply:SetRunSpeed( HUMAN_SPRINT_SPEED )
-	ply:SetWalkSpeed( HUMAN_RUN_SPEED )
+	ply:SetWalkSpeed( HUMAN_JOG_SPEED )
 	ply:SetSlowWalkSpeed( HUMAN_WALK_SPEED )
 	ply:SetJumpPower( ( 2 * GetConVarNumber "sv_gravity" * HUMAN_JUMP_HEIGHT ) ^ .5 )
 	ply:SetDuckSpeed( .25 )

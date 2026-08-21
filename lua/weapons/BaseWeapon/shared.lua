@@ -40,6 +40,11 @@ SWEP.__WEAPON__ = true
 SWEP.flReloadTime = 0
 SWEP.flLastShot = 0
 
+function SWEP:Initialize()
+	self:SetHealth( 200 )
+	if SERVER then self:SetMaxHealth( 200 ) end
+end
+
 local NOT_SPRINTING_OVERRIDES = {
 	[ ACT_HL2MP_IDLE_PISTOL ] = ACT_HL2MP_IDLE_REVOLVER,
 	[ ACT_HL2MP_IDLE_CROUCH_REVOLVER ] = ACT_HL2MP_IDLE_CROUCH_PISTOL,

@@ -26,7 +26,10 @@ local EffectData = EffectData
 local util_Effect = util.Effect
 local CurTime = CurTime
 
-function SWEP:Initialize() CWeapon_SetHoldType( self, CEntity_GetTable( self ).sHoldType ) end
+function SWEP:Initialize()
+	BaseClass.Initialize( self )
+	CWeapon_SetHoldType( self, CEntity_GetTable( self ).sHoldType )
+end
 
 function SWEP:FurtherModificationsToBulletTable( tBullets, MyTable ) end
 
