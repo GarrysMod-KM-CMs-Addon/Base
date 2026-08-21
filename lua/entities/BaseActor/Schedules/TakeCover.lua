@@ -11,7 +11,7 @@ local SortByMember = table.SortByMember
 RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
 
 	local pEnemy = sched.Enemy

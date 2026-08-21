@@ -1,7 +1,7 @@
 include "MoveToLoS.lua"
 
 RegisterSchedule( "VehicleAirEngage", { Execute = function( self, sched, MyTable )
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table.IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end

@@ -17,9 +17,7 @@ local util_TraceLine = util.TraceLine
 
 function ENT:DontRePath( pPath, vPos, vGoal, MyTable )
 	pPath:MoveCursorToClosestPosition( vPos )
-
-	local f = MyTable.flPathTolerance
-
+	local f = math_max( MyTable.flPathTolerance, self:OBBMaxs()[ 1 ] * 10 )
 	local flCursor = pPath:GetCursorPosition()
 	if pPath:GetPositionOnPath( flCursor ):DistToSqr( vPos ) <= f * f then
 		pPath:MoveCursorToClosestPosition( vGoal )

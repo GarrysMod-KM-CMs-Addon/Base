@@ -399,7 +399,7 @@ ENT.m_sYawPoseParameter = "aim_yaw"
 ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
 
-ENT.flAimStiffness = 24
+ENT.flAimStiffness = 48
 ENT.flAimDamping = -8
 
 ENT.flBodyStiffness = 14

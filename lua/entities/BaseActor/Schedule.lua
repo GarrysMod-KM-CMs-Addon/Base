@@ -39,6 +39,7 @@ ENT.tPreScheduleResetVariables = {}
 ENT.tPreScheduleResetVariables.bCharging = false
 ENT.tPreScheduleResetVariables.bTaunting = false
 ENT.tPreScheduleResetVariables.bAttacking = false
+ENT.tPreScheduleResetVariables.EScheduleState = ACTOR_STATE_IDLE
 
 function ENT:SelectScheduleInternal( MyTable, ... )
 	if MyTable.m_bScript then return end
@@ -105,3 +106,4 @@ include "Schedules/PullAlarm.lua"
 include "Schedules/Startle.lua"
 include "Schedules/PickUpGun.lua"
 include "Schedules/FreeMovement.lua"
+include "Schedules/Alert.lua"

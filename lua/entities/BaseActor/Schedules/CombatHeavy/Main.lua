@@ -3,7 +3,7 @@ local table_IsEmpty = table.IsEmpty
 ENT.CombatHeavy_WEAPON_STANCE = WEAPON_STANCE_HIP
 
 RegisterSchedule( "CombatHeavy", { Execute = function( self, sched, MyTable )
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end

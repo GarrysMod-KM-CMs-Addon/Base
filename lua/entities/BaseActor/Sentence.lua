@@ -3,6 +3,7 @@ local CEntity_GetTable = CEntity.GetTable
 
 function ENT:EmitSentence( tSentence, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
 	local pLast = MyTable.m_pLastSentence
 	if pLast then
 		local pNew = { tSentence = tSentence }
@@ -30,8 +31,8 @@ function ENT:HandleSentences( MyTable )
 	if !pLast then return end
 	local pNext = MyTable.m_pNextSentence || pLast.pNext
 	local tSentence = pNext.tSentence
-	local sSentence = tSentence.sSentence
-	local pSound = CreateSound( self, sSentence )
+	local sSound = tSentence.sSound
+	local pSound = CreateSound( self, sSound )
 	pSound:Play()
 	MyTable.m_flSpeechTime = CurTime() + MyTable.GAME_flLastSoundDuration * ( tSentence.flMultiplier || .95 ) + ( tSentence.flDelay || 0 )
 	if pNext.pNext == pNext then

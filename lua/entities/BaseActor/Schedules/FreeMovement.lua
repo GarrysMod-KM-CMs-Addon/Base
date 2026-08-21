@@ -27,7 +27,7 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
@@ -256,7 +256,7 @@ RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
@@ -435,7 +435,7 @@ RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTa
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
@@ -581,7 +581,7 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
@@ -812,7 +812,7 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 	MyTable.vCover = nil
 	MyTable.tCover = nil
 
-	local tEnemies = sched.tEnemies || MyTable.tEnemies
+	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
 
 	if MyTable.flCombatState < 0 || MyTable.GAME_flSuppression > MyTable.FreeMovementCoverHealth( self, MyTable ) then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end

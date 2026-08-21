@@ -1,6 +1,7 @@
 local table_IsEmpty = table.IsEmpty
 
 ENT.m_sDefaultIdleSchedule = "Idle"
+ENT.m_sDefaultAlertSchedule = "Alert"
 ENT.m_sDefaultCombatSchedule = "Cover"
 
 function ENT:SelectSchedule( MyTable )

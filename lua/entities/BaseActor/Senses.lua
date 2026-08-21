@@ -236,18 +236,22 @@ local math_Clamp = math.Clamp
 
 local CurTime = CurTime
 
-// The name is a fluke lmao - you should handle the picking up code here too
-function ENT:ShouldPickUpGun( pWeapon, vEyePos, TheirTable, MyTable )
+function ENT:OnSeeWeapon( pWeapon, vEyePos, tAllies, MyTable )
 	if MyTable.bCannotCarryWeapons || pWeapon:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 9437184/*3072*/ then return end
+
 	local pSchedule = MyTable.Schedule
 	if pSchedule && pSchedule.m_sName == "PickUpGun" then return end
-	// I already have this gun... but why not take the other too?
+
+	// I already have this gun... but why not take the other one too?
 	//	local sTargetClass = pWeapon:GetClass()
 	//	for wep in pairs( MyTable.tWeapons ) do
 	//		if wep:GetClass() == sTargetClass then
 	//			return
 	//		end
 	//	end
+
+	for pAlly in pairs( tAllies ) do if pAlly.pTargetWeapon == pWeapon then return end end
+
 	pSchedule = MyTable.SetSchedule( self, "PickUpGun", MyTable )
 	pSchedule.pWeapon = pWeapon
 end
@@ -369,7 +373,7 @@ function ENT:Look( MyTable )
 	for _, t in ipairs( tWeapons ) do
 		local ent = t[ 1 ]
 		if !IsValid( ent ) then continue end
-		MyTable.ShouldPickUpGun( self, ent, vEyePos, TheirTable, MyTable )
+		MyTable.OnSeeWeapon( self, ent, vEyePos, tAllies, MyTable )
 	end
 
 	MyTable.tAlertEntities = tAlertEntities
