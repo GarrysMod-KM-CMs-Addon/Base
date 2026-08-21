@@ -384,14 +384,17 @@ SWEP.flUpwardsRecoilMax = 1
 SWEP.flSidewaysRecoilMin = -1
 SWEP.flSidewaysRecoilMax = 1
 
-function SWEP:CalculateRecoil( pOwner, MyTable )
-	local flRecoil = MyTable.flRecoil
+function SWEP:CalculateRecoilMultiplier( pOwner, MyTable )
 	local flMultiplier = 1
-	if pOwner.GetRunSpeed then flMultiplier = flMultiplier + math_Clamp( pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.1 ), 0, .1 ) end
-	local f = pOwner.KeyDown
-	if f && !f( pOwner, IN_ZOOM ) then flMultiplier = flMultiplier + .4 end
-	if !pOwner:IsOnGround() then flMultiplier = flMultiplier + ( 1 / 3 ) end
-	return flRecoil * flMultiplier
+
+	if pOwner.GetRunSpeed then flMultiplier = flMultiplier * ( 1 + math_Clamp( pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.25 ), 0, .25 ) ) end
+
+	if pOwner:IsOnGround() then
+		local f = pOwner.KeyDown
+		if f && f( pOwner, IN_ZOOM ) then flMultiplier = flMultiplier * .5 end
+	else flMultiplier = flMultiplier * 1.5 end
+
+	return flMultiplier
 end
 
 local type = type
@@ -406,7 +409,7 @@ function SWEP:DoRecoil( MyTable )
 
 	local flPitch = math_Rand( MyTable.flUpwardsRecoilMin, MyTable.flUpwardsRecoilMax )
 	local flYaw = math_Rand( MyTable.flSidewaysRecoilMin, MyTable.flSidewaysRecoilMax )
-	local flRecoil = MyTable.CalculateRecoil( self, pOwner, MyTable )
+	local flRecoil = MyTable.flRecoil
 
 	local OwnerTable = CEntity_GetTable( pOwner )
 

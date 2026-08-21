@@ -810,6 +810,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	if MyTable.bSniper && flMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
 		vInstantTarget = Vector( 0, 0, 999999 )
 		flMultiplier = ( MyTable.flSniperAimingSwayMultiplier || SNIPER_AIMING_SWAY_MULTIPLIER )
+		pos[ 3 ] = pos[ 3 ] - 1000
 	end
 
 	if MyTable.__VIEWMODEL_FULLY_MODELED__ then

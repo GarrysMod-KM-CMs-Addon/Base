@@ -33,6 +33,7 @@ SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.flRecoil = 10
 SWEP.WPN_SPRINT = WPN_RIFLEUP
 SWEP.WPN_SHOOT = WPN_RIFLEUP
+SWEP.Crosshair = "Sniper"
 
 function SWEP:FreezeMovement()
 	local owner = self:GetOwner()

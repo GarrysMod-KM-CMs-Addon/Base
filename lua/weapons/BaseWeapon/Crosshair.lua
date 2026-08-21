@@ -379,7 +379,7 @@ function SWEP:DoDrawCrosshair()
 	)
 
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
-	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart + ( MyTable.Crosshair == "Sniper" && .15 || ( 1 / 30 ) )
+	MyTable.flCrosshairInAccuracy = flGapPart + flRecoilPart + ( MyTable.Crosshair == "Sniper" && 1 / 15 || ( 1 / 30 ) )
 
 	if MyTable.sAimSound && MyTable.vViewModelAim then
 		if MyTable.bAiming then
@@ -428,7 +428,7 @@ function SWEP:DoDrawCrosshair()
 		surface_SetDrawColor( 0, 0, 0, 255 )
 		local flWidth, flHeight, sFont
 		local b = MyTable.bDontDrawAmmoBars
-		if b || self:GetMaxClip1() <= 15 then
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN || MyTable.WPN_SHOOT == WPN_PISTOL || b || self:GetMaxClip1() <= 15 then
 			flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
 		else
 			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"

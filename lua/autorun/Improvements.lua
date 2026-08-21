@@ -152,7 +152,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	PlyTable.GAME_flLastStartCommandCall = SysTime()
 
 	local pActiveWeapon = ply:GetActiveWeapon()
-	local flDelay, flRecoil = .1, 1
+	local flDelay, flRecoil, flMultiplier = .1, 1, 1
 	local bAutomatic
 	if IsValid( pActiveWeapon ) then
 		local WeaponTable = CEntity_GetTable( pActiveWeapon )
@@ -164,7 +164,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			flDelay = WeaponTable.Primary_flDelay || flDelay
 			if flDelay then
 				flDelay = min( flDelay, .2 )
-				flRecoil = WeaponTable.CalculateRecoil( pActiveWeapon, ply, WeaponTable )
+				flRecoil = WeaponTable.flRecoil
+				flMultiplier = WeaponTable.CalculateRecoilMultiplier( pActiveWeapon, ply, WeaponTable )
 			end
 		end
 	end
@@ -177,8 +178,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local flRecoilImpulseRight = math_Approach( PlyTable.GAME_flRecoilImpulseRight || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseRight = flRecoilImpulseRight
 
-	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flFrameTime
-	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flFrameTime
+	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flMultiplier * flFrameTime
+	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flMultiplier * flFrameTime
 
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 		local flBreathe = RealTime() * .5
