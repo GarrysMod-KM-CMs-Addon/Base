@@ -405,6 +405,8 @@ ENT.flAimDamping = -8
 ENT.flBodyStiffness = 14
 ENT.flBodyDamping = -12
 
+ENT.flLastBodyYaw = 0
+
 function ENT:HandleTurning( MyTable )
 	local flFrameTime = MyTable.m_flFrameTime
 	local Angles = CEntity_GetAngles( self )
@@ -465,7 +467,9 @@ function ENT:HandleTurning( MyTable )
 
 	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )
 
-	CEntity_SetPoseParameter( self, sYaw, flYaw + flYawVelocity * flFrameTime )
+	local flBodyYaw = Angles[ 2 ]
+	CEntity_SetPoseParameter( self, sYaw, flYaw - math_AngleDifference( flBodyYaw, MyTable.flLastBodyYaw ) )
+	MyTable.flLastBodyYaw = flBodyYaw
 
 	MyTable.flYawVelocity = flYawVelocity
 

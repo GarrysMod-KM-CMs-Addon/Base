@@ -4,7 +4,6 @@ local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local CEntity_GetPos = CEntity.GetPos
 
-local math = math
 local math_Remap = math.Remap
 local math_Clamp = math.Clamp
 local math_max = math.max
@@ -151,6 +150,8 @@ end
 
 // Tries to jump to vTarget
 function ENT:Jump( vTarget, bJumpGap, MyTable )
+	vTarget[ 3 ] = vTarget[ 3 ] + 20
+
 	local flGravity = sv_gravity:GetFloat()
 
 	local pLocomotion = self.loco
@@ -182,9 +183,6 @@ function ENT:Jump( vTarget, bJumpGap, MyTable )
 	local flDelta = math.abs( vTarget[ 1 ] - vStart[ 1 ] )
 	if flDelta > flTargetHeight then return end
 
-	local flJumpLength = vVelocity:Length() * ( 2 * flGravity * flJumpHeight ) ^ .5 / flGravity
-	if vStart:Distance2D( vTarget ) > flJumpLength then return end
-
 	pLocomotion:SetJumpHeight( math_Clamp( math.abs( vTarget[ 3 ] - flZ ) * 2, 0, flJumpHeight ) )
 	pLocomotion:JumpAcrossGap( vTarget, self:GetForward() )
 	pLocomotion:SetJumpHeight( flJumpHeight )
@@ -193,24 +191,21 @@ function ENT:Jump( vTarget, bJumpGap, MyTable )
 	self.m_bJumping = true
 end
 
+local developer = GetConVar "developer"
+
 ENT.flNavigationAvoidTime = 0
-function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
+function ENT:GrountMovement( pPath, flSpeed, tFilter )
 	local pLocomotion = self.loco
 
-	pLocomotion:SetStepHeight( self.vHullMaxs[ 1 ] * .5 )
+	pLocomotion:SetStepHeight( self.vHullMaxs[ 3 ] * .25 )
+
+	if developer:GetBool() then pPath:Draw() end
+
+	pPath:SetMinLookAheadDistance( self:OBBMaxs()[ 1 ] * 3 )
 
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
 		return
-	end
-
-	local pGoal, tNextGoal = pPath:GetCurrentGoal(), pPath:NextSegment()
-	if pGoal && tNextGoal then
-		if pGoal.type == 2 || pGoal.type == 3 then
-			self:Jump( tNextGoal.pos )
-			pPath:Update( self )
-			return
-		end
 	end
 
 	if CurTime() <= self.flNavigationAvoidTime then
@@ -218,10 +213,12 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 		return
 	end
 
+	local pGoal, pNextGoal = pPath:GetCurrentGoal()
+
 	if !pGoal then pPath:Update( self ) return end
 
 	local aVelocity = pGoal.forward:Angle()
-
+	
 	tFilter = tFilter || { self }
 
 	local trHull = util.TraceHull {
@@ -231,8 +228,30 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 		maxs = self:OBBMaxs(),
 		filter = tFilter
 	}
+	
+	if trHull.Hit then
+		local pNextGoal, b = pPath:NextSegment()
+		if pNextGoal && ( pGoal.type == 2 || pGoal.type == 3 ) then b = true end
 
-	if trHull.Hit && !trHull.HitWorld then
+		if b then
+			local iRand = math.random( 3 )
+			if iRand == 1 then
+				self:Jump( pNextGoal.pos )
+				pPath:Update( self )
+				return
+			elseif iRand == 2 then
+				self.vNavigationAvoidDirection = aVelocity:Forward()
+				self.flNavigationAvoidTime = CurTime() + math.random()
+				return
+			end
+		else
+			if math.random( 2 ) == 1 then
+				self.vNavigationAvoidDirection = aVelocity:Forward()
+				self.flNavigationAvoidTime = CurTime() + math.random()
+				return
+			end
+		end
+
 		local trLeft, trRight = util.TraceHull {
 			start = self:GetPos(),
 			endpos = self:GetPos() - aVelocity:Right() * self:OBBMaxs()[ 1 ],
@@ -247,7 +266,7 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 			filter = self
 		}
 
-		local bLeft, bRight = trLeft.Hit && !trLeft.HitWorld, trRight.Hit && !trRight.HitWorld
+		local bLeft, bRight = trLeft.Hit, trRight.Hit
 		if bLeft && bRight then
 			if math.random( 2 ) == 1 then
 				self.vNavigationAvoidDirection = -aVelocity:Right()
@@ -263,6 +282,15 @@ function ENT:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
 		else
 			self.flNavigationAvoidTime = CurTime() + math.random()
 			self.vNavigationAvoidDirection = aVelocity:Right()
+			return
+		end
+	end
+
+	local pNextGoal = pPath:NextSegment()
+	if pNextGoal then
+		if pGoal.type == 2 || pGoal.type == 3 then
+			self:Jump( pNextGoal.pos )
+			pPath:Update( self )
 			return
 		end
 	end

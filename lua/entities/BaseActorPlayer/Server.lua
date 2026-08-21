@@ -54,7 +54,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter )
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:SetAcceleration( 0 )
 		pLocomotion:SetDeceleration( 0 )
-		self:HandleJumpingAlongPath( pPath, self.flTopSpeed, tFilter )
+		self:GrountMovement( pPath, self.flTopSpeed, tFilter )
 		return
 	end
 	if self.bCanSlide && QuickSlide_Can( self ) then
@@ -157,7 +157,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
 	local f = flSpeed * ACCELERATION_NORMAL
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
-	self:HandleJumpingAlongPath( pPath, flSpeed, tFilter )
+	self:GrountMovement( pPath, flSpeed, tFilter )
 end
 
 function ENT:Stand( flHeight )
