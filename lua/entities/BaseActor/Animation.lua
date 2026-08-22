@@ -17,7 +17,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 	local flLength = self:SetSequence( sSequence )
 
 	self:ResetSequenceInfo()
-	self:SetCycle( 0 )
+	self:SetCycle( flSpeed > 0 && 0 || 1 )
 	self:SetPlaybackRate( flSpeed )
 
 	self.sCallMeInRunBehaviour = sSequence
@@ -36,8 +36,9 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 
 		self:SetSequence( sSequence )
 		self:SetPlaybackRate( flSpeed )
+
 		local flCycle = ( CurTime() - flStartTime ) * flInverseDuration
-		self:SetCycle( flCycle )
+		self:SetCycle( flSpeed > 0 && flCycle || ( 1 - flCycle ) )
 
 		local pLocomotion = CEntity_GetTable( self ).loco
 		pLocomotion:SetDesiredSpeed( 0 )

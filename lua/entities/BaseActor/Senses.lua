@@ -447,7 +447,7 @@ end
 
 function ENT:GetStartleSoundLevel( sName )
 	local t = self.tSoundHarmless[ sName ]
-	return 95 * math.Remap( 1 + ( t && t[ 1 ] || 1 ) * self.flBoldness, 0, 128, 1, 2 )
+	return 110 * math.Remap( 1 + ( t && t[ 1 ] || 1 ) * self.flBoldness, 0, 128, 1, 2 )
 end
 
 ENT.tSoundHarmless = {}
