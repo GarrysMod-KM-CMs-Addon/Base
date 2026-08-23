@@ -31,7 +31,7 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 	local vOffStanding, vOffDucking = Vector( 0, 0, MyTable.vHullMaxs.z )
 	if MyTable.vHullDuckMaxs && MyTable.vHullDuckMaxs.z != MyTable.vHullMaxs.z then vOffDucking = Vector( 0, 0, MyTable.vHullDuckMaxs.z ) end
 
-	local bDisAllowWater = !MyTable.bCanSwim
+	local bDisAllowWater = MyTable.bHasOxygen
 
 	fWeighter = fWeighter || function( _/*pFrom*/, _/*pTo*/, flCurrentDistance, flAdditionalDistance ) return flCurrentDistance + flAdditionalDistance end
 

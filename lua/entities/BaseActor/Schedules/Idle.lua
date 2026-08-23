@@ -8,12 +8,14 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 
 	if CurTime() > MyTable.flWeaponReloadTime then
 		local t, i = {}, 0
+
 		for wep in pairs( MyTable.tWeapons ) do
 			if !wep.bNoReloads && wep:Clip1() < wep:GetMaxClip1() then
 				table.insert( t, wep )
 				i = i + 1
 			end
 		end
+
 		if !table.IsEmpty( t ) then
 			MyTable.SetActiveWeapon( self, t[ math.random( i ) ], MyTable )
 			MyTable.WeaponReload( self, MyTable )
@@ -90,7 +92,7 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 
 		local tQueue, tVisited, flDistSqr = { { pArea, 0 } }, {}, math.Rand( 0, 1024 )
 		flDistSqr = flDistSqr * flDistSqr
-		local bDisAllowWater = !MyTable.bCanSwim
+		local bDisAllowWater = MyTable.bHasOxygen
 		while !table.IsEmpty( tQueue ) do
 			local pArea, flDistance = unpack( table.remove( tQueue ) )
 			for _, t in ipairs( pArea:GetAdjacentAreaDistances() ) do

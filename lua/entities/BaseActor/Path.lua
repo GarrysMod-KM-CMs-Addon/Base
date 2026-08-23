@@ -33,7 +33,7 @@ function ENT:ComputePath( Path, vGoal, Weighter )
 	if Weighter then return Path, Path:Compute( self, vGoal, Weighter ) end
 	local loco = MyTable.loco
 	local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-	local bDisAllowWater = !MyTable.bCanSwim
+	local bDisAllowWater = MyTable.bHasOxygen
 	local flDeathDropNeg = -loco:GetDeathDropHeight()
 	local flStepHeight = loco:GetStepHeight()
 	local flJumpHeight
@@ -117,7 +117,7 @@ function ENT:ComputeFlankPath( Path, pEnemy )
 	else __ACTOR_FLANK_PATHS_LOCAL__[ iClass ] = { [ sPartition ] = { [ self ] = tPath } } end
 	local loco = MyTable.loco
 	local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-	local bDisAllowWater = !MyTable.bCanSwim
+	local bDisAllowWater = MyTable.bHasOxygen
 	local flDeathDropNeg = -loco:GetDeathDropHeight()
 	local flStepHeight = loco:GetStepHeight()
 	local flJumpHeight
