@@ -229,26 +229,12 @@ hook.Add( "DoPlayerDeath", "GameImprovements", function( ply )
 end )
 hook.Add( "PlayerDeath", "GameImprovements", function( ply, _, at )
 	if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end
-	if IsValid( at ) && at:IsPlayer() then
-		local v = __PLAYER_MODEL__[ at:GetModel() ]
-		if v then
-			v = v.OnKilledSomething
-			if v then if v( at, ply ) then b = nil end end
-		end
-	end
 	fOnKilled( ply, at )
 end )
 hook.Add( "PlayerDeathSilent", "GameImprovements", function( ply ) if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end end )
 hook.Add( "PlayerDeathSound", "GameImprovements", function() return true end )
 
 hook.Add( "OnNPCKilled", "GameImprovements", function( ent, at )
-	if IsValid( at ) && at:IsPlayer() then
-		local v = __PLAYER_MODEL__[ at:GetModel() ]
-		if v then
-			v = v.OnKilledSomething
-			if v then if v( at, ent ) then b = nil end end
-		end
-	end
 	fOnKilled( ent, at )
 end )
 
@@ -485,13 +471,7 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	if IsValid( at ) then
 		local f = at.GAME_OnHurtSomething
 		if f && f( at, pEntity, dDamage ) then return true end
-		if at:IsPlayer() then
-			local v = __PLAYER_MODEL__[ at:GetModel() ]
-			if v then
-				v = v.OnHurtSomething
-				if v then if v( at, pEntity, dDamage ) then b = nil end end
-			end
-		elseif at.GetEnemy && dDamage:GetDamage() > 0 then at.GAME_bHurtEnemy = true end
+		if at.GetEnemy && dDamage:GetDamage() > 0 then at.GAME_bHurtEnemy = true end
 	end
 
 	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
@@ -725,12 +705,6 @@ function GameImprovements_StartCommand( ply, cmd )
 		if IsValid( p ) then p:Remove() end
 		return
 	end
-	local c = ply:GetModel()
-	local v = __PLAYER_MODEL__[ c ]
-	if v then
-		v = v.StartCommand
-		if v && v( ply, cmd ) then return end
-	end
 	BloodlossStuff( ply, cmd )
 	ply:SetLadderClimbSpeed( ply:IsSprinting() && ply:GetRunSpeed() || ply:IsWalking() && ply:GetSlowWalkSpeed() || ply:GetWalkSpeed() )
 	local bGround = CEntity_IsOnGround( ply )
@@ -776,8 +750,7 @@ function GameImprovements_StartCommand( ply, cmd )
 			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
 		end
 	end
-	local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	local bAllDirectionalSprint = Either( v, v && v.bAllDirectionalSprint, ply.CTRL_bAllDirectionalSprint ) || ( ( Either( ply.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, ply.CTRL_bCantSlide ) && GetVelocity( ply ):Length() >= ply:GetRunSpeed() ) || ply:Crouching() )
+	local bAllDirectionalSprint = ply.CTRL_bAllDirectionalSprint || ply:Crouching()
 	if bAllDirectionalSprint then
 		ply:SetNW2Bool( "CTRL_bSprinting", false )
 		ply:SetCrouchedWalkSpeed( 1 )
@@ -806,14 +779,6 @@ function GameImprovements_StartCommand( ply, cmd )
 			ply:SetNW2Bool( "CTRL_bSprinting", false )
 		end
 	end
-	//	if !ply:IsOnGround() then
-	//		local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	//		if CEntity_WaterLevel( ply ) <= 0 && !Either( v == nil, ply.CTRL_bAllowMovingWhileInAir, v && v.bAllowMovingWhileInAir ) && ply:GetMoveType() == MOVETYPE_WALK then
-	//			// cmd:SetForwardMove( 0 )
-	//			cmd:SetSideMove( 0 )
-	//		end
-	//		// ply:SetNW2Bool( "CTRL_bSprinting", false )
-	//	end
 
 	local s = ply.GAME_sCoverState
 	if s then

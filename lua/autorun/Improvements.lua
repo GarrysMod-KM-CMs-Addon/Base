@@ -59,7 +59,7 @@ BIOLOGICAL_ONLY_DAMAGE_TYPES = {
 }
 
 ACCELERATION_NORMAL = 5
-GRAVITY_NORMAL = 800
+GRAVITY_NORMAL = 1200
 
 HUMAN_SPRINT_SPEED = 350
 HUMAN_JOG_SPEED = 200 + 1 / .03
@@ -140,7 +140,7 @@ function QuickSlide_Can( ply, t )
 	if t == nil then t = CEntity_GetTable( ply ) end
 	local flNextSlide = t.GAME_flNextSlide
 	if flNextSlide && CurTime() <= flNextSlide then return end
-	return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !Either( t.CTRL_bCantSlide == nil, __PLAYER_MODEL__[ ply:GetModel() ] && __PLAYER_MODEL__[ ply:GetModel() ].bCantSlide, t.CTRL_bCantSlide ) && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9  )
+	return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !t.CTRL_bCantSlide && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9  )
 end
 
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
@@ -395,9 +395,6 @@ hook_Add( "HandlePlayerDrivingNew", "Base", function( ply, plyTable, pVehicle )
 	return true
 end )
 
-__PLAYER_MODEL__ = {}
-local __PLAYER_MODEL__ = __PLAYER_MODEL__
-
 CEntity_OBBMinsInternal = CEntity_OBBMinsInternal || CEntity.OBBMins
 CEntity_OBBMaxsInternal = CEntity_OBBMaxsInternal || CEntity.OBBMaxs
 
@@ -433,22 +430,30 @@ hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 	end
 end )
 
-hook.Add( "PlayerFootstep", "Improvements", function( ply, ... )
-	if ply:GetNW2Bool "CTRL_bSliding" || GetVelocity( ply ):Length() <= ply:GetSlowWalkSpeed() then return true end
-	if ply:WaterLevel() > 0 &&
-		// Tip_Walking8: Different surfaces make different amounts of noise. The loudest is water, the exception being the ocean floor, walking on which makes almost no sound.
-		ply:WaterLevel() < 3 then
+function DoFootstep( pEntity, vPos, flForce )
+	// Tip_Walking8: Different surfaces make different amounts of noise. The loudest is water, the exception being the ocean floor, walking on which makes almost no sound.
+	if pEntity:WaterLevel() == 1 then
 		local pEffectData = EffectData()
-		pEffectData:SetOrigin( vec || ply:GetPos() )
-		pEffectData:SetScale( ply:BoundingRadius() * .2 )
+		pEffectData:SetOrigin( vPos )
+		pEffectData:SetScale( flForce * 5 )
 		pEffectData:SetFlags( 0 )
 		util.Effect( "watersplash", pEffectData )
 	end
-	local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	if v then
-		v = v.PlayerFootstep
-		if v then return v( ply, ... ) end
+end
+
+hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
+	local flSpeed = GetVelocity( ply ):Length()
+	if ply:GetNW2Bool "CTRL_bSliding" then return true end
+
+	local flForce = 1
+
+	if flSpeed <= ply:GetWalkSpeed() * 1.1 then
+		flForce = 1.5
+	elseif flSpeed <= ply:GetRunSpeed() * 1.1 then
+		flForce = 2
 	end
+
+	DoFootstep( ply, vPos, flForce )
 end )
 
 function SetHumanPlayer( ply )
@@ -482,32 +487,6 @@ hook.Add( "PlayerInitialSpawn", "Improvements", function( ply )
 		local sClass = player_manager.GetPlayerClass( ply )
 		if sClass == "player_default" || sClass == "player_sandbox" then SetHumanPlayer( ply ) end
 	end )
-end )
-
-hook.Add( "PlayerHandleAnimEvent", "Improvements", function( ply, ... )
-	local v = __PLAYER_MODEL__[ ply:GetModel() ]
-	if v then
-		v = v.PlayerHandleAnimEvent
-		if v then return v( ply, ... ) end
-	end
-end )
-
-hook.Add( "TranslateActivity", "Improvements", function( ply, ... )
-	local c = ply:GetModel()
-	local v = __PLAYER_MODEL__[ c ]
-	if v then
-		v = v.TranslateActivity
-		if v then return v( ply, ... ) end
-	end
-end )
-
-hook.Add( "CalcView", "Improvements", function( ply, ... )
-	local c = ply:GetModel()
-	local v = __PLAYER_MODEL__[ c ]
-	if v then
-		v = v.CalcView
-		if v then return v( ply, ... ) end
-	end
 end )
 
 function GetOwner( self )

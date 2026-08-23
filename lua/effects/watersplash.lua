@@ -8,7 +8,7 @@ local EyePos = EyePos
 local sqrt = math.sqrt
 
 sound.Add {
-	name = "GunshotSplash",
+	name = "WaterSplashSmall",
 	sound = {
 		"ambient/water/water_splash1.wav",
 		"ambient/water/water_splash2.wav",
@@ -22,13 +22,15 @@ sound.Add {
 function EFFECT:Init( pData )
 	local vPos = pData:GetOrigin()
 
-	EmitSound( "GunshotSplash", vPos )
+	EmitSound( "WaterSplashSmall", vPos )
 
 	local flScale = pData:GetScale()
 
+	self.m_flScale = flScale
+
 	local pEmitter = ParticleEmitter( vPos )
 
-	for i = 1, random( 8, 12 ) do
+	for i = 1, random( 2, 4 ) do
 		local vVelocity = VectorRand() * 20 * flScale
 		vVelocity[ 3 ] = Rand( 60, 120 ) * flScale
 		local pPart = pEmitter:Add( "particles/smokey", vPos )
@@ -47,7 +49,7 @@ function EFFECT:Init( pData )
 		end
 	end
 
-	for i = 1, random( 15, 25 ) do
+	for i = 1, random( 4, 8 ) do
 		local vVelocity = VectorRand() * Rand( 80, 160 ) * flScale
 		vVelocity[ 3 ] = Rand( 80, 160 ) * flScale
 		local pPart = pEmitter:Add( "effects/splash4", vPos )
@@ -67,7 +69,7 @@ function EFFECT:Init( pData )
 		end
 	end
 
-	for i = 1, random( 3, 6 ) do
+	for i = 1, random( 2, 4 ) do
 		local pPart = pEmitter:Add( "particles/smokey", vPos )
 		if pPart then
 			pPart:SetVelocity( VectorRand() * 4 * flScale + Vector( 0, 0, Rand( 40, 50 ) ) * flScale )
@@ -105,7 +107,7 @@ end
 
 function EFFECT:Think() return false end
 
-local GUNSHOTSPLASH_BLUR_DISTANCE = 192
+local WATERSPLASH_BLUR_DISTANCE = 192
 
 function EFFECT:Render()
 	local MyTable = CEntity_GetTable( self )
@@ -113,8 +115,10 @@ function EFFECT:Render()
 	MyTable.m_bCalculatedBlur = true
 
 	local flDistSqr = EyePos():DistToSqr( self:GetPos() )
-	if flDistSqr > GUNSHOTSPLASH_BLUR_DISTANCE * GUNSHOTSPLASH_BLUR_DISTANCE then return end
+	local flScale = MyTable.m_flScale
+	local f = WATERSPLASH_BLUR_DISTANCE * flScale
+	if flDistSqr > f * f then return end
 
-	WATER_BLUR = WATER_BLUR + ( 1 - sqrt( flDistSqr ) / GUNSHOTSPLASH_BLUR_DISTANCE ) ^ 2
+	WATER_BLUR = WATER_BLUR + ( 1 - sqrt( flDistSqr ) / ( WATERSPLASH_BLUR_DISTANCE * flScale ) ) ^ 2 * flScale ^ 1.1 * .005
 	RecalculateWaterBlurAmounts()
 end
