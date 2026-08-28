@@ -434,7 +434,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 		else COMP.KM_CMs_Addon = true end
 	end
 
-	hook.Run( "EntityFireBullets", pShooter, Data, COMP )
+	hook.Run( "EntityFireBullets", pShooter, Data, { KM_CMs_Addon = true } )
 
 	if Data.AmmoType != "" then
 		Data.Damage = game_GetAmmoPlayerDamage( game_GetAmmoID( Data.AmmoType ) )
@@ -451,7 +451,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 
 	local bTracer = Data.Tracer > 0
 
-	if bTracer then col = TRACER_COLOR[ Data.TracerName || "Bullet" ] || TRACER_COLOR.Bullet end
+	if bTracer then tColor = TRACER_COLOR[ Data.TracerName || "Bullet" ] || TRACER_COLOR.Bullet end
 	if Data.HullSize == 0 then Data.HullSize = TRACER_SIZE[ Data.TracerName || "Bullet" ] || TRACER_SIZE.Bullet end
 
 	local pOwner = GetOwner( pShooter )
@@ -819,13 +819,11 @@ function GameImprovements_StartCommand( ply, cmd )
 
 				local bSprinting = ply:GetVelocity():LengthSqr() > 256
 
-				ply:SetNW2Bool( "CTRL_bSprinting", b )
+				ply:SetNW2Bool( "CTRL_bSprinting", bSprinting )
 
-				if bSprinting then
-					if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then
-						cmd:RemoveKey( IN_SPEED )
-						ply:SetNW2Bool( "CTRL_bSprinting", false )
-					end
+				if bSprinting && ( cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) ) then
+					cmd:RemoveKey( IN_SPEED )
+					ply:SetNW2Bool( "CTRL_bSprinting", false )
 				end
 			end
 		else ply:SetNW2Bool( "CTRL_bSprinting", false ) end
@@ -1320,10 +1318,10 @@ NOT_A_VOICELINE[ "npc/zombie/moan_loop4.wav" ] = true
 
 util.AddNetworkString "CaptionSound"
 
-hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
-	if _Comp then
-		if _Comp.KM_CMs_Addon then return
-		else _Comp.KM_CMs_Addon = true end
+hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
+	if COMP then
+		if COMP.KM_CMs_Addon then return
+		else COMP.KM_CMs_Addon = true end
 	end
 
 	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
