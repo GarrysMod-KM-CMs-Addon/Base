@@ -3,6 +3,7 @@ local band = bit.band
 local util_TraceLine = util.TraceLine
 local util_ScreenShake = util.ScreenShake
 local util_DistanceToLine = util.DistanceToLine
+local min = math.min
 local max = math.max
 local IsValid = IsValid
 local Rand = math.Rand
@@ -28,7 +29,6 @@ local coroutine_status = coroutine.status
 local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
 local engine_TickInterval = engine.TickInterval
 local CEntity_IsOnGround = CEntity.IsOnGround
-local CEntity_WaterLevel = CEntity.WaterLevel
 local CEntity_Remove = CEntity.Remove
 local CPlayer = FindMetaTable "Player"
 local CPlayer_GetRunSpeed = CPlayer.GetRunSpeed
@@ -47,11 +47,27 @@ local Format = Format
 local player_Iterator = player.Iterator
 local table_insert = table.insert
 local table_IsEmpty = table.IsEmpty
+local char = string.char
+local concat = table.concat
+local CEntity_GetClass = CEntity.GetClass
+local CEntity_EntIndex = CEntity.EntIndex
+local ents_FindAlongRay = ents.FindAlongRay
+local game_GetAmmoPlayerDamage = game.GetAmmoPlayerDamage
+local game_GetAmmoID = game.GetAmmoID
+local math_Remap = math.Remap
+local tonumber = tonumber
+local lower = string.lower
+local Vector = Vector
 
 concommand.Add( "+drop", function() end )
 concommand.Add( "-drop", function( ply )
 	local pWeapon = ply:GetActiveWeapon()
-	if IsValid( pWeapon ) && pWeapon.Holster then pWeapon:Holster() pWeapon:CallOnClient "Holster" end
+
+	if IsValid( pWeapon ) && pWeapon.Holster then
+		pWeapon:Holster()
+		pWeapon:CallOnClient "Holster"
+	end
+
 	ply:DropWeapon()
 end )
 
@@ -64,6 +80,7 @@ RunConsoleCommand( "sv_gravity", GRAVITY_NORMAL )
 
 HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
 HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )
+HULL_HUMAN_DUCK_HIT_MINS, HULL_HUMAN_DUCK_HIT_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 48 )
 
 local CAP_WEAPON_RANGE_ATTACK1 = CAP_WEAPON_RANGE_ATTACK1
 local CAP_WEAPON_RANGE_ATTACK2 = CAP_WEAPON_RANGE_ATTACK2
@@ -74,52 +91,60 @@ local CAP_INNATE_RANGE_ATTACK2 = CAP_INNATE_RANGE_ATTACK2
 function InRangeAttack( ent )
 	if ent.IN_RANGE_ATTACK then return true end
 	if ent.IN_NOT_RANGE_ATTACK then return end
+
 	if ent.CapabilitiesGet then
-		local c = ent:CapabilitiesGet()
-		if band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-		band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-		band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-		band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+		local ECapabilities = ent:CapabilitiesGet()
+		if band( ECapabilities, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 	end
+
 	local fGetActiveWeapon = ent.GetActiveWeapon
 	if !fGetActiveWeapon then return end
+
 	local pWeapon = fGetActiveWeapon( ent )
 	if !IsValid( pWeapon ) then return end
+
 	if !pWeapon.GetCapabilities then return end
-	local c = pWeapon:GetCapabilities()
-	if band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-	band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-	band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-	band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+
+	local ECapabilities = pWeapon:GetCapabilities()
+	if band( ECapabilities, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+	band( ECapabilities, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+	band( ECapabilities, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+	band( ECapabilities, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 end
 
 function HasRangeAttack( ent )
 	if ent.HAS_RANGE_ATTACK then return true end
 	if ent.HAS_NOT_RANGE_ATTACK then return end
+
 	if ent.CapabilitiesGet then
-		local c = ent:CapabilitiesGet()
-		if band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-		band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-		band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-		band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+		local ECapabilities = ent:CapabilitiesGet()
+		if band( ECapabilities, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 	end
+
 	if ent.tWeapons then
 		for wep in pairs( ent.tWeapons ) do
 			if !wep.GetCapabilities then continue end
-			local c = wep:GetCapabilities()
-			if band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-			band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-			band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-			band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+			local ECapabilities = wep:GetCapabilities()
+			if band( ECapabilities, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 		end
+
 	elseif ent.GetWeapons then
 		for _, wep in ipairs( ent:GetWeapons() ) do
 			if !wep.GetCapabilities then continue end
-			local c = wep:GetCapabilities()
-			if band( c, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
-			band( c, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
-			band( c, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
-			band( c, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
+			local ECapabilities = wep:GetCapabilities()
+			if band( ECapabilities, CAP_WEAPON_RANGE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_WEAPON_RANGE_ATTACK2 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_RANGE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_RANGE_ATTACK2 ) != 0 then return true end
 		end
 	end
 end
@@ -133,81 +158,94 @@ local CAP_INNATE_MELEE_ATTACK2 = CAP_INNATE_MELEE_ATTACK2
 function HasMeleeAttack( ent )
 	if ent.HAS_MELEE_ATTACK || IsValid( ent.GAME_pVehicle ) then return true end
 	if ent.HAS_NOT_MELEE_ATTACK then return end
+
 	if ent.CapabilitiesGet then
-		local c = ent:CapabilitiesGet()
-		if band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-		band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-		band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-		band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+		local ECapabilities = ent:CapabilitiesGet()
+		if band( ECapabilities, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+		band( ECapabilities, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 	end
+
 	if ent.tWeapons then
 		for wep in pairs( ent.tWeapons ) do
 			if !wep.GetCapabilities then continue end
-			local c = wep:GetCapabilities()
-			if band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-			band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-			band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-			band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+			local ECapabilities = wep:GetCapabilities()
+			if band( ECapabilities, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 		end
+
 	elseif ent.GetWeapons then
 		for _, wep in ipairs( ent:GetWeapons() ) do
 			if !wep.GetCapabilities then continue end
-			local c = wep:GetCapabilities()
-			if band( c, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
-			band( c, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
-			band( c, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
-			band( c, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
+			local ECapabilities = wep:GetCapabilities()
+			if band( ECapabilities, CAP_WEAPON_MELEE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_WEAPON_MELEE_ATTACK2 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_MELEE_ATTACK1 ) != 0 ||
+			band( ECapabilities, CAP_INNATE_MELEE_ATTACK2 ) != 0 then return true end
 		end
 	end
 end
 
-// Intentionally generates UUIDs instead of truly unique numbers for extremely rare funni bugs
 function EntityUniqueIdentifier( ent )
 	if ent.__UNIQUE_IDENTIFIER__ then return ent.__UNIQUE_IDENTIFIER__ end
-	local t = {}
+
+	local sIdentifier = ""
 	for _ = 1, 16 do
 		local i = random( 1, 3 )
-		if i == 1 then table.insert( t, string.char( random( 65, 90 ) ) ) // A-Z
-		elseif i == 2 then table.insert( t, string.char( random( 97, 122 ) ) ) // a-z
-		else table.insert( t, random( 0, 9 ) ) end
+		if i == 1 then sIdentifier = sIdentifier .. char( random( 65, 90 ) )
+		elseif i == 2 then sIdentifier = sIdentifier .. char( random( 97, 122 ) )
+		else sIdentifier = sIdentifier .. random( 0, 9 ) end
 	end
-	ent.__UNIQUE_IDENTIFIER__ = table.concat( t )
+	
+	-- Combine them cleanly
+	ent.__UNIQUE_IDENTIFIER__ = CEntity_GetClass( ent ) .. "_" .. CEntity_EntIndex( ent ) .. "_" .. sIdentifier
 	return ent.__UNIQUE_IDENTIFIER__
 end
 
 local tIgnoreRangeAttackDisp = { [ D_NU ] = true, [ D_LI ] = true }
+
 RANGE_ATTACK_SUPPRESSION_BOUND_SIZE = 512
+
+SUPPRESSION_MIN_BOUND = Vector( -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE )
+SUPPRESSION_MAX_BOUND = Vector( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE )
+
+local SUPPRESSION_MIN_BOUND = SUPPRESSION_MIN_BOUND
+local SUPPRESSION_MAX_BOUND = SUPPRESSION_MAX_BOUND
+
 function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
-	local flAmplitude, flFrequency, flDuration = flDamage * .024, flDamage * .0016, math.min( 4, flDamage * .1 )
-	local ang = ( vEnd - vStart ):Angle()
-	for _, ent in ipairs( ents.FindAlongRay( vStart, vEnd, Vector( -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, -RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ), Vector( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE, RANGE_ATTACK_SUPPRESSION_BOUND_SIZE ) ) ) do
+	for _, ent in ipairs( ents_FindAlongRay( vStart, vEnd, SUPPRESSION_MIN_BOUND, SUPPRESSION_MAX_BOUND ) ) do
 		if ent == Owner || Owner.Disposition && Owner:Disposition( ent ) == D_LI || ent.Disposition && ent:Disposition( Owner ) == D_LI then continue end
-		local p = ent:GetPos() + ent:OBBCenter()
-		local _, v = util_DistanceToLine( vStart, vEnd, p )
+	
+		local vCenter = ent:GetPos() + ent:OBBCenter()
+
+		local _, v = util_DistanceToLine( vStart, vEnd, vCenter )
+
 		if util_TraceLine( {
 			start = v,
-			endpos = p,
+			endpos = vCenter,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilter( ent )
 		} ).Hit then continue end
-		if ent.GAME_tSuppressionAmount then
-			ent.GAME_tSuppressionAmount[ Owner ] = ( ent.GAME_tSuppressionAmount[ Owner ] || 0 ) + flDamage
-		else ent.GAME_tSuppressionAmount = { [ Owner ] = flDamage } end
+
 		local f = ent.GAME_OnRangeAttacked
 		if f == nil then ent.GAME_flSuppression = ( ent.GAME_flSuppression || 0 ) + flDamage else f( ent, Owner, vStart, vEnd, flDamage ) end
 	end
-	local ang = ( vEnd - vStart ):Angle()
-	for ent in pairs( __ACTOR_LIST__ ) do
-		if ent == Owner || Owner.Disposition && tIgnoreRangeAttackDisp[ Owner:Disposition( ent ) ] || ent.Disposition && tIgnoreRangeAttackDisp[ ent:Disposition( Owner ) ] then continue end
-		local _, v = util_DistanceToLine( vStart, vEnd, ent:EyePos() )
-		if ent:CanSee( v ) && ent:WillAttackFirst( Owner ) then
-			if !IsValid( ent.Enemy ) && table.IsEmpty( ent.tEnemies ) && table.IsEmpty( ent.tBullseyes ) then
+
+	local aAngle = ( vEnd - vStart ):Angle()
+	for pActor in pairs( __ACTOR_LIST__ ) do
+		if pActor == Owner || Owner.Disposition && tIgnoreRangeAttackDisp[ Owner:Disposition( pActor ) ] || tIgnoreRangeAttackDisp[ pActor:Disposition( Owner ) ] then continue end
+		local _, v = util_DistanceToLine( vStart, vEnd, pActor:EyePos() )
+		if pActor:CanSee( v ) && pActor:WillAttackFirst( Owner ) then
+			if !IsValid( pActor.Enemy ) && table.IsEmpty( pActor.tEnemies ) && table.IsEmpty( pActor.tBullseyes ) then
 				timer.Simple( Rand( 0, 1 ), function()
-					if !IsValid( ent ) then return end
-					ent:DLG_Startle( Owner )
+					if !IsValid( pActor ) then return end
+					pActor:DLG_Startle( Owner )
 				end )
-				ent.Enemy = ent:SetupBullseye( Owner, vStart, ang )
-			else ent:SetupBullseye( Owner, vStart, ang ) end
+				pActor.Enemy = pActor:SetupBullseye( Owner, vStart, aAngle )
+			else pActor:SetupBullseye( Owner, vStart, aAngle ) end
 		end
 	end
 end
@@ -227,10 +265,12 @@ hook.Add( "DoPlayerDeath", "GameImprovements", function( ply )
 	if IsValid( pWeapon ) then ply:DropWeapon( pWeapon ) end
 	for _, pWeapon in ipairs( ply:GetWeapons() ) do ply:DropWeapon( pWeapon ) end
 end )
+
 hook.Add( "PlayerDeath", "GameImprovements", function( ply, _, at )
 	if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end
 	fOnKilled( ply, at )
 end )
+
 hook.Add( "PlayerDeathSilent", "GameImprovements", function( ply ) if IsValid( ply.GAME_pFlashlight ) then ply.GAME_pFlashlight:Remove() end end )
 hook.Add( "PlayerDeathSound", "GameImprovements", function() return true end )
 
@@ -240,35 +280,32 @@ end )
 
 hook.Add( "PlayerSwitchFlashlight", "GameImprovements", function( ply )
 	if !ply:Alive() then if IsValid( ply.GAME_pFlashlight ) then ply:EmitSound "FlashlightOff" ply.GAME_pFlashlight:Remove() end return end
+
 	if IsValid( ply.GAME_pFlashlight ) then ply:EmitSound "FlashlightOff" ply.GAME_pFlashlight:Remove() else
-		local pt = ents.Create "LightStream"
-		pt:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 )
-		pt:SetAngles( ply:EyeAngles() )
-		pt:SetOwner( ply )
-		pt:SetParent( ply )
-		pt:SetKeyValue( "lightfov", "30" )
-		pt:SetKeyValue( "lightcolor", "255 255 255 2048" )
-		pt:SetKeyValue( "NearZ", "1" )
-		pt:SetKeyValue( "FarZ", "2048" )
-		pt:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
-		pt:Spawn()
+		local pFlashlight = ents.Create "LightStream"
+		pFlashlight:SetPos( ply:GetShootPos() + ply:GetAimVector() * 32 )
+		pFlashlight:SetAngles( ply:EyeAngles() )
+		pFlashlight:SetOwner( ply )
+		pFlashlight:SetParent( ply )
+		pFlashlight:SetKeyValue( "lightfov", "30" )
+		pFlashlight:SetKeyValue( "lightcolor", "255 255 255 2048" )
+		pFlashlight:SetKeyValue( "NearZ", "1" )
+		pFlashlight:SetKeyValue( "FarZ", "2048" )
+		pFlashlight:Input( "SpotlightTexture", nil, nil, "effects/flashlight/soft" )
+		pFlashlight:Spawn()
 		ply:EmitSound "FlashlightOn"
-		ply.GAME_pFlashlight = pt
+		ply.GAME_pFlashlight = pFlashlight
 	end
+
 	return false
 end )
 
-hook.Add( "OnEntityCreated", "GameImprovements", function( ent )
-	if IsValid( ent ) then
+hook.Add( "OnEntityCreated", "GameImprovements", function( pEntity )
+	if IsValid( pEntity ) then
 		timer.Simple( .01, function()
-			if !IsValid( ent ) then return end
+			if !IsValid( pEntity ) then return end
 
-			if ent:IsWeapon() then ent.GAME_bWeaponPickedUpOnce = true end
-
-			// Until GetVelocity( ent ):Length() >= 256 and then back <= 256,
-			// we will not generate covers. Done to avoid huge navmesh load
-			// of connecting dynamic cover nodes to existing ones.
-			ent.GAME_flNextCreateCovers = math.huge
+			if pEntity:IsWeapon() then pEntity.GAME_bWeaponPickedUpOnce = true end
 		end )
 	end
 end )
@@ -371,6 +408,7 @@ TRACER_COLOR = {
 	AR2Tracer = { 48, 255, 255, 1024 },
 	HelicopterTracer = { 48, 255, 255, 2048 }
 }
+
 local TRACER_COLOR = TRACER_COLOR
 
 TRACER_SIZE = { Bullet = 4 }
@@ -390,64 +428,92 @@ local cSGT = CreateConVar(
 
 local function fViolentAssRandom() return 1 - .9 * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() end
 
-hook.Add( "EntityFireBullets", "GameImprovements", function( ent, Data, _Comp )
-	if _Comp then return end
-	hook.Run( "EntityFireBullets", ent, Data, true )
-	if Data.AmmoType != "" then Data.Damage = game.GetAmmoPlayerDamage( game.GetAmmoID( Data.AmmoType ) ) Data.AmmoType = "" end
-	local OldCallBack = Data.Callback || function() return { damage = true, effects = true } end
+hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COMP )
+	if COMP then
+		if COMP.KM_CMs_Addon then return
+		else COMP.KM_CMs_Addon = true end
+	end
+
+	hook.Run( "EntityFireBullets", pShooter, Data, COMP )
+
+	if Data.AmmoType != "" then
+		Data.Damage = game_GetAmmoPlayerDamage( game_GetAmmoID( Data.AmmoType ) )
+		Data.AmmoType = ""
+	end
+
+	local fOldCallback = Data.Callback || function() return { damage = true, effects = true } end
+
 	local flDamage = Data.Damage
-	local col
+
+	local tColor
+
 	if !Data.TracerName then Data.TracerName = "Bullet" end
+
 	local bTracer = Data.Tracer > 0
-	// TODO: Find a way to conceal tracers of your own gun in first person,
-	// that will make the crosshair disappearing actually matter
+
 	if bTracer then col = TRACER_COLOR[ Data.TracerName || "Bullet" ] || TRACER_COLOR.Bullet end
 	if Data.HullSize == 0 then Data.HullSize = TRACER_SIZE[ Data.TracerName || "Bullet" ] || TRACER_SIZE.Bullet end
-	local pOwner = GetOwner( ent )
+
+	local pOwner = GetOwner( pShooter )
+
 	local bMuzzleFlash = true
-	if ent.GAME_bNoMuzzleFlash then bMuzzleFlash = nil ent.GAME_bNoMuzzleFlash = nil end
+	if pShooter.GAME_bNoMuzzleFlash then
+		bMuzzleFlash = nil
+		pShooter.GAME_bNoMuzzleFlash = nil
+	end
+
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
-		local v = Data.Spread
-		v[ 1 ] = v[ 1 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 10, 1 ), 1, 10 )
-		v[ 2 ] = v[ 2 ] * math_Clamp( math.Remap( v[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+		local vSpread = Data.Spread
+
+		vSpread[ 1 ] = vSpread[ 1 ] * math_Clamp( math_Remap( vSpread[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+		vSpread[ 2 ] = vSpread[ 2 ] * math_Clamp( math_Remap( vSpread[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+
 		Data.Damage = Data.Damage * ( 1 / 3 )
 	end
-	local flMuzzleFlashTime = math.Clamp( ( ent.Primary_flDelay || .1 ) * Rand( .1, .15 ), 0, .2 )
-	local flForce = math.max( Data.Force, 1 )
+
+	local flMuzzleFlashTime = math_Clamp( ( pShooter.Primary_flDelay || .1 ) * Rand( .1, .15 ), 0, .2 )
+	local flForce = max( Data.Force, 1 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
-		local pTarget, vTargetVelocity, dDamage = tr.Entity
+
+		local pTarget = tr.Entity
 		local bTarget = IsValid( pTarget )
+
 		local dDamage = DamageInfo()
 		dDamage:SetAttacker( pOwner )
 		// Not setting the inflictor prevents WALK and STEP movetype knockback
-		//	dDamage:SetInflictor( ent )
+		//	dDamage:SetInflictor( pShooter )
 		dDamage:SetDamage( dmg:GetDamage() )
 		dDamage:SetDamageType( DMG_BULLET )
 		dDamage:SetDamagePosition( tr.HitPos )
 		dDamage:SetDamageForce( ( tr.HitPos - tr.StartPos ):GetNormalized() * flForce )
-		if bTarget then vTargetVelocity = ent:GetVelocity() end
-		local t = OldCallBack( atk, tr, dDamage ) || { damage = true, effects = true }
-		if t.damage && bTarget then
+
+		local tCallbackResult = fOldCallback( atk, tr, dDamage ) || { damage = true, effects = true }
+
+		if tCallbackResult.damage && bTarget then
 			local f = pTarget.SetLastHitGroup
 			if f then f( pTarget, tr.HitGroup ) end
 			pTarget:TakeDamageInfo( dDamage )
 		end
-		local b = t.effects
-		if !bTracer || !b then return { damage = false, effects = b } end
-		t = pTarget.OnBulletImpact
-		if t then t( pTarget, dDamage ) end
+
+		local bEffects = tCallbackResult.effects
+		if !bTracer || !bEffects then return { damage = false, effects = bEffects } end
+	
+		local fOnBulletImpact = pTarget.OnBulletImpact
+		if fOnBulletImpact then fOnBulletImpact( pTarget, dDamage ) end
+	
 		if bMuzzleFlash then
 			net_Start "EphemeralLight"
-				net_WriteFloat( col[ 4 ] / 255 * .2 * fViolentAssRandom() ) // Brightness
+				net_WriteFloat( tColor[ 4 ] / 255 * .2 * fViolentAssRandom() ) // Brightness
 				net_WriteFloat( 512 * fViolentAssRandom() ) // Size
 				local f = flMuzzleFlashTime * fViolentAssRandom()
 				net_WriteFloat( f ) // Existence length
 				net_WriteFloat( f )
 				net_WriteVector( tr.StartPos + ( tr.HitPos - tr.StartPos ):GetNormalized() * 32 ) // Position
-				net_WriteUInt( col[ 1 ], 8 ) net_WriteUInt( col[ 2 ], 8 ) net_WriteUInt( col[ 3 ], 8 ) // R, G, B
+				net_WriteUInt( tColor[ 1 ], 8 ) net_WriteUInt( tColor[ 2 ], 8 ) net_WriteUInt( tColor[ 3 ], 8 ) // R, G, B
 			net_Broadcast()
 		end
+	
 		return { damage = false, effects = true }
 	end
 	return true
@@ -456,14 +522,6 @@ end )
 local cPersistAll = CreateConVar( "bPersistAll", 1, FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE, "Everything persists", 0, 1 )
 
 hook.Add( "PhysgunPickup", "GameImprovements", function() return true end )
-
-function PhysicsCollide( ent, Data )
-	local pOther = Data.HitEntity
-	if CEntity_IsOnFire( ent ) || CEntity_IsOnFire( pOther ) then
-		CEntity_Ignite( ent, 10 )
-		CEntity_Ignite( pOther, 10 )
-	end
-end
 
 hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	// Bloodloss only works on players for now, so see PlayerHurt for bloodloss code
@@ -491,39 +549,11 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	end
 end )
 
-file.CreateDir "Covers"
-file.CreateDir "Achievements"
+hook.Add( "EntityKeyValue", "GameImprovementsGatherSunInformation", function( pEntity, sKey, sValue )
+	if !SUN_HAS_A_NAME && CurTime() > 2 then hook.Remove( "EntityKeyValue", "GameImprovementsGatherSunInformation" ) return end
 
-local cEvents = CreateConVar(
-	"bEvents",
-	0, // 1 // Forcing this to 0 so that people who
-	// simply play the game to build and have fun
-	// don't have their stuff destroyed by destructive events
-	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_CHEAT,
-	"Allow random events?",
-	0, 1
-)
-local cEventProbability = CreateConVar(
-	"flEventProbability",
-	250000,
-	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_CHEAT,
-	"The probability of random events if bEvents is on",
-	0, 1
-)
-__EVENTS__ = __EVENTS__ || {}
-__EVENTS_LENGTH__ = __EVENTS_LENGTH__ || 0 // Don't forget to do this every time you add a new event!
-//	if !__EVENTS__.MyEvent then __EVENTS_LENGTH__ = __EVENTS_LENGTH__ + 1 end
-//	__EVENTS__.MyEvent = function()
-//	end
-DONT_CHANGE_DRAW_SHADOW = {
-	viewmodel = true,
-	predicted_viewmodel = true,
-	gmod_hands = true
-}
-hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue )
-	if !SUN_HAS_A_NAME && CurTime() > 2 then hook.Remove( "EntityKeyValue", "GameImprovements" ) return end
 	if pEntity:GetClass() == "light_environment" then
-		sKey = string.lower( sKey )
+		sKey = lower( sKey )
 		if sKey == "targetname" && sValue != "" then SUN_HAS_A_NAME = true
 		elseif sKey == "angles" then SUN_ANGLES = Angle( sValue )
 		elseif sKey == "pitch" then SUN_PITCH_OVERRIDE = tonumber( sValue ) || 0
@@ -536,6 +566,25 @@ hook.Add( "EntityKeyValue", "GameImprovements", function( pEntity, sKey, sValue 
 	end
 end )
 
+function PhysicsCollide( ent, Data )
+	local pOther = Data.HitEntity
+	if CEntity_IsOnFire( ent ) || CEntity_IsOnFire( pOther ) then
+		CEntity_Ignite( ent, 10 )
+		CEntity_Ignite( pOther, 10 )
+	end
+end
+
+local PhysicsCollide = PhysicsCollide
+
+file.CreateDir "Covers"
+file.CreateDir "Achievements"
+
+DONT_CHANGE_DRAW_SHADOW = {
+	viewmodel = true,
+	predicted_viewmodel = true,
+	gmod_hands = true
+}
+
 local cActorQueueCallsPerTick = CreateConVar(
 	"iActorQueueCallsPerTick",
 	1,
@@ -547,17 +596,6 @@ local cActorQueueCallsPerTick = CreateConVar(
 local ACTOR_QUEUE_CURRENT = nil
 
 hook.Add( "Think", "GameImprovements", function()
-	if cEvents:GetBool() && __EVENTS_LENGTH__ > 0 && Rand( 0, cEventProbability:GetFloat() * FrameTime() ) <= 1 then
-		local iRemaining, tEncountered = __EVENTS_LENGTH__, {}
-		while iRemaining > 0 do
-			local fEvent = table.Random( __EVENTS__ )
-			if tEncountered[ fEvent ] then continue end
-			tEncountered[ fEvent ] = true
-			if ProtectedCall( fEvent ) then break end
-			iRemaining = iRemaining - 1
-		end
-	end
-
 	if ACTOR_QUEUE_LAST && SysTime() > flNextActorQueueCall then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
 
@@ -612,63 +650,61 @@ hook.Add( "Think", "GameImprovements", function()
 		end
 	end
 
-	for _, ent in ents_Iterator() do
-		if ent:GetClass() == "light_environment" then ent:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" )
-		elseif ent:GetClass() == "prop_ragdoll" then
-			local flBlood = ent:GetNW2Float( "GAME_flBlood", 1 )
-			local f = ent:GetNW2Float( "GAME_flBleeding", 0 )
+	for _, pEntity in ents_Iterator() do
+		local sClass = CEntity_GetClass( pEntity )
+
+		if sClass == "light_environment" then pEntity:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" )
+		elseif sClass == "prop_ragdoll" then
+			local flBlood = pEntity:GetNW2Float( "GAME_flBlood", 1 )
+			local f = pEntity:GetNW2Float( "GAME_flBleeding", 0 )
+
 			if flBlood > 0 && f > 0 && f > .0016 then
-				local flTimeLeft = ent.GAME_flBleedTimeLeft || 0
+				local flTimeLeft = pEntity.GAME_flBleedTimeLeft || 0
 				if flTimeLeft <= 0 then
-					local v = ent:GetPos()
-					v:Add( ent:OBBCenter() )
-					for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ent:BoundingRadius() * 4, ent ) end
-					ent.GAME_flBleedTimeLeft = 1
-				else ent.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * Rand( .9, 1.1 ) * FrameTime() end
+					local v = pEntity:GetPos()
+					v:Add( pEntity:OBBCenter() )
+					for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * pEntity:BoundingRadius() * 4, pEntity ) end
+					pEntity.GAME_flBleedTimeLeft = 1
+				else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * Rand( .9, 1.1 ) * FrameTime() end
 			end
-			// We cannot regenerate blood if we're dead!
+
+			// We cannot regenerate blood if we're dead
 			//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 			flBlood = math.Clamp( flBlood - f * FrameTime(), 0, 1 )
-			ent:SetNW2Float( "GAME_flBlood", flBlood )
+			pEntity:SetNW2Float( "GAME_flBlood", flBlood )
 		end
 
-		if ent.__ACTOR__ then
-			local pEnemy = ent.Enemy
+		local EntityTable = CEntity_GetTable( pEntity )
+
+		if EntityTable.__ACTOR__ then
+			local pEnemy = EntityTable.Enemy
 			if IsValid( pEnemy ) then
-				local pEnemy, pTrueEnemy = ent:SetupEnemy( pEnemy )
-				if pTrueEnemy:Health() <= 0 || !ent:Visible( pTrueEnemy ) then ent.GAME_bHurtEnemy = nil end
-			else ent.GAME_bHurtEnemy = nil end
+				local pEnemy, pTrueEnemy = EntityTable.SetupEnemy( pEntity, pEnemy )
+				if pTrueEnemy:Health() <= 0 || !pEntity:Visible( pTrueEnemy ) then EntityTable.GAME_bHurtEnemy = nil end
+			else EntityTable.GAME_bHurtEnemy = nil end
 		else
-			local fGetEnemy = ent.GetEnemy
+			local fGetEnemy = pEntity.GetEnemy
 			if fGetEnemy then
-				local pEnemy = fGetEnemy( ent )
-				if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !ent:Visible( pEnemy ) then ent.GAME_bHurtEnemy = nil end
+				local pEnemy = fGetEnemy( pEntity )
+				if !IsValid( pEnemy ) || pEnemy:Health() <= 0 || !pEntity:Visible( pEnemy ) then EntityTable.GAME_bHurtEnemy = nil end
 			end
 		end
 
-		if !DONT_CHANGE_DRAW_SHADOW[ ent:GetClass() ] then ent:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
+		if !DONT_CHANGE_DRAW_SHADOW[ sClass ] then pEntity:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
 
-		if ent.GAME_Think then ent:GAME_Think() end
+		if EntityTable.GAME_Think then EntityTable.GAME_Think( pEntity, EntityTable ) end
 
-		if !ent.GAME_bPhysCollideHook then ent:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end ) ent.GAME_bPhysCollideHook = true end
+		if !EntityTable.GAME_bPhysCollideHook then
+			pEntity:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end )
+			EntityTable.GAME_bPhysCollideHook = true
+		end
 
 		// TODO: Custom fire system
-		CEntity_Extinguish( ent )
+		CEntity_Extinguish( pEntity )
 
-		if cPersistAll:GetBool() && ent:MapCreationID() == -1 && !ent:IsPlayer() && ( !ent:IsWeapon() || ent:IsWeapon() && ( !IsValid( ent:GetOwner() ) || IsValid( ent:GetOwner() ) && !ent:GetOwner():IsPlayer() ) ) then ent:SetPersistent( true ) end
-
-		local tSuppressionAmount = {}
-		if ent.GAME_tSuppressionAmount then
-			for pSuppressor, am in pairs( ent.GAME_tSuppressionAmount ) do
-				if IsValid( pSuppressor ) then
-					am = math.Approach( am, 0, math.max( ent:Health() * 2, am * .33 ) * FrameTime() )
-					if am <= 0 then continue end
-					tSuppressionAmount[ pSuppressor ] = am
-				end
-			end
+		if cPersistAll:GetBool() && pEntity:MapCreationID() == -1 && !pEntity:IsPlayer() && ( !pEntity:IsWeapon() || pEntity:IsWeapon() && ( !IsValid( pEntity:GetOwner() ) || IsValid( pEntity:GetOwner() ) && !pEntity:GetOwner():IsPlayer() ) ) then
+			pEntity:SetPersistent( true )
 		end
-
-		ent.GAME_tSuppressionAmount = tSuppressionAmount
 	end
 end )
 
@@ -682,124 +718,139 @@ end
 
 function GameImprovements_StartCommand( ply, cmd )
 	if !ply:Alive() then return end
-	ply.m_iOriginalButtons = cmd:GetButtons()
-	local veh = ply.GAME_pVehicle
-	if IsValid( veh ) then
-		if !ply.GAME_sRestoreGun then
-			local w = ply:GetActiveWeapon()
-			if IsValid( w ) then ply.GAME_sRestoreGun = w:GetClass() end
+
+	local PlyTable = CEntity_GetTable( ply )
+
+	PlyTable.m_iOriginalButtons = cmd:GetButtons()
+
+	local pVehicle = PlyTable.GAME_pVehicle
+	if IsValid( pVehicle ) then
+		if !PlyTable.GAME_sRestoreGun then
+			local pWeapon = ply:GetActiveWeapon()
+			if IsValid( pWeapon ) then PlyTable.GAME_sRestoreGun = CEntity_GetClass( pWeapon ) end
 		end
-		if veh.bDriverHoldingUse then
+
+		if pVehicle.bDriverHoldingUse then
 			if !cmd:KeyDown( IN_USE ) then
-				veh.bDriverHoldingUse = nil
+				pVehicle.bDriverHoldingUse = nil
 			end
 		else
-			if ply:KeyDown( IN_USE ) && veh:ExitVehicle( ply ) then return end
+			if ply:KeyDown( IN_USE ) && pVehicle:ExitVehicle( ply ) then return end
 		end
-		veh:PlayerControls( ply, cmd )
+
+		pVehicle:PlayerControls( ply, cmd )
 		cmd:AddKey( IN_DUCK )
-		local p = ply:GetWeapon "Hands"
-		if !IsValid( p ) then p = ply:Give "Hands" end
-		if IsValid( p ) then cmd:SelectWeapon( p ) end
-		local p = ply:GetWeapon "HandsSwimInternal"
-		if IsValid( p ) then p:Remove() end
+
+		local pHands = ply:GetWeapon "Hands"
+		if !IsValid( pHands ) then pHands = ply:Give "Hands" end
+		if IsValid( pHands ) then cmd:SelectWeapon( pHands ) end
+
+		local pSwim = ply:GetWeapon "Swim"
+		if IsValid( pSwim ) then pSwim:Remove() end
 		return
 	end
+
 	BloodlossStuff( ply, cmd )
+
 	ply:SetLadderClimbSpeed( ply:IsSprinting() && ply:GetRunSpeed() || ply:IsWalking() && ply:GetSlowWalkSpeed() || ply:GetWalkSpeed() )
+	
 	local bGround = CEntity_IsOnGround( ply )
 	if !bGround && CEntity_WaterLevel( ply ) > 0 then
-		if !ply.GAME_sRestoreGun then
-			local w = ply:GetActiveWeapon()
-			if IsValid( w ) then ply.GAME_sRestoreGun = w:GetClass() end
+		if !PlyTable.GAME_sRestoreGun then
+			local pWeapon = ply:GetActiveWeapon()
+			if IsValid( pWeapon ) then PlyTable.GAME_sRestoreGun = CEntity_GetClass( pWeapon ) end
 		end
-		local p = ply:GetWeapon "Hands"
-		if IsValid( p ) then p:Remove() end
-		local p = ply:GetWeapon "HandsSwimInternal"
-		if !IsValid( p ) then p = ply:Give "HandsSwimInternal" end
-		if IsValid( p ) then cmd:SelectWeapon( p ) end
+
+		local pHands = ply:GetWeapon "Hands"
+		if IsValid( pHands ) then pHands:Remove() end
+
+		local pSwim = ply:GetWeapon "Swim"
+		if !IsValid( pSwim ) then pSwim = ply:Give "Swim" end
+		if IsValid( pSwim ) then cmd:SelectWeapon( pSwim ) end
+
 		ply:SetNW2Bool( "CTRL_bSliding", false )
 		return
 	else
-		local p = ply:GetWeapon "Hands"
-		if !IsValid( p ) then
-			local sRestoreGun = ply.GAME_sRestoreGun
-			p = ply:Give "Hands"
-			ply.GAME_sRestoreGun = sRestoreGun
-		end
-		if IsValid( p ) && !IsValid( ply:GetActiveWeapon() ) then
-			local sRestoreGun = ply.GAME_sRestoreGun
-			cmd:SelectWeapon( p )
-			ply.GAME_sRestoreGun = sRestoreGun
-		end
-		local p = ply:GetWeapon "HandsSwimInternal"
-		if IsValid( p ) then p:Remove() end
+		local pHands = ply:GetWeapon "Hands"
+		if !IsValid( pHands ) then pHands = ply:Give "Hands" end
+
+		if IsValid( pHands ) && !IsValid( ply:GetActiveWeapon() ) then cmd:SelectWeapon( pHands ) end
+
+		local pSwim = ply:GetWeapon "Swim"
+		if IsValid( pSwim ) then pSwim:Remove() end
 	end
-	local s = ply.GAME_sRestoreGun
-	if s then
-		local w = ply:GetWeapon( s )
-		if IsValid( w ) then cmd:SelectWeapon( w ) end
-		ply.GAME_sRestoreGun = nil
+
+	local sRestoreGun = PlyTable.GAME_sRestoreGun
+	if sRestoreGun then
+		local pWeapon = ply:GetWeapon( sRestoreGun )
+		if IsValid( pWeapon ) then cmd:SelectWeapon( pWeapon ) end
+		PlyTable.GAME_sRestoreGun = nil
 	end
+
 	if ply:GetNW2Bool "CTRL_bSliding" then cmd:RemoveKey( IN_ATTACK ) cmd:RemoveKey( IN_ATTACK2 ) end
+
 	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK )
 	elseif !cmd:KeyDown( IN_SPEED ) then
-		local b = cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 )
-		if b then cmd:AddKey( IN_WALK ) else
-			local p = ply:GetActiveWeapon()
-			if IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
+		if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then cmd:AddKey( IN_WALK ) else
+			local pWeapon = ply:GetActiveWeapon()
+			if IsValid( pWeapon ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() || CurTime() <= pWeapon:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
 		end
 	end
-	local bAllDirectionalSprint = ply.CTRL_bAllDirectionalSprint || ply:Crouching()
+
+	local bAllDirectionalSprint = PlyTable.CTRL_bAllDirectionalSprint || ply:Crouching()
 	if bAllDirectionalSprint then
 		ply:SetNW2Bool( "CTRL_bSprinting", false )
 		ply:SetCrouchedWalkSpeed( 1 )
 	else
-		local bGroundCrouchingAndNotSliding = ply:Crouching() && !ply:GetNW2Bool "CTRL_bSliding"
-		if bGroundCrouchingAndNotSliding || cmd:KeyDown( IN_ZOOM ) || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then cmd:RemoveKey( IN_SPEED ) end
-		if !bGroundCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) then
+		local bCrouchingAndNotSliding = ply:Crouching() && !ply:GetNW2Bool "CTRL_bSliding"
+
+		if bCrouchingAndNotSliding || cmd:KeyDown( IN_ZOOM ) || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then cmd:RemoveKey( IN_SPEED ) end
+
+		if !bCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) then
 			cmd:AddKey( IN_SPEED )
-			local p = ply:GetActiveWeapon()
-			if cmd:GetForwardMove() < 0 || cmd:GetForwardMove() <= 0 && cmd:GetSideMove() == 0 || IsValid( p ) && ( CurTime() <= p:GetNextPrimaryFire() || CurTime() <= p:GetNextSecondaryFire() ) then
+			local pWeapon = ply:GetActiveWeapon()
+			if cmd:GetForwardMove() < 0 || cmd:GetForwardMove() <= 0 && cmd:GetSideMove() == 0 || IsValid( pWeapon ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() || CurTime() <= pWeapon:GetNextSecondaryFire() ) then
 				cmd:RemoveKey( IN_SPEED )
 				ply:SetNW2Bool( "CTRL_bSprinting", false )
+
 			else
 				cmd:SetForwardMove( CPlayer_GetRunSpeed( ply ) )
-				cmd:SetSideMove( math.Clamp( cmd:GetSideMove(), -cmd:GetForwardMove(), cmd:GetForwardMove() ) )
-				local b = ply:GetVelocity():Length() > 10
+				cmd:SetSideMove( math_Clamp( cmd:GetSideMove(), -cmd:GetForwardMove(), cmd:GetForwardMove() ) )
+
+				local bSprinting = ply:GetVelocity():LengthSqr() > 256
+
 				ply:SetNW2Bool( "CTRL_bSprinting", b )
-				if b then
+
+				if bSprinting then
 					if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then
 						cmd:RemoveKey( IN_SPEED )
 						ply:SetNW2Bool( "CTRL_bSprinting", false )
 					end
 				end
 			end
-		else
-			ply:SetNW2Bool( "CTRL_bSprinting", false )
-		end
+		else ply:SetNW2Bool( "CTRL_bSprinting", false ) end
 	end
 
-	local s = ply.GAME_sCoverState
+	local s = PlyTable.GAME_sCoverState
 	if s then
 		if s == "DUCK" then
 			if cmd:KeyDown( IN_ZOOM ) then
-				ply.GAME_flPeekFireTime = nil
+				PlyTable.GAME_flPeekFireTime = nil
 			elseif cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
-				ply.GAME_flPeekFireTime = CurTime() + .2
-			elseif CurTime() > ( ply.GAME_flPeekFireTime || 0 ) then
-				ply.GAME_sCoverState = nil
-				ply.GAME_flPeekUpMinimumTime = nil
+				PlyTable.GAME_flPeekFireTime = CurTime() + .2
+			elseif CurTime() > ( PlyTable.GAME_flPeekFireTime || 0 ) then
+				PlyTable.GAME_sCoverState = nil
+				PlyTable.GAME_flPeekUpMinimumTime = nil
 				return
 			end
-			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
-			if CurTime() <= ply.GAME_flPeekUpMinimumTime then
+			if !PlyTable.GAME_flPeekUpMinimumTime then PlyTable.GAME_flPeekUpMinimumTime = CurTime() + .25 end
+			if CurTime() <= PlyTable.GAME_flPeekUpMinimumTime then
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
 			else ply:SetNW2Bool "CTRL_bPredictedCantShoot" end
 			ply:SetNW2Bool "CTRL_bInCover"
-			ply.CTRL_bInCover = nil
+			PlyTable.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && COVER_FIRE_UP || COVER_BLINDFIRE_UP )
 			cmd:RemoveKey( IN_DUCK )
 			local aEye = ply:EyeAngles()
@@ -811,54 +862,54 @@ function GameImprovements_StartCommand( ply, cmd )
 			local vView = ply:GetPos() + ply:GetViewOffset()
 			local trStand = util_TraceLine {
 				start = vView,
-				endpos = vView + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = vView + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}
 			local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 			local trDuck = util_TraceLine {
 				start = vViewDucked,
-				endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}
 			if !trDuck.Hit || trStand.Hit then
-				ply.GAME_sCoverState = nil
-				ply.GAME_flPeekUpMinimumTime = nil
+				PlyTable.GAME_sCoverState = nil
+				PlyTable.GAME_flPeekUpMinimumTime = nil
 				return
 			end
 		elseif s == "MOVE" then
 			if cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) then ply.GAME_sCoverState = nil return end
-			if !ply.GAME_flPeekTime then
-				ply.GAME_flPeekTime = CurTime() + .1
+			if !PlyTable.GAME_flPeekTime then
+				PlyTable.GAME_flPeekTime = CurTime() + .1
 			elseif cmd:KeyDown( IN_ZOOM ) then
-				ply.GAME_flPeekFireTime = nil
+				PlyTable.GAME_flPeekFireTime = nil
 			elseif cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
-				ply.GAME_flPeekFireTime = CurTime() + .2
-			elseif CurTime() > ( ply.GAME_flPeekFireTime || 0 ) && CurTime() > ( ply.GAME_flPeekTime || 0 ) then
-				ply.GAME_sCoverState = "FROM"
-				ply.GAME_flPeekUpMinimumTime = nil
+				PlyTable.GAME_flPeekFireTime = CurTime() + .2
+			elseif CurTime() > ( PlyTable.GAME_flPeekFireTime || 0 ) && CurTime() > ( PlyTable.GAME_flPeekTime || 0 ) then
+				PlyTable.GAME_sCoverState = "FROM"
+				PlyTable.GAME_flPeekUpMinimumTime = nil
 				return
 			end
 			cmd:AddKey( IN_WALK )
 			ply:SetNW2Bool "CTRL_bInCover"
-			ply.CTRL_bInCover = nil
-			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && ply.GAME_EPeek || ply.GAME_EPeekBlind )
-			if !ply.GAME_flPeekUpMinimumTime then ply.GAME_flPeekUpMinimumTime = CurTime() + .25 end
+			PlyTable.CTRL_bInCover = nil
+			ply:SetNW2Int( "CTRL_Peek", cmd:KeyDown( IN_ZOOM ) && PlyTable.GAME_EPeek || PlyTable.GAME_EPeekBlind )
+			if !PlyTable.GAME_flPeekUpMinimumTime then PlyTable.GAME_flPeekUpMinimumTime = CurTime() + .25 end
 			local bPredictedCantShoot
-			if CurTime() <= ( ply.GAME_flPeekUpMinimumTime || 0 ) then
+			if CurTime() <= ( PlyTable.GAME_flPeekUpMinimumTime || 0 ) then
 				bPredictedCantShoot = true
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
 			end
-			local d = ply.GAME_vPeekTarget - ply:GetPos()
+			local d = PlyTable.GAME_vPeekTarget - ply:GetPos()
 			d[ 3 ] = 0
 			d:Normalize()
 			local dEyeFlat = ply:GetAimVector()
 			dEyeFlat[ 3 ] = 0
 			dEyeFlat:Normalize()
 			local bMove
-			local s = ply.GAME_bPeekForceCrouch
+			local s = PlyTable.GAME_bPeekForceCrouch
 			if s == false then
 				cmd:RemoveKey( IN_DUCK )
 				local vMins, vMaxs = ply:OBBMins(), ply:OBBMaxs()
@@ -873,7 +924,7 @@ function GameImprovements_StartCommand( ply, cmd )
 					filter = ply
 				} ).Hit || util_TraceLine( {
 					start = ply:GetPos() + ply:GetViewOffset(),
-					endpos = ply:GetPos() + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = ply:GetPos() + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				} ).Hit
@@ -881,14 +932,14 @@ function GameImprovements_StartCommand( ply, cmd )
 				cmd:AddKey( IN_DUCK )
 				bMove = util_TraceLine( {
 					start = ply:GetPos() + ply:GetViewOffsetDucked(),
-					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				} ).Hit
-			elseif ply.GAME_bPeekUnCrouchIfCan then
+			elseif PlyTable.GAME_bPeekUnCrouchIfCan then
 				bMove = util_TraceLine( {
 					start = ply:GetPos() + ply:GetViewOffsetDucked(),
-					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				} ).Hit
@@ -897,14 +948,14 @@ function GameImprovements_StartCommand( ply, cmd )
 				local v = ply:GetPos() + ( cmd:KeyDown( IN_DUCK ) && ply:GetViewOffsetDucked() || ply:GetViewOffset() )
 				bMove = util_TraceLine( {
 					start = v,
-					endpos = v + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = v + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				} ).Hit
 			end
 			if bMove then
-				ply.GAME_flPeekUpMinimumTime = math.max( ply.GAME_flPeekUpMinimumTime, CurTime() + .15 )
-				ply.GAME_flPeekTime = CurTime() + .15
+				PlyTable.GAME_flPeekUpMinimumTime = math.max( ply.GAME_flPeekUpMinimumTime, CurTime() + .15 )
+				PlyTable.GAME_flPeekTime = CurTime() + .15
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
 				cmd:RemoveKey( IN_ATTACK2 )
@@ -912,38 +963,38 @@ function GameImprovements_StartCommand( ply, cmd )
 				cmd:SetSideMove( ply:GetRunSpeed() * d:Dot( ply:GetRight() ) )
 			else ply:SetNW2Bool( "CTRL_bPredictedCantShoot", bPredictedCantShoot ) end
 		else//if s == "FROM" then
-			ply.GAME_flPeekTime = nil
+			PlyTable.GAME_flPeekTime = nil
 			ply:SetNW2Bool "CTRL_bPredictedCantShoot"
 			if cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) then ply.GAME_sCoverState = nil return end
 			local bInCover
-			local dEyeFlat = -ply.GAME_vPeekSourceHitNormal
+			local dEyeFlat = -PlyTable.GAME_vPeekSourceHitNormal
 			dEyeFlat.z = 0
 			dEyeFlat:Normalize()
-			local v = ply.GAME_vPeekSource
+			local v = PlyTable.GAME_vPeekSource
 			local trOriginalStand, trOriginalDuck = util_TraceLine {
 				start = v + ply:GetViewOffset(),
-				endpos = v + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = v + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}, util_TraceLine {
 				start = v + ply:GetViewOffsetDucked(),
-				endpos = v + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = v + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}
 			if !trOriginalStand.Hit then cmd:AddKey( IN_DUCK ) end
-			if !trOriginalDuck.Hit then ply.GAME_sCoverState = nil return end
+			if !trOriginalDuck.Hit then PlyTable.GAME_sCoverState = nil return end
 			local vView = ply:GetPos() + ply:GetViewOffset()
 			local trStand = util_TraceLine {
 				start = vView,
-				endpos = vView + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = vView + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}
 			local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 			local trDuck = util_TraceLine {
 				start = vViewDucked,
-				endpos = vViewDucked + dEyeFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+				endpos = vViewDucked + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
 				filter = ply
 			}
@@ -963,11 +1014,11 @@ function GameImprovements_StartCommand( ply, cmd )
 				end
 			end
 			if bInCover then
-				ply.GAME_sCoverState = nil
+				PlyTable.GAME_sCoverState = nil
 				return
 			else
 				cmd:AddKey( IN_WALK )
-				local d = ply.GAME_vPeekSource - ply:GetPos()
+				local d = PlyTable.GAME_vPeekSource - ply:GetPos()
 				d[ 3 ] = 0
 				d:Normalize()
 				local dEyeFlat = ply:GetAimVector()
@@ -978,7 +1029,7 @@ function GameImprovements_StartCommand( ply, cmd )
 			end
 		end
 	else
-		ply.GAME_flPeekFireTime = nil
+		PlyTable.GAME_flPeekFireTime = nil
 		local wep = ply:GetActiveWeapon()
 		if IsValid( wep ) && !cmd:KeyDown( IN_ZOOM ) then
 			local cap = wep.GetCapabilities
@@ -1001,7 +1052,7 @@ function GameImprovements_StartCommand( ply, cmd )
 		local vView = ply:GetPos() + ply:GetViewOffset()
 		local trStand = util_TraceLine {
 			start = vView,
-			endpos = vView + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+			endpos = vView + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 			mask = MASK_SOLID,
 			filter = function( pEntity )
 				if pEntity == ply || pEntity.__PROJECTILE__ then return end
@@ -1011,7 +1062,7 @@ function GameImprovements_StartCommand( ply, cmd )
 		local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 		local trDuck = util_TraceLine {
 			start = vViewDucked,
-			endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+			endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 			mask = MASK_SOLID,
 			filter = function( pEntity )
 				if pEntity == ply || pEntity.__PROJECTILE__ then return end
@@ -1049,7 +1100,7 @@ function GameImprovements_StartCommand( ply, cmd )
 				maxs = vMaxs,
 				filter = ply
 			} ).Hit
-			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs().y * 2, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs().y * 2
+			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] * 2, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] * 2
 			if !util_TraceLine( {
 				start = ply:GetPos() + ply:GetViewOffsetDucked(),
 				endpos = vLeft + ply:GetViewOffsetDucked(),
@@ -1063,13 +1114,13 @@ function GameImprovements_StartCommand( ply, cmd )
 			} ).Hit then
 				local trDuck = util_TraceLine {
 					start = vLeft + ply:GetViewOffsetDucked(),
-					endpos = vLeft + ply:GetViewOffsetDucked() + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = vLeft + ply:GetViewOffsetDucked() + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				}
 				local trStand = util_TraceLine {
 					start = vLeft + ply:GetViewOffset(),
-					endpos = vLeft + ply:GetViewOffset() + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = vLeft + ply:GetViewOffset() + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				}
@@ -1090,13 +1141,13 @@ function GameImprovements_StartCommand( ply, cmd )
 			} ).Hit then
 				local trDuck = util_TraceLine {
 					start = vRight + ply:GetViewOffsetDucked(),
-					endpos = vRight + ply:GetViewOffsetDucked() + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = vRight + ply:GetViewOffsetDucked() + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				}
 				local trStand = util_TraceLine {
 					start = vRight + ply:GetViewOffset(),
-					endpos = vRight + ply:GetViewOffset() + EyeVectorFlat * ply:OBBMaxs().x * COVER_BOUND_SIZE,
+					endpos = vRight + ply:GetViewOffset() + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
 					filter = ply
 				}
@@ -1130,43 +1181,44 @@ function GameImprovements_StartCommand( ply, cmd )
 			if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then
 				if VARIANTS == COVER_VARIANTS_BOTH && bUp then
 					Achievement_Miscellaneous( ply, cmd:KeyDown( IN_ZOOM ) && "CoverPeek" || "CoverBlindFire" )
-					ply.GAME_sCoverState = "DUCK"
+					PlyTable.GAME_sCoverState = "DUCK"
 					return
 				elseif VARIANTS == COVER_VARIANTS_LEFT then
 					Achievement_Miscellaneous( ply, cmd:KeyDown( IN_ZOOM ) && "CoverPeek" || "CoverBlindFire" )
-					ply.GAME_sCoverState = "MOVE"
-					ply.GAME_bPeekForceCrouch = bLeftForceCrouch
-					ply.GAME_vPeekTarget = vLeft
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
-					ply.GAME_vPeekSource = ply:GetPos()
-					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
-					ply.GAME_EPeek = COVER_FIRE_LEFT
-					ply.GAME_EPeekBlind = COVER_BLINDFIRE_LEFT
+					PlyTable.GAME_sCoverState = "MOVE"
+					PlyTable.GAME_bPeekForceCrouch = bLeftForceCrouch
+					PlyTable.GAME_vPeekTarget = vLeft
+					PlyTable.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
+					PlyTable.GAME_vPeekSource = ply:GetPos()
+					PlyTable.GAME_vPeekSourceHitNormal = tr.HitNormal
+					PlyTable.GAME_EPeek = COVER_FIRE_LEFT
+					PlyTable.GAME_EPeekBlind = COVER_BLINDFIRE_LEFT
 					return
 				elseif VARIANTS == COVER_VARIANTS_RIGHT then
 					Achievement_Miscellaneous( ply, cmd:KeyDown( IN_ZOOM ) && "CoverPeek" || "CoverBlindFire" )
-					ply.GAME_sCoverState = "MOVE"
-					ply.GAME_bPeekForceCrouch = bRightForceCrouch
-					ply.GAME_vPeekTarget = vRight
-					ply.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
-					ply.GAME_vPeekSource = ply:GetPos()
-					ply.GAME_vPeekSourceHitNormal = tr.HitNormal
-					ply.GAME_EPeek = COVER_FIRE_RIGHT
-					ply.GAME_EPeekBlind = COVER_BLINDFIRE_RIGHT
+					PlyTable.GAME_sCoverState = "MOVE"
+					PlyTable.GAME_bPeekForceCrouch = bRightForceCrouch
+					PlyTable.GAME_vPeekTarget = vRight
+					PlyTable.GAME_bPeekUnCrouchIfCan = aEye[ 1 ] < -5.625
+					PlyTable.GAME_vPeekSource = ply:GetPos()
+					PlyTable.GAME_vPeekSourceHitNormal = tr.HitNormal
+					PlyTable.GAME_EPeek = COVER_FIRE_RIGHT
+					PlyTable.GAME_EPeekBlind = COVER_BLINDFIRE_RIGHT
 					return
 				end
 			end
+			PlyTable.CTRL_bInCover = true
 			ply:SetNW2Bool( "CTRL_bInCover", true )
-			ply.CTRL_bInCover = true
 			ply:SetNW2Int( "CTRL_Variants", VARIANTS )
 			ply:SetNW2Int( "CTRL_Peek", COVER_PEEK_NONE )
 		else
+			PlyTable.CTRL_bInCover = nil
 			ply:SetNW2Bool "CTRL_bInCover"
-			ply.CTRL_bInCover = nil
 			ply:SetNW2Int( "CTRL_Peek", COVER_PEEK_NONE )
 		end
 	end
-	BloodlossStuff( ply, cmd ) // Run it twice so that we neutralize RemoveKey( IN_DUCK )
+
+	BloodlossStuff( ply, cmd ) // Run it twice so that we neutralize RemoveKey( IN_DUCK ) in case it was called
 end
 
 function QuickSlide_Handle( ply )
@@ -1223,13 +1275,15 @@ function QuickSlide_CalcLength( ply )
 end
 
 hook.Add( "Move", "GameImprovements", function( ply, mv )
-	if ply:Alive() then
-		if !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && QuickSlide_Can( ply ) then
-			local t = CEntity_GetTable( ply )
-			if CPlayer_KeyDown( ply, IN_SPEED ) && CPlayer_KeyDown( ply, IN_DUCK ) && QuickSlide_Can( ply, t ) then QuickSlide_Start( ply, t ) end
-		end
-		local v = QuickSlide_Handle( ply ) if v then mv:SetVelocity( v ) end
+	if !ply:Alive() then return end
+
+	if !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && QuickSlide_Can( ply ) then
+		local t = CEntity_GetTable( ply )
+		if CPlayer_KeyDown( ply, IN_SPEED ) && CPlayer_KeyDown( ply, IN_DUCK ) && QuickSlide_Can( ply, t ) then QuickSlide_Start( ply, t ) end
 	end
+
+	local v = QuickSlide_Handle( ply )
+	if v then mv:SetVelocity( v ) end
 end )
 
 NOT_A_VOICELINE = NOT_A_VOICELINE || {}
@@ -1271,20 +1325,31 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		if _Comp.KM_CMs_Addon then return
 		else _Comp.KM_CMs_Addon = true end
 	end
+
 	hook.Run( "EntityEmitSound", Data, { KM_CMs_Addon = true } )
-	local ent = Data.Entity
-	local dent = GetOwner( ent )
+
+	local pEntity = Data.Entity
+	local pOwner = GetOwner( pEntity )
+
 	local sSoundName = Data.SoundName
-	ent.GAME_sLastSoundPath = sSoundName
+	pEntity.GAME_sLastSoundPath = sSoundName
+
 	local flDuration = SoundDuration( Data.SoundName )
-	ent.GAME_flLastSoundDuration = flDuration
+	pEntity.GAME_flLastSoundDuration = flDuration
+
 	if Data.Volume <= .05 then return true end
-	local dt = math.Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 1.95547 || 1.5 ), 5, 18000 )
-	local vPos = Data.Pos || ( ent:GetPos() + ent:OBBCenter() )
-	for act in pairs( __ACTOR_LIST__ ) do
-		if act == ent || act == dent then continue end
-		if act.flHearDistanceMultiplier > 0 && act:GetPos():Distance( vPos ) <= ( dt * act.flHearDistanceMultiplier ) then
-			act:OnHeardSomething( dent, Data )
+
+	local flDistance = math_Clamp( Data.SoundLevel ^ ( Data.SoundLevel >= 100 && 1.95547 || 1.5 ), 5, 18000 )
+
+	local vPos = Data.Pos || ( pEntity:GetPos() + pEntity:OBBCenter() )
+
+	for pActor in pairs( __ACTOR_LIST__ ) do
+		if pActor == pEntity || pActor == pOwner then continue end
+
+		local ActorTable = CEntity_GetTable( pActor )
+
+		if ActorTable.flHearingStrength > 0 && ActorTable.GetShootPos( pActor ):Distance( vPos ) <= ( flDistance * ActorTable.flHearingStrength ) then
+			ActorTable.OnHeardSomething( pActor, pOwner, Data )
 		end
 	end
 
@@ -1292,71 +1357,90 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 		local sRealSound = sSoundName:match "^[%^%)]*(.*)"
 
 		local cColor
-		local fCaptionColor = dent.CaptionColor
+		local fCaptionColor = pOwner.CaptionColor
 		if fCaptionColor then
-			cColor = fCaptionColor( dent )
+			cColor = fCaptionColor( pOwner )
 		else
-			local fPlayerColor = dent.GetPlayerColor
+			local fPlayerColor = pOwner.GetPlayerColor
 			if fPlayerColor then
-				cColor = fPlayerColor( dent ):ToColor()
+				cColor = fPlayerColor( pOwner ):ToColor()
 			else cColor = color_white end
 		end
-		local dts = dt * dt
+
+		local flDistSqr = flDistance * flDistance
+
 		local tCaptionPlayers = {}
+
 		for _, ply in player_Iterator() do
-			if ply:EyePos():DistToSqr( vPos ) > dts then continue end
+			if ply:EyePos():DistToSqr( vPos ) > flDistSqr then continue end
 
 			table_insert( tCaptionPlayers, ply )
 
 			if NOT_A_VOICELINE[ sRealSound ] then continue end
 
-			if Director_GetThreat( ply, ent ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, dent ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+			if Director_GetThreat( ply, pEntity ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, pOwner ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+
+			local PlyTable = CEntity_GetTable( ply )
 
 			local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-			ply.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
-			local t = ply.DR_tSpotted
-			if t then t[ dent ] = 0
-			else ply.DR_tSpotted = { [ dent ] = 0 } end
-			local t = ply.DR_tMusicEntities
-			if t then t[ dent ] = true
-			else ply.DR_tMusicEntities = { [ dent ] = true } end
 
-			if ply.DR_EThreat == DIRECTOR_THREAT_COMBAT then continue end
+			PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
+
+			local t = PlyTable.DR_tSpotted
+			if t then t[ pOwner ] = 0
+			else PlyTable.DR_tSpotted = { [ pOwner ] = 0 } end
+			local t = PlyTable.DR_tMusicEntities
+
+			if t then t[ pOwner ] = true
+			else PlyTable.DR_tMusicEntities = { [ pOwner ] = true } end
+
+			if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT then continue end
 
 			if f <= 0 then
-				ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+				PlyTable.DR_EThreat = DIRECTOR_THREAT_COMBAT
 				continue
 			end
 	
-			if ( RealTime() > ( ply.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( ply.DR_flVoWait || 0 ) && ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoDangerousWait || math.huge ) ) then
-				local flVoVait = ply.DR_flVoWait
+			if ( RealTime() > ( PlyTable.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( PlyTable.DR_flVoWait || 0 ) && PlyTable.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( PlyTable.DR_flVoDangerousWait || math.huge ) ) then
+				local flVoVait = PlyTable.DR_flVoWait
 				if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
-					ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
+					PlyTable.DR_EThreat = DIRECTOR_THREAT_COMBAT
+
 					ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. sSoundName .. "\")" )
-					local t = RealTime() + math.min( SoundDuration( sSoundName ), 8 )
-					ply.DR_flIAmAlreadyInCombatForSomeTime = t
-					ply.DR_flIAmAlreadyInDangerForSomeTime = t
-					if f <= 0 then ply.DR_flVoDangerousWait = RealTime()
-					else ply.DR_flVoDangerousWait = t end
+
+					local t = RealTime() + min( SoundDuration( sSoundName ), 8 )
+
+					PlyTable.DR_flIAmAlreadyInCombatForSomeTime = t
+					PlyTable.DR_flIAmAlreadyInDangerForSomeTime = t
+
+					if f <= 0 then PlyTable.DR_flVoDangerousWait = RealTime()
+					else PlyTable.DR_flVoDangerousWait = t end
 				end
-				f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+
+				f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
 				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
+
 				continue
 			end
 	
-			if ( RealTime() > ( ply.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( ply.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( ply.DR_flVoWait || 0 ) ) then
-				ply.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
+			if ( RealTime() > ( PlyTable.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( PlyTable.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( PlyTable.DR_flVoWait || 0 ) ) then
+				PlyTable.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
+
 				ply:SendLua( "Director_VoiceLineHook(\"" .. sSoundName .. "\")" )
+
 				local t = RealTime() + math.min( SoundDuration( sSoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-				ply.DR_flIAmAlreadyInDangerForSomeTime = t
-				if f <= 0 then ply.DR_flVoWait = RealTime()
-				else ply.DR_flVoWait = t end
-				f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
+				PlyTable.DR_flIAmAlreadyInDangerForSomeTime = t
+
+				if f <= 0 then PlyTable.DR_flVoWait = RealTime()
+				else PlyTable.DR_flVoWait = t end
+
+				f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
 				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
+
 				continue
 			end
 	
-			f = math.Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
+			f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
 			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 		end
 
@@ -1368,6 +1452,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, _Comp )
 			net_Send( tCaptionPlayers )
 		end
 	end
+
 	return true
 end )
 

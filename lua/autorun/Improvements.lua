@@ -7,6 +7,8 @@ if SERVER then
 	end
 end
 
+DMG_RAYLEIGH = DMG_CLUB + DMG_SONIC + DMG_BLAST
+
 local IsValid = IsValid
 local insert = table.insert
 
@@ -65,7 +67,7 @@ HUMAN_SPRINT_SPEED = 350
 HUMAN_JOG_SPEED = 200 + 1 / .03
 HUMAN_WALK_SPEED = 75
 
-HUMAN_JUMP_HEIGHT = 72
+HUMAN_JUMP_HEIGHT = 32
 
 // Weapon statuses and other complicated bullshit
 
@@ -202,7 +204,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	// No, this is not a mistake. Only automatic weapons get the penalty.
 	// Why? Idunno, it just feels better.
 	if bAutomatic then
-		if CurTime() >= ( PlyTable.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then PlyTable.GAME_flSpamPenalty = CurTime() + .085 end
+		if CurTime() >= ( PlyTable.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then PlyTable.GAME_flSpamPenalty = CurTime() + math.Rand( 0, .085 ) end
 		if CurTime() <= ( PlyTable.GAME_flSpamPenalty || 0 ) then cmd:RemoveKey( IN_ATTACK ) end
 	end
 
@@ -229,6 +231,20 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 				ply.GAME_bWalkPressed = nil
 			end
 		end
+	end
+
+	// Lovely crouch jumping fix! :D
+	if ply:IsOnGround() then
+		ply.GAME_bDuckLast = cmd:KeyDown( IN_DUCK )
+	else
+		if ply.GAME_bDuckLast then
+			// So, technically, crouch jumping only extends height if you crouch midair.
+			// We're letting people uncrouch midair for logical reasons - air doesn't
+			// just magically paralyze all your muscles. I really do want people to
+			// be able to crouch in air too, but that extends height... you know,
+			// the literal reason this fix exists?
+			if !cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckLast = nil end
+		else cmd:RemoveKey( IN_DUCK ) end
 	end
 
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
@@ -430,17 +446,6 @@ hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 	end
 end )
 
-function DoFootstep( pEntity, vPos, flForce )
-	// Tip_Walking8: Different surfaces make different amounts of noise. The loudest is water, the exception being the ocean floor, walking on which makes almost no sound.
-	if pEntity:WaterLevel() == 1 then
-		local pEffectData = EffectData()
-		pEffectData:SetOrigin( vPos )
-		pEffectData:SetScale( flForce * 5 )
-		pEffectData:SetFlags( 0 )
-		util.Effect( "watersplash", pEffectData )
-	end
-end
-
 hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
 	local flSpeed = GetVelocity( ply ):Length()
 	if ply:GetNW2Bool "CTRL_bSliding" then return true end
@@ -453,7 +458,14 @@ hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
 		flForce = 2
 	end
 
-	DoFootstep( ply, vPos, flForce )
+	// Tip_Walking8: Different surfaces make different amounts of noise. The loudest is water, the exception being the ocean floor, walking on which makes almost no sound.
+	if ply:WaterLevel() == 1 then
+		local pEffectData = EffectData()
+		pEffectData:SetOrigin( vPos )
+		pEffectData:SetScale( flForce * 5 )
+		pEffectData:SetFlags( 0 )
+		util.Effect( "watersplash", pEffectData )
+	end
 end )
 
 function SetHumanPlayer( ply )
@@ -549,4 +561,23 @@ function AddVelocity( ent, vVelocity )
 		local phys = CEntity_GetPhysicsObject( ent )
 		if IsValid( phys ) then phys:AddVelocity( vVelocity ) end
 	end
+end
+
+if CLIENT then
+	g_pActiveGlowEntities = g_pActiveGlowEntities || {}
+
+    hook.Add( "PostDrawTranslucentRenderables", "ZBufferFuckery", function( bDepth, bSkybox )
+        if bSkybox then return end
+
+        for pEntity, fFunction in pairs( g_pActiveGlowEntities ) do
+            if !IsValid( pEntity ) then 
+                g_pActiveGlowEntities[ pEntity ] = nil 
+                continue 
+            end
+
+            if pEntity:IsDormant() then continue end
+
+            fFunction( pEntity )
+        end
+    end )
 end

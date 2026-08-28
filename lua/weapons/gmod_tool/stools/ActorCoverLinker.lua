@@ -44,6 +44,7 @@ function TOOL:LeftClick()
 			self.pCover = tCover
 			self.iAreaID = pArea:GetID()
 			self.iCoverID = iIndex
+			file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 			return
 		end
 	end
@@ -89,6 +90,7 @@ function TOOL:RightClick()
 			self.pCover = tCover
 			self.iAreaID = pArea:GetID()
 			self.iCoverID = iIndex
+			file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 			return
 		end
 	end

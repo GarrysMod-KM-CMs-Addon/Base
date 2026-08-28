@@ -239,9 +239,13 @@ local RecalculateWaterBlurAmounts = RecalculateWaterBlurAmounts
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
 	DIRECTOR_CLIENT_TICK()
+
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
+
 	if RealTime() > flNextSendLuminosity then
+		flNextSendLuminosity = RealTime() + math_Rand( .1, .5 )
+
 		net_Start( "UpdateLuminosity", true )
 		local iPasses = 0
 		vColor = Vector()
@@ -271,8 +275,10 @@ hook.Add( "Tick", "Graphics", function()
 		net_WriteColor( vColor:ToColor(), false )
 		net_SendToServer()
 	end
+
 	local flFrameTime = RealTime() - flLastTickCall
 	if flFrameTime < .05 then return end // This will be ran 20 FPS MAX
+
 	flLastTickCall = RealTime()
 	DOFModeHack( true )
 	vColor = Vector()
@@ -394,7 +400,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		flBloomColorMultiply, 1, 1, 1
 	)
 
-	DrawColorModify( tDrawColorModify )
+	//DrawColorModify( tDrawColorModify )
 
 	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
@@ -451,6 +457,9 @@ function AddAngleToThirdPersonFacing( aAngle ) aThirdPerson:Add( aAngle ) end
 
 local flThirdPersonAttackTime = 0
 
+local aLastThirdPersonAngle = Angle()
+local flThirdPersonToAttackLerp = 0
+
 hook.Add( "CreateMove", "Graphics", function( cmd )
 	DIRECTOR_CLIENT_TICK()
 	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
@@ -476,28 +485,46 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
 	local bSpecial = pPlayer:WaterLevel() > 0
 	if RealTime() <= flThirdPersonAttackTime then
-		cmd:SetViewAngles( LerpAngle( FRILerpRate( 22.5, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 1 )
+
+		cmd:SetViewAngles( LerpAngle( flThirdPersonToAttackLerp, aLastThirdPersonAngle, aThirdPerson ) )
 		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
+
 	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
+
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
 		local r = LerpAngle( FRILerpRate( 5, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
+		aLastThirdPersonAngle = Angle( r )
+
 	elseif bSpecial then
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
+
 		cmd:SetViewAngles( LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson ) )
+		aLastThirdPersonAngle = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), aThirdPerson )
+
 	elseif flActualBiggerMove > 0 then
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
+
 		local a = Angle( aDirection )
 		a[ 1 ] = a[ 1 ] + 30
 		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
+		aLastThirdPersonAngle = Angle( r )
+
 	else
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
+
 		local a = Angle( aAim )
 		a[ 0 ] = 0
 		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), a )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
+		aLastThirdPersonAngle = Angle( r )
 	end
 end )
 

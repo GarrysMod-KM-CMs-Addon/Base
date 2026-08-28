@@ -41,11 +41,11 @@ function TOOL:LeftClick()
 			end
 			self.vStart = nil
 			self.vEnd = nil
+			file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 		else
 			self.vEnd = vPos
 		end
 	else self.vStart = vPos end
-	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 end
 
 function TOOL:RightClick()
@@ -135,14 +135,36 @@ function TOOL:Think()
 			local vCenter = ( vStart + vEnd ) * .5
 
 			local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
-
-			if tCover.bRight then
+			if tCover[ 3 ] then
 				debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 255 ), true )
 			else
 				debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
 			end
+
+			local t = {}
+			for iAreaID, tIndices in pairs( tCover.tLinks || {} ) do
+				for iIndex in pairs( tIndices ) do
+					local tNewCover = __COVERS_STATIC__[ iAreaID ]
+					if tNewCover then tNewCover = tNewCover[ iIndex ] end
+					if !tNewCover || tNewCover == tCover then continue end
+
+					local t2 = t[ iAreaID ]
+					if t2 then t2[ iIndex ] = true
+					else t[ iAreaID ] = { [ iIndex ] = true } end
+
+					local vStart, vEnd = tNewCover.vStart, tNewCover.vEnd
+					debugoverlay.Line( vStart, vEnd, .1, Color( 0, 255, 255 ), true )
+					local vCenter = ( vStart + vEnd ) * .5
+					debugoverlay.Line( vCenter, ( tCover.vStart + tCover.vEnd ) * .5, .1, Color( 0, 255, 255 ), true )
+					local vRight = ( vEnd - vStart ):GetNormalized():Angle():Right()
+					if tNewCover.bRight then
+						debugoverlay.Line( vCenter, vCenter + vRight * 12, .1, Color( 0, 255, 255 ), true )
+					else
+						debugoverlay.Line( vCenter, vCenter - vRight * 12, .1, Color( 0, 255, 255 ), true )
+					end
+				end
+			end
+			tCover.tLinks = t
 		end
 	end
-
-	file.Write( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json", util.TableToJSON( __COVERS_STATIC__ ) )
 end
