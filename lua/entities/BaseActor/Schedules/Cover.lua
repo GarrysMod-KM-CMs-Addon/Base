@@ -187,9 +187,9 @@ function ENT:IsValidCoverCandidate( tCover, pEnemyPath, MyTable )
 end
 
 function ENT:IsValidCoverPoint( vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs /* Optional as you may have precomputed them */ )
-	vMaxs = vMaxs || MyTable.vHullDuckMaxs || MyTable.vHullMaxs
+	vMaxs = vMaxs || MyTable.vHullDuckHitCheckMaxs || MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 	local vCrouched = Vector( vCover )
-	vCrouched[ 3 ] = vCrouched[ 3 ] + vMaxs[ 3 ]
+	vCrouched[ 3 ] = vCrouched[ 3 ] + vMaxs[ 3 ] * 1.25
 
 	pEnemyPath:MoveCursorToClosestPosition( vCover )
 	local flCursor = pEnemyPath:GetCursorPosition()
@@ -464,12 +464,12 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 		end
 
 		if !util_TraceLine( {
-			start = vCover + vStandOffset,
+			start = vCover + vStanding,
 			endpos = vStart,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && !util_TraceLine( {
-			start = vStart + vStandOffset,
+			start = vStart + vStanding,
 			endpos = vEnemy,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
@@ -490,12 +490,12 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 		end
 
 		if !util_TraceLine( {
-			start = vCover + vStandOffset,
+			start = vCover + vStanding,
 			endpos = vEnd,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && !util_TraceLine( {
-			start = vEnd + vStandOffset,
+			start = vEnd + vStanding,
 			endpos = vEnemy,
 			mask = MASK_SHOT_HULL,
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )

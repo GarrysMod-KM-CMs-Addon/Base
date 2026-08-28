@@ -73,7 +73,7 @@ function ENT:CanSee( vec, MyTable )
 	} ).Hit
 end
 
-ENT.tEnemies = {} // Entity ( Even InValid, will be Filtered ) -> true
+ENT.tEnemies = {} // Entity (even invalid, will be filtered) -> true
 ENT.tBullseyes = {} // EntityUniqueIdentifier -> { BaseActorBullseye, Source Entity (Even invalid), Entity (even invalid) }
 
 local CEntity_Remove = CEntity.Remove
@@ -93,8 +93,7 @@ function ENT:ReportPositionAsClear( vec, MyTable )
 	end
 end
 
-// function ENT:UpdateEnemyMemory( enemy, vec ) self:SetupBullseye( enemy, vec, enemy:GetAngles() ) end
-function ENT:UpdateEnemyMemory( enemy, vec, ang ) self:SetupBullseye( enemy, vec || enemy:GetPos(), ang || enemy:GetAngles() ) end
+function ENT:UpdateEnemyMemory( pEnemy, vPos, aAngles ) self:SetupBullseye( pEnemy, vPos || pEnemy:GetPos(), aAngles || pEnemy:GetAngles() ) end
 
 // For external senses, e.g. the GRAD's tactile laser
 function ENT:UpdateMemory( pObject )
@@ -108,52 +107,67 @@ local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 local math_min = math.min
 
-function ENT:SetupBullseye( enemy, vec, ang, MyTable )
+function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
-	if !vec then vec = enemy:GetPos() + enemy:OBBCenter() end
-	if !ang then ang = ( enemy.GetAimVector && enemy:GetAimVector() || enemy:GetForward() ):Angle() end
-	local ent = enemy
-	if ent.__ACTOR_BULLSEYE__ then
-		while ent.__ACTOR_BULLSEYE__ && IsValid( ent.Enemy ) do
-			ent = ent.Enemy
+
+	if !vPos then
+		vPos = pEnemy:GetPos()
+		vPos:Add( pEnemy:OBBCenter() )
+	end
+	if !aAngles then aAngles = ( pEnemy.GetAimVector && pEnemy:GetAimVector() || pEnemy:GetForward() ):Angle() end
+
+	local pTrueEnemy = pEnemy
+	if pTrueEnemy.__ACTOR_BULLSEYE__ then
+		while pTrueEnemy.__ACTOR_BULLSEYE__ && IsValid( pTrueEnemy.Enemy ) do
+			pTrueEnemy = pTrueEnemy.Enemy
 		end
 	end
-	local id = EntityUniqueIdentifier( ent )
-	local beye = MyTable.tBullseyes[ id ]
-	if beye then beye = beye[ 1 ] end
-	if !IsValid( beye ) then beye = ents.Create "BaseActorBullseye" beye:Spawn() end
-	MyTable.tBullseyes[ id ] = { beye, enemy, ent }
-	local BullseyeTable = CEntity_GetTable( beye )
+
+	local sIdentifier = EntityUniqueIdentifier( pTrueEnemy )
+
+	local pBullseye = MyTable.tBullseyes[ sIdentifier ]
+	if pBullseye then pBullseye = pBullseye[ 1 ] end
+	if !IsValid( pBullseye ) then
+		pBullseye = ents.Create "BaseActorBullseye"
+		pBullseye:Spawn()
+	end
+
+	MyTable.tBullseyes[ sIdentifier ] = { pBullseye, enemy, pTrueEnemy }
+
+	local BullseyeTable = CEntity_GetTable( pBullseye )
+
 	BullseyeTable.flTime = CurTime()
-	BullseyeTable.Enemy = ent
+	BullseyeTable.Enemy = pTrueEnemy
 	BullseyeTable.Owner = self
+	BullseyeTable.GAME_BoundMins = pTrueEnemy:OBBMins()
+	BullseyeTable.GAME_BoundMaxs = pTrueEnemy:OBBMaxs()
+	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
+
 	// TODO: We should use a trace here. Why don't we? Simple. I'm lazy and don't wanna write it right now.
 	//	if !enemy.__ACTOR_BULLSEYE__ then
 	//		local v = GetVelocity( enemy )
 	//		local l = v:Length()
 	//		v:Normalize()
 	//		v:Mul( math_min( l, self:BoundingRadius() ) )
-	//		vec:Add( v )
+	//		vPos:Add( v )
 	//	end
-	beye:SetPos( vec )
-	beye:SetAngles( ang )
-	BullseyeTable.GAME_BoundMins = ent:OBBMins()
-	BullseyeTable.GAME_BoundMaxs = ent:OBBMaxs()
-	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
 
-	local fGetAimVector = ent.GetAimVector
+	pBullseye:SetPos( vPos )
+	pBullseye:SetAngles( aAngles )
+
+	local fGetAimVector = pTrueEnemy.GetAimVector
 	if fGetAimVector then
-		local v = fGetAimVector( ent )
+		local v = fGetAimVector( pTrueEnemy )
 		function BullseyeTable:GetAimVector() return v end
 	end
 
-	local fGetShootPos = ent.GetShootPos
+	local fGetShootPos = pTrueEnemy.GetShootPos
 	if fGetShootPos then
-		local v = fGetShootPos( ent )
+		local v = fGetShootPos( pTrueEnemy )
 		function BullseyeTable:GetShootPos() return v end
 	end
 
-	if InRangeAttack( ent ) then
+	if InRangeAttack( pTrueEnemy ) then
 		BullseyeTable.IN_RANGE_ATTACK = true
 		BullseyeTable.IN_NOT_RANGE_ATTACK = nil
 	else
@@ -161,7 +175,7 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		BullseyeTable.IN_NOT_RANGE_ATTACK = true
 	end
 
-	if HasRangeAttack( ent ) then
+	if HasRangeAttack( pTrueEnemy ) then
 		BullseyeTable.HAS_RANGE_ATTACK = true
 		BullseyeTable.HAS_NOT_RANGE_ATTACK = nil
 	else
@@ -169,7 +183,7 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		BullseyeTable.HAS_NOT_RANGE_ATTACK = true
 	end
 
-	if HasMeleeAttack( ent ) then
+	if HasMeleeAttack( pTrueEnemy ) then
 		BullseyeTable.HAS_MELEE_ATTACK = true
 		BullseyeTable.HAS_NOT_MELEE_ATTACK = nil
 	else
@@ -177,10 +191,10 @@ function ENT:SetupBullseye( enemy, vec, ang, MyTable )
 		BullseyeTable.HAS_NOT_MELEE_ATTACK = true
 	end
 
-	beye:SetHealth( enemy:Health() )
-	beye:SetMaxHealth( enemy:GetMaxHealth() )
+	pBullseye:SetHealth( pTrueEnemy:Health() )
+	pBullseye:SetMaxHealth( pTrueEnemy:GetMaxHealth() )
 
-	return beye
+	return pBullseye
 end
 
 local pairs = pairs

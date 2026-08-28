@@ -248,7 +248,7 @@ function ENT:OnTakeDamage( dDamage )
 	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) + dDamage:GetDamage() / ( self:GetMaxHealth() * 112 ) )
 end
 
-ENT.flHearDistanceMultiplier = 1
+ENT.flHearingStrength = 1
 
 ENT.iState = NPC_STATE_NONE
 function ENT:GetNPCState() return self.iState end
@@ -399,16 +399,21 @@ ENT.m_sYawPoseParameter = "aim_yaw"
 ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
 
-ENT.flAimStiffness = 48
-ENT.flAimDamping = -8
+ENT.flAimStiffness = 64
+ENT.flAimDamping = -2
 
 ENT.flBodyStiffness = 14
 ENT.flBodyDamping = -12
 
 ENT.flLastBodyYaw = 0
 
+ENT.m_flLastHandleTurningCall = 0
+
 function ENT:HandleTurning( MyTable )
-	local flFrameTime = MyTable.m_flFrameTime
+	local flFrameTime = CurTime() - MyTable.m_flLastHandleTurningCall
+
+	MyTable.m_flLastHandleTurningCall = CurTime()
+
 	local Angles = CEntity_GetAngles( self )
 	local aAim = Angle( Angles )
 	local v = MyTable.vaAimTargetPose
@@ -452,7 +457,7 @@ function ENT:HandleTurning( MyTable )
 	MyTable.aAim = aAim
 	MyTable.vAim = aAim:Forward()
 
-	if MyTable.bCantTurnBody then return end
+	if MyTable.bCantTurnBody then return flFrameTime end
 
 	local v = MyTable.vaAimTargetBody || CEntity_GetAngles( self )
 	if isangle( v ) then v = v:Forward() else v = ( v - self:GetShootPos() ):GetNormalized() end
@@ -480,6 +485,8 @@ function ENT:HandleTurning( MyTable )
 
 	local fFaceTowards = pLocomotion.FaceTowards
 	for _ = 1, 8 do fFaceTowards( pLocomotion, v ) end
+
+	return flFrameTime
 end
 
 ENT.flSuppressionRecoverTime = 0

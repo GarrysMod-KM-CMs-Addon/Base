@@ -192,7 +192,7 @@ local developer = GetConVar "developer"
 ENT.flNavigationAvoidTime = 0
 ENT.flJumpedTime = 0
 
-function ENT:GrountMovement( pPath, flSpeed, tFilter )
+function ENT:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 	local pLocomotion = self.loco
 
 	pLocomotion:SetStepHeight( self.vHullMaxs[ 3 ] * .25 )
@@ -201,7 +201,7 @@ function ENT:GrountMovement( pPath, flSpeed, tFilter )
 
 	pPath:SetMinLookAheadDistance( self:OBBMaxs()[ 1 ] * 3 )
 
-	pPath:SetGoalTolerance( self:OBBMaxs()[ 1 ] )
+	pPath:SetGoalTolerance( flToleranceOverride || self:OBBMaxs()[ 1 ] )
 
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works

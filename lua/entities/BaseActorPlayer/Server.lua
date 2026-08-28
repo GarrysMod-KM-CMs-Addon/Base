@@ -2,6 +2,7 @@ include "Player.lua"
 
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
+
 ENT.vHullDuckMins = HULL_HUMAN_DUCK_MINS
 ENT.vHullDuckMaxs = HULL_HUMAN_DUCK_MAXS
 
@@ -143,7 +144,7 @@ function ENT:OnKilled( dmg )
 end
 
 local sv_friction, sv_gravity = GetConVar "sv_friction", GetConVar "sv_gravity"
-function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
+function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, flToleranceOverride )
 	if flHeight == nil then flHeight = 1 end
 	if !bAllowSliding then self:SetNW2Bool( "CTRL_bSliding", false ) end
 	self:SetCrouchTarget( flHeight )
@@ -157,7 +158,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding )
 	local f = flSpeed * ACCELERATION_NORMAL
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
-	self:GrountMovement( pPath, flSpeed, tFilter )
+	self:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 end
 
 function ENT:Stand( flHeight )

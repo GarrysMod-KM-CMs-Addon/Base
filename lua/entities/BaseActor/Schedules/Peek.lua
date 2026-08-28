@@ -27,10 +27,9 @@ function ENT:PeekInHorizontal()
 
 		MyTable.ComputePath( self, pPath, vPeek )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .25
-		pPath:SetGoalTolerance( f )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, MyTable.vHullMaxs[ 2 ] * .25 )
 
-		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand )
+		pPath:SetGoalTolerance( f )
 
 		if self:GetPos():DistToSqr( vPeek ) <= ( f * f ) then return true end
 	end
@@ -46,10 +45,7 @@ function ENT:PeekOutHorizontal()
 
 		MyTable.ComputePath( self, pPath, vCover )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .25
-		pPath:SetGoalTolerance( f )
-
-		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, MyTable.vHullMaxs[ 2 ] * .25 )
 
 		if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
 	end

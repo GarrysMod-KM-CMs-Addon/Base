@@ -2,57 +2,7 @@ DEFINE_BASECLASS "BaseProjectile"
 AddCSLuaFile()
 
 scripted_ents.Register( ENT, "MagnussonDevice" )
-if IsMounted "ep2" then
-	scripted_ents.Alias( "weapon_striderbuster", "MagnussonDevice" )
-	if SERVER then
-		if !__EVENTS__.MagnussonBombing then __EVENTS_LENGTH__ = __EVENTS_LENGTH__ + 1 end
-		__EVENTS__.MagnussonBombing = function()
-			local n = navmesh.GetNavAreaCount()
-			if n <= 0 then return end
-			local pArea = navmesh.GetAllNavAreas()[ math.random( 0, n ) ]
-			local tr = util.TraceLine {
-				start = pArea:GetCenter(),
-				endpos = pArea:GetCenter() + Vector( 0, 0, 4096 ),
-				mask = MASK_SOLID
-			}
-			if tr.Hit then return end
-			local f = 0
-			for _ = 1, math.Rand( 1, 64 ) do
-				timer.Simple( f * math.Rand( .9, 1.1 ), function()
-					local v = pArea:GetRandomPoint()
-					local tr = util.TraceLine {
-						start = v,
-						endpos = v + Vector( 0, 0, 4096 ),
-						mask = MASK_SOLID
-					}
-					if tr.Hit then return end
-					local pMagnusson = ents.Create "MagnussonDevice"
-					pMagnusson:SetPos( tr.HitPos )
-					pMagnusson:SetAngles( AngleRand() )
-					pMagnusson:Spawn()
-					AddThinkToEntity( pMagnusson, function()
-						local pPhys = pMagnusson:GetPhysicsObject()
-						if IsValid( pPhys ) then
-							if pPhys:GetVelocity():Length() <= ( pMagnusson.COLLISION_DETONATION_flSpeed * .5 ) then
-								pMagnusson:Remove()
-							end
-						else pMagnusson:Remove() end
-					end )
-					local pPhys = pMagnusson:GetPhysicsObject()
-					if IsValid( pPhys ) then
-						local v = Vector( math.Rand( -1, 1 ), math.Rand( -1, 1 ), -1 )
-						v:Normalize()
-						pPhys:AddVelocity( v * pMagnusson.COLLISION_DETONATION_flSpeed * math.Rand( 1, 6 ) )
-					else pMagnusson:Remove() end
-				end )
-				if math.random( 3 ) == 1 then f = f + math.Rand( 0, 4 ) continue end
-				if math.random( 4 ) <= 3 then continue end
-				f = f + math.Rand( 0, 2 )
-			end
-			return true
-		end
-	end
-end
+scripted_ents.Alias( "weapon_striderbuster", "MagnussonDevice" )
 
 sound.Add {
 	name = "MagnussonDeviceLoop",

@@ -195,6 +195,8 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 
 			local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 
+			local vHitMaxs = MyTable.vHullDuckHitCheckMaxs || MyTable.vHullDuckMaxs || MyTable.vHullMaxs
+
 			local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 			vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
 
@@ -251,7 +253,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 						} ).Hit then continue end
 
 						// Supply it with vMaxs because we have, in fact, precomputed them
-						if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs ) then continue end
+						if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vHitMaxs ) then continue end
 
 						if tAllies then
 							local b

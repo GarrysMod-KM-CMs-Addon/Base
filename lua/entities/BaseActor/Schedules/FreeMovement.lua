@@ -625,13 +625,13 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 
 		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
 
-		local flTakenDistSqr = self:OBBMaxs()[ 1 ]
-		flTakenDistSqr = flTakenDistSqr * flTakenDistSqr
-
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 
 		local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 		vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
+
+		local flTakenDistSqr = self:BoundingRadius()
+		flTakenDistSqr = flTakenDistSqr * flTakenDistSqr
 
 		local tCovers
 
@@ -647,73 +647,6 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 				pPath = Path "Follow"
 				MyTable.ComputeFlankPath( self, pPath, pEnemy, MyTable )
 				MyTable.pEnemyPath = pPath
-			end
-
-			if pArea != nil && !tVisited[ pArea:GetID() ] then
-				tVisited[ pArea:GetID() ] = true
-
-				tCovers = {}
-
-				for _, tCover in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do
-					insert( tCovers, { tCover, DistanceToLine( tCover.vStart, tCover.vEnd, self:GetPos() ) } )
-				end
-
-				SortByMember( tCovers, 2, true )
-
-				for _, tData in ipairs( tCovers ) do
-					local tCover = tData[ 1 ]
-
-					local vStart, vEnd = tCover.vStart, tCover.vEnd
-
-					local vDirection = vEnd - vStart
-
-					local flStep, flStart, flEnd
-					if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-						flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-					else
-						flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
-					end
-
-					vDirection:Normalize()
-
-					local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-					vOff = vOff * vMaxs[ 1 ] * 1.2
-
-					if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
-
-					for flCurrent = flStart, flEnd, flStep do
-						local vCover = vStart + vDirection * flCurrent + vOff
-
-						if util_TraceHull( {
-							start = vCover,
-							endpos = vCover,
-							mins = vMins,
-							maxs = vMaxs,
-							filter = self
-						} ).Hit then continue end
-
-						// Supply it with vMaxs because we have, in fact, precomputed them
-						if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs ) then continue end
-
-						if tAllies then
-							local b
-							for pAlly in pairs( tAllies ) do
-								if self == pAlly then continue end
-								if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= flTakenDistSqr then b = true break end
-							end
-							if b then continue end
-						end
-
-						MyTable.vCover = vCover
-						MyTable.tCover = tCover
-
-						MyTable.SetSchedule( self, "TakeCover", MyTable )
-
-						return true
-					end
-					coroutine.yield()
-				end
-				coroutine.yield()
 			end
 
 			if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != sched then return true end
@@ -863,13 +796,13 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 
 		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
 
-		local flTakenDistSqr = self:OBBMaxs()[ 1 ]
-		flTakenDistSqr = flTakenDistSqr * flTakenDistSqr
-
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 
 		local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 		vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
+
+		local flTakenDistSqr = self:BoundingRadius()
+		flTakenDistSqr = flTakenDistSqr * flTakenDistSqr
 
 		local tCovers
 
@@ -885,73 +818,6 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 				pPath = Path "Follow"
 				MyTable.ComputeFlankPath( self, pPath, pEnemy, MyTable )
 				MyTable.pEnemyPath = pPath
-			end
-
-			if pArea != nil && !tVisited[ pArea:GetID() ] then
-				tVisited[ pArea:GetID() ] = true
-
-				tCovers = {}
-
-				for _, tCover in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do
-					insert( tCovers, { tCover, DistanceToLine( tCover.vStart, tCover.vEnd, self:GetPos() ) } )
-				end
-
-				SortByMember( tCovers, 2, true )
-
-				for _, tData in ipairs( tCovers ) do
-					local tCover = tData[ 1 ]
-
-					local vStart, vEnd = tCover.vStart, tCover.vEnd
-
-					local vDirection = vEnd - vStart
-
-					local flStep, flStart, flEnd
-					if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-						flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-					else
-						flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
-					end
-
-					vDirection:Normalize()
-
-					local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-					vOff = vOff * vMaxs[ 1 ] * 1.2
-
-					if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
-
-					for flCurrent = flStart, flEnd, flStep do
-						local vCover = vStart + vDirection * flCurrent + vOff
-
-						if util_TraceHull( {
-							start = vCover,
-							endpos = vCover,
-							mins = vMins,
-							maxs = vMaxs,
-							filter = self
-						} ).Hit then continue end
-
-						// Supply it with vMaxs because we have, in fact, precomputed them
-						if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs ) then continue end
-
-						if tAllies then
-							local b
-							for pAlly in pairs( tAllies ) do
-								if self == pAlly then continue end
-								if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= flTakenDistSqr then b = true break end
-							end
-							if b then continue end
-						end
-
-						MyTable.SetSchedule( self, "TakeCover", MyTable )
-
-						MyTable.vCover = vCover
-						MyTable.tCover = tCover
-
-						return true
-					end
-					coroutine.yield()
-				end
-				coroutine.yield()
 			end
 
 			if util_TraceLine( {
@@ -1025,11 +891,9 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 			//		filter = tFilter
 			//	} ).Hit then
 				local tAllies, b = MyTable.GetAlliesByClass( self, MyTable ) || {}, true
-				local f = self:BoundingRadius()
-				f = f * f
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
-					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vPoint ) <= f || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vPoint ) <= f then b = nil break end
+					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vPoint ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vPoint ) <= flTakenDistSqr then b = nil break end
 				end
 				if b then
 					local pNew = MyTable.SetSchedule( self, "FreeMovementMove", MyTable )
