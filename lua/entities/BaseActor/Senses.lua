@@ -132,7 +132,7 @@ function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 		pBullseye:Spawn()
 	end
 
-	MyTable.tBullseyes[ sIdentifier ] = { pBullseye, enemy, pTrueEnemy }
+	MyTable.tBullseyes[ sIdentifier ] = { pBullseye, pEnemy, pTrueEnemy }
 
 	local BullseyeTable = CEntity_GetTable( pBullseye )
 
@@ -141,7 +141,7 @@ function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 	BullseyeTable.Owner = self
 	BullseyeTable.GAME_BoundMins = pTrueEnemy:OBBMins()
 	BullseyeTable.GAME_BoundMaxs = pTrueEnemy:OBBMaxs()
-	BullseyeTable.__VELOCITY__ = GetVelocity( enemy )
+	BullseyeTable.__VELOCITY__ = GetVelocity( pEnemy )
 
 	// TODO: We should use a trace here. Why don't we? Simple. I'm lazy and don't wanna write it right now.
 	//	if !enemy.__ACTOR_BULLSEYE__ then
