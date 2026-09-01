@@ -480,7 +480,9 @@ local EFFECTS = {
 		pEmitter:Finish()
 	end,
 
-	[ util.GetSurfaceIndex "plaster" ] = function( self, pData )
+	// Now used as default
+	//	[ util.GetSurfaceIndex "plaster" ] = function( self, pData )
+	[ -1 ] = function( self, pData )
 		local vPos = pData:GetOrigin()
 		EmitSound( "BulletImpactPlaster", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 		local vDir = ( vPos - pData:GetStart() ):GetNormalized()
@@ -528,7 +530,7 @@ local EFFECTS = {
 function EFFECT:Init( pData )
 	//	print( util.GetSurfacePropName( pData:GetSurfaceProp() ) )
 	local f = EFFECTS[ pData:GetSurfaceProp() ]
-	if f then f( self, pData ) end
+	if f then f( self, pData ) else EFFECTS[ -1 ]( self, pData ) end
 end
 
 function EFFECT:Think() return false end

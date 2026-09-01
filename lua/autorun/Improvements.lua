@@ -9,6 +9,49 @@ end
 
 DMG_RAYLEIGH = DMG_CLUB + DMG_SONIC + DMG_BLAST
 
+local ents_Create = ents.Create
+
+function GetAnimationDonor()
+	local pExistingDonor = g_pAnimationDonor
+	if IsValid( pExistingDonor ) then return pExistingDonor end
+
+	local pDonor = ents_Create "AnimationDonor"
+	pDonor:Spawn()
+	return pDonor
+end
+
+local CEntity = FindMetaTable "Entity"
+local CEntity_GetTable = CEntity.GetTable
+
+function ClearMeleeData( pEntity, EntityTable )
+	EntityTable = EntityTable || CEntity_GetTable( pEntity )
+
+	EntityTable.MELEE_flStart = nil
+	EntityTable.MELEE_flHit = nil
+	EntityTable.MELEE_flEnd = nil
+
+	EntityTable.MELEE_flDamage = nil
+	EntityTable.MELEE_flRadius = nil
+	EntityTable.MELEE_vRadius = nil
+
+	EntityTable.MELEE_bCharge = nil
+end
+
+// Not entity pointers because it is actually originally made for Actor Bullseyes
+function CopyMeleeData( EntityTableTo, EntityTableFrom )
+	if CurTime() > ( EntityTableFrom.MELEE_flEnd || 0 ) then return end
+
+	EntityTableTo.MELEE_flStart = EntityTableFrom.MELEE_flStart
+	EntityTableTo.MELEE_flHit = EntityTableFrom.MELEE_flHit
+	EntityTableTo.MELEE_flEnd = EntityTableFrom.MELEE_flEnd
+
+	EntityTableTo.MELEE_flDamage = EntityTableFrom.MELEE_flDamage
+	EntityTableTo.MELEE_flRadius = EntityTableFrom.MELEE_flRadius
+	EntityTableTo.MELEE_vRadius = EntityTableFrom.MELEE_vRadius
+
+	EntityTableTo.MELEE_bCharge = EntityTableFrom.MELEE_bCharge
+end
+
 local IsValid = IsValid
 local insert = table.insert
 
@@ -67,7 +110,7 @@ HUMAN_SPRINT_SPEED = 350
 HUMAN_JOG_SPEED = 200 + 1 / .03
 HUMAN_WALK_SPEED = 75
 
-HUMAN_JUMP_HEIGHT = 32
+HUMAN_JUMP_HEIGHT = 48
 
 // Weapon statuses and other complicated bullshit
 
@@ -108,10 +151,8 @@ UNIVERSAL_FOV = 80
 local RealTime = RealTime
 local FrameTime = FrameTime
 local math_cos = math.cos
-local CEntity = FindMetaTable "Entity"
 local CEntity_GetVelocity = CEntity.GetVelocity
 local CEntity_GetNW2Bool = CEntity.GetNW2Bool
-local CEntity_GetTable = CEntity.GetTable
 local CEntity_IsOnGround = CEntity.IsOnGround
 local IN_WALK = IN_WALK
 local IN_DUCK = IN_DUCK
@@ -463,8 +504,7 @@ hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
 		local pEffectData = EffectData()
 		pEffectData:SetOrigin( vPos )
 		pEffectData:SetScale( flForce * 5 )
-		pEffectData:SetFlags( 0 )
-		util.Effect( "watersplash", pEffectData )
+		util.Effect( "FootstepSplash", pEffectData )
 	end
 end )
 
@@ -566,18 +606,18 @@ end
 if CLIENT then
 	g_pActiveGlowEntities = g_pActiveGlowEntities || {}
 
-    hook.Add( "PostDrawTranslucentRenderables", "ZBufferFuckery", function( bDepth, bSkybox )
-        if bSkybox then return end
+	hook.Add( "PostDrawTranslucentRenderables", "ZBufferFuckery", function( bDepth, bSkybox )
+		if bSkybox then return end
 
-        for pEntity, fFunction in pairs( g_pActiveGlowEntities ) do
-            if !IsValid( pEntity ) then 
-                g_pActiveGlowEntities[ pEntity ] = nil 
-                continue 
-            end
+		for pEntity, fFunction in pairs( g_pActiveGlowEntities ) do
+			if !IsValid( pEntity ) then 
+				g_pActiveGlowEntities[ pEntity ] = nil 
+				continue 
+			end
 
-            if pEntity:IsDormant() then continue end
+			if pEntity:IsDormant() then continue end
 
-            fFunction( pEntity )
-        end
-    end )
+			fFunction( pEntity )
+		end
+	end )
 end

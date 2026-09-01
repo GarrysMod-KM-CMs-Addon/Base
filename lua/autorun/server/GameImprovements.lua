@@ -862,14 +862,20 @@ function GameImprovements_StartCommand( ply, cmd )
 				start = vView,
 				endpos = vView + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}
 			local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 			local trDuck = util_TraceLine {
 				start = vViewDucked,
 				endpos = vViewDucked + EyeVectorFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}
 			if !trDuck.Hit || trStand.Hit then
 				PlyTable.GAME_sCoverState = nil
@@ -919,12 +925,18 @@ function GameImprovements_StartCommand( ply, cmd )
 					mask = MASK_SOLID,
 					mins = vMins,
 					maxs = vMaxs,
-					filter = ply
+					filter = function( pEntity )
+						if pEntity == ply || pEntity.__PROJECTILE__ then return end
+						return true
+					end
 				} ).Hit || util_TraceLine( {
 					start = ply:GetPos() + ply:GetViewOffset(),
 					endpos = ply:GetPos() + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
-					filter = ply
+					filter = function( pEntity )
+						if pEntity == ply || pEntity.__PROJECTILE__ then return end
+						return true
+					end
 				} ).Hit
 			elseif s then
 				cmd:AddKey( IN_DUCK )
@@ -932,14 +944,20 @@ function GameImprovements_StartCommand( ply, cmd )
 					start = ply:GetPos() + ply:GetViewOffsetDucked(),
 					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
-					filter = ply
+					filter = function( pEntity )
+						if pEntity == ply || pEntity.__PROJECTILE__ then return end
+						return true
+					end
 				} ).Hit
 			elseif PlyTable.GAME_bPeekUnCrouchIfCan then
 				bMove = util_TraceLine( {
 					start = ply:GetPos() + ply:GetViewOffsetDucked(),
 					endpos = ply:GetPos() + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
-					filter = ply
+					filter = function( pEntity )
+						if pEntity == ply || pEntity.__PROJECTILE__ then return end
+						return true
+					end
 				} ).Hit
 				cmd:RemoveKey( IN_DUCK )
 			else
@@ -948,7 +966,10 @@ function GameImprovements_StartCommand( ply, cmd )
 					start = v,
 					endpos = v + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 					mask = MASK_SOLID,
-					filter = ply
+					filter = function( pEntity )
+						if pEntity == ply || pEntity.__PROJECTILE__ then return end
+						return true
+					end
 				} ).Hit
 			end
 			if bMove then
@@ -973,12 +994,18 @@ function GameImprovements_StartCommand( ply, cmd )
 				start = v + ply:GetViewOffset(),
 				endpos = v + ply:GetViewOffset() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}, util_TraceLine {
 				start = v + ply:GetViewOffsetDucked(),
 				endpos = v + ply:GetViewOffsetDucked() + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}
 			if !trOriginalStand.Hit then cmd:AddKey( IN_DUCK ) end
 			if !trOriginalDuck.Hit then PlyTable.GAME_sCoverState = nil return end
@@ -987,14 +1014,20 @@ function GameImprovements_StartCommand( ply, cmd )
 				start = vView,
 				endpos = vView + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}
 			local vViewDucked = ply:GetPos() + ply:GetViewOffsetDucked()
 			local trDuck = util_TraceLine {
 				start = vViewDucked,
 				endpos = vViewDucked + dEyeFlat * ply:OBBMaxs()[ 1 ] * COVER_BOUND_SIZE,
 				mask = MASK_SOLID,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return end
+					return true
+				end
 			}
 			local bDuck, tr
 			if ply:IsOnGround() then

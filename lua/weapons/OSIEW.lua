@@ -3,7 +3,7 @@
 
 DEFINE_BASECLASS "BaseBulletWeapon"
 
-SWEP.Category = "Medium Machine Guns"
+SWEP.Category = "General-Purpose Machine Guns"
 SWEP.PrintName = "#OSIEW"
 SWEP.Purpose = "Overwatch Standard Issue Emplacement Weapon."
 

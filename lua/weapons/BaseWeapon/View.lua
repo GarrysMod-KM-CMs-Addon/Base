@@ -35,6 +35,8 @@ local vViewFinalRatherQuick, vViewFinalRatherQuickVel = Vector(), Vector()
 local vViewFinalRatherQuickAngle, vViewFinalRatherQuickAngleVel = Vector(), Vector()
 local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
 
+local Rand = math.Rand
+
 WEAPON_SWAY = Vector()
 
 local flLandTime, flJumpTime = 0, 0
@@ -268,14 +270,14 @@ end
 SWEP.flViewModelSprint = 0
 SWEP.flAimSpeed = 7
 
-local COVER_BLINDFIRE_LEFT_POSE = Vector( 0, -11, 3 )
-local COVER_BLINDFIRE_LEFT_POSE_ANGLE = Vector( 0, 0, -30 )
+local COVER_BLINDFIRE_LEFT_POSE = Vector( 0, -8, 2 )
+local COVER_BLINDFIRE_LEFT_POSE_ANGLE = Vector( 0, -2, -30 )
 
 local COVER_BLINDFIRE_RIGHT_POSE = Vector( 0, 3.5, 2 )
-local COVER_BLINDFIRE_RIGHT_POSE_ANGLE = Vector( 0, 0, 15 )
+local COVER_BLINDFIRE_RIGHT_POSE_ANGLE = Vector( 0, 2, 15 )
 
-local COVER_BLINDFIRE_UP_POSE = Vector( 0, 1.8, 2 )
-local COVER_BLINDFIRE_UP_POSE_ANGLE = Vector( 0, 0, -60 )
+local COVER_BLINDFIRE_UP_POSE = Vector( -4, 1.8, 2 )
+local COVER_BLINDFIRE_UP_POSE_ANGLE = Vector( 0, 0, -50 )
 
 local math_Approach = math.Approach
 local flLastCalcViewModelViewCall = SysTime()
@@ -339,6 +341,9 @@ local flAimingRecoilPitchTurn, flAimingRecoilPitchTurnLerped = 0, 0
 local flAimingRecoilYawTurn, flAimingRecoilYawTurnLerped = 0, 0
 
 local flHipRecoilBack, flHipRecoilBackLerped = 0, 0
+
+local flHipRecoilRollTurn, flHipRecoilRollTurnLerped = 0, 0
+
 local flHipRecoilPitchTurn, flHipRecoilPitchTurnLerped = 0, 0
 local flHipRecoilYawTurn, flHipRecoilYawTurnLerped = 0, 0
 
@@ -350,17 +355,18 @@ local tApplyRecoil = {
 		local flDelay = min( MyTable.Primary_flDelay, .2 )
 	
 		local flAimingFireMul = 1 - flAimMultiplier
-	
-		local flPitchTurn, flYawTurn = 0, 0
+
+		local flPitchTurn, flYawTurn, flRollTurn = 0, 0, 0
 	
 		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
 			flHipRecoilBack = 2 * flAimMultiplier
-			flHipRecoilPitchTurn = tAnimation[ 2 ] * 15 * flAimMultiplier
-			flHipRecoilYawTurn = tAnimation[ 3 ] * 30 * flAimMultiplier
+			flHipRecoilPitchTurn = tAnimation[ 2 ] * .75 * flAimMultiplier
+			flHipRecoilYawTurn = tAnimation[ 3 ] * .75 * flAimMultiplier
+			flHipRecoilRollTurn = Rand( -1, 1 ) * 3 * flAimMultiplier
 	
 			flAimingRecoilBack = 2.5 * flAimingFireMul
-			flAimingRecoilPitchTurn = tAnimation[ 2 ] * 2 * flAimingFireMul
-			flAimingRecoilYawTurn = tAnimation[ 3 ] * 3.5 * flAimingFireMul
+			flAimingRecoilPitchTurn = tAnimation[ 2 ] * .05 * flAimingFireMul
+			flAimingRecoilYawTurn = tAnimation[ 3 ] * .1 * flAimingFireMul
 		end
 	
 		MyTable.tShootAnimations = {}
@@ -374,16 +380,19 @@ local tApplyRecoil = {
 	
 		flHipRecoilYawTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
 		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+
+		flHipRecoilRollTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 	
 	
 		flAimingRecoilBack = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilBack, 0 )
 		flAimingRecoilBackLerped = Lerp( FRILerpRate( 2 / flDelay, flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
 	
 		flAimingRecoilPitchTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilPitchTurn, 0 )
-		flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
+		flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
 	
-		flAimingRecoilYawTurn = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
-		flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
+		flAimingRecoilYawTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
+		flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
 
 	
 		pos:Sub( ang:Forward() * ( flAimingRecoilBackLerped + flHipRecoilBackLerped ) )
@@ -395,8 +404,10 @@ local tApplyRecoil = {
 		flYawTurn = flYawTurn
 		+ flAimingRecoilYawTurnLerped
 		+ flHipRecoilYawTurnLerped
-	
-		return flPitchTurn, flYawTurn
+
+		flRollTurn = flRollTurn + flHipRecoilRollTurnLerped
+
+		return flPitchTurn, flYawTurn, flRollTurn
 	end,
 
 	[ WPN_SUBMACHINEGUN ] = function( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
@@ -404,16 +415,17 @@ local tApplyRecoil = {
 	
 		local flAimingFireMul = 1 - flAimMultiplier
 	
-		local flPitchTurn, flYawTurn = 0, 0
+		local flPitchTurn, flYawTurn, flRollTurn = 0, 0, 0
 	
 		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
 			flHipRecoilBack = 4 * flAimMultiplier
-			flHipRecoilPitchTurn = tAnimation[ 2 ] * 30 * flAimMultiplier
-			flHipRecoilYawTurn = tAnimation[ 3 ] * 60 * flAimMultiplier
+			flHipRecoilPitchTurn = tAnimation[ 2 ] * 1.25 * flAimMultiplier
+			flHipRecoilYawTurn = tAnimation[ 3 ] * 1.25 * flAimMultiplier
+			flHipRecoilRollTurn = Rand( -1, 1 ) * 3 * flAimMultiplier
 	
-			flAimingRecoilBack = 3 * flAimingFireMul
-			flAimingRecoilPitchTurn = tAnimation[ 2 ] * 2 * flAimingFireMul
-			flAimingRecoilYawTurn = tAnimation[ 3 ] * 3.5 * flAimingFireMul
+			flAimingRecoilBack = 2 * flAimingFireMul
+			flAimingRecoilPitchTurn = tAnimation[ 2 ] * .05 * flAimingFireMul
+			flAimingRecoilYawTurn = tAnimation[ 3 ] * .1 * flAimingFireMul
 		end
 	
 		MyTable.tShootAnimations = {}
@@ -427,6 +439,9 @@ local tApplyRecoil = {
 	
 		flHipRecoilYawTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
 		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+
+		flHipRecoilRollTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 	
 	
 		flAimingRecoilBack = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilBack, 0 )
@@ -435,7 +450,7 @@ local tApplyRecoil = {
 		flAimingRecoilPitchTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilPitchTurn, 0 )
 		flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
 	
-		flAimingRecoilYawTurn = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
+		flAimingRecoilYawTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
 		flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
 
 	
@@ -448,8 +463,10 @@ local tApplyRecoil = {
 		flYawTurn = flYawTurn
 		+ flAimingRecoilYawTurnLerped
 		+ flHipRecoilYawTurnLerped
+
+		flRollTurn = flRollTurn + flHipRecoilRollTurnLerped
 	
-		return flPitchTurn, flYawTurn
+		return flPitchTurn, flYawTurn, flRollTurn
 	end,
 
 	[ WPN_PISTOL ] = function( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
@@ -457,20 +474,23 @@ local tApplyRecoil = {
 	
 		local flAimingFireMul = 1 - flAimMultiplier
 	
-		local flPitchTurn, flYawTurn = 0, 0
+		local flPitchTurn, flYawTurn, flRollTurn = 0, 0, 0
 
 		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			flHipRecoilPitchTurn = tAnimation[ 2 ] * flAimMultiplier
-			flHipRecoilYawTurn = tAnimation[ 3 ] * flAimMultiplier
+			flHipRecoilYawTurn = tAnimation[ 3 ] * flAimMultiplier * 1.5
+			flHipRecoilRollTurn = Rand( -1, 1 ) * flAimMultiplier * 2
 
 			flRecoilPistolJump = flAimMultiplier
 			flAimingRecoilPistolJump = flAimingFireMul
 		end
-	
+
 		MyTable.tShootAnimations = {}
 
 		flHipRecoilYawTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
 		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+
+		flHipRecoilRollTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 
 		flRecoilPistolJump = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flRecoilPistolJump, 0 )
 		flRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flRecoilPistolJumpLerped, flRecoilPistolJump )
@@ -480,13 +500,16 @@ local tApplyRecoil = {
 		flAimingRecoilPistolJump = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilPistolJump, 0 )
 		flAimingRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPistolJumpLerped, flAimingRecoilPistolJump )
 
-		pos:Sub( ang:Forward() * flAimingRecoilPistolJumpLerped * 5 )
+		pos:Sub( ang:Forward() * ( flAimingRecoilPistolJumpLerped * 3 + flRecoilPistolJumpLerped * 4 ) )
+		pos:Add( ang:Up() * ( flAimingRecoilPistolJumpLerped * ( 1 / 3 ) + flRecoilPistolJumpLerped * .8 ) )
 
-		flPitchTurn = flPitchTurn + flAimingRecoilPistolJumpLerped * 50 + flRecoilPistolJumpLerped * 80
+		flPitchTurn = flPitchTurn + flAimingRecoilPistolJumpLerped * .8 + flRecoilPistolJumpLerped * .5
 	
-		flYawTurn = flYawTurn + flHipRecoilYawTurnLerped * 150
+		flYawTurn = flYawTurn + flHipRecoilYawTurnLerped
 
-		return flPitchTurn, flYawTurn
+		flRollTurn = flRollTurn + flHipRecoilRollTurnLerped
+
+		return flPitchTurn, flYawTurn, flRollTurn
 	end,
 
 	[ WPN_SHOTGUN ] = function( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
@@ -494,20 +517,23 @@ local tApplyRecoil = {
 	
 		local flAimingFireMul = 1 - flAimMultiplier
 	
-		local flPitchTurn, flYawTurn = 0, 0
+		local flPitchTurn, flYawTurn, flRollTurn = 0, 0, 0
 
 		for _, tAnimation in ipairs( MyTable.tShootAnimations ) do
-			flHipRecoilPitchTurn = tAnimation[ 2 ] * flAimMultiplier
-			flHipRecoilYawTurn = tAnimation[ 3 ] * flAimMultiplier
+			flHipRecoilYawTurn = tAnimation[ 3 ] * flAimMultiplier * .1
+			flHipRecoilRollTurn = Rand( -1, 1 ) * flAimMultiplier * .1
 
 			flRecoilPistolJump = flAimMultiplier
 			flAimingRecoilPistolJump = flAimingFireMul
 		end
-	
+
 		MyTable.tShootAnimations = {}
 
 		flHipRecoilYawTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
 		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+
+		flHipRecoilRollTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 
 		flRecoilPistolJump = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flRecoilPistolJump, 0 )
 		flRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flRecoilPistolJumpLerped, flRecoilPistolJump )
@@ -517,13 +543,16 @@ local tApplyRecoil = {
 		flAimingRecoilPistolJump = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flAimingRecoilPistolJump, 0 )
 		flAimingRecoilPistolJumpLerped = Lerp( FRILerpRate( 3 / flDelay, flFrameTime ), flAimingRecoilPistolJumpLerped, flAimingRecoilPistolJump )
 
-		pos:Sub( ang:Forward() * flAimingRecoilPistolJumpLerped * 5 )
+		pos:Sub( ang:Forward() * ( flAimingRecoilPistolJumpLerped * 3 + flRecoilPistolJumpLerped * 4 ) )
+		pos:Add( ang:Up() * ( flAimingRecoilPistolJumpLerped * .1 + flRecoilPistolJumpLerped * .8 ) )
 
-		flPitchTurn = flPitchTurn + flAimingRecoilPistolJumpLerped * 30 + flRecoilPistolJumpLerped * 40
+		flPitchTurn = flPitchTurn + flAimingRecoilPistolJumpLerped * .4 + flRecoilPistolJumpLerped * .5
 	
-		flYawTurn = flYawTurn + flHipRecoilYawTurnLerped * 100
+		flYawTurn = flYawTurn + flHipRecoilYawTurnLerped
 
-		return flPitchTurn, flYawTurn
+		flRollTurn = flRollTurn + flHipRecoilRollTurnLerped
+
+		return flPitchTurn, flYawTurn, flRollTurn
 	end
 }
 
@@ -535,7 +564,7 @@ end
 
 local vActualSway = Vector()
 
-local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flFrameTime )
+local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flRollTurn, flFrameTime )
 	local flSway = MyTable.flSway
 	local flSwayNeg = -flSway
 	local flSwayVector = flSway * ( MyTable.flSwayStabilizer * ( 1 - flMultiplier ) + .3 * flMultiplier )
@@ -553,11 +582,14 @@ local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTur
 	vActualSway[ 1 ] = Lerp( flLerpSpeed, vActualSway[ 1 ], WEAPON_SWAY[ 1 ] )
 	vActualSway[ 2 ] = Lerp( flLerpSpeed, vActualSway[ 2 ], WEAPON_SWAY[ 2 ] )
 
-	ang:RotateAroundAxis( ang:Right(), flSway * ( vActualSway[ 1 ] * flMultiplier + flPitchTurn ) / flSwayScale )
-	pos:Add( ( flSwayVectorNeg * ( vActualSway[ 1 ] * flMultiplier + flPitchTurn ) / MyTable.flSwayScale ) * ang:Up() )
+	ang:RotateAroundAxis( ang:Right(), flSway * ( vActualSway[ 1 ] * flMultiplier / flSwayScale + flPitchTurn ) )
+	pos:Add( flSwayVectorNeg * ( vActualSway[ 1 ] * flMultiplier / flSwayScale + flPitchTurn ) * ang:Up() )
 
-	ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( vActualSway[ 2 ] * flMultiplier + flYawTurn ) / flSwayScale )
-	pos:Add( ( flSwayVectorNeg * ( vActualSway[ 2 ] * flMultiplier + flYawTurn ) / MyTable.flSwayScale ) * ang:Right() )
+	ang:RotateAroundAxis( ang:Up(), flSwayNeg * ( vActualSway[ 2 ] * flMultiplier / flSwayScale + flYawTurn ) )
+	pos:Add( flSwayVectorNeg * ( vActualSway[ 2 ] * flMultiplier / flSwayScale + flYawTurn ) * ang:Right() )
+
+	ang:RotateAroundAxis( ang:Forward(), flSway * flRollTurn * MyTable.flAimMultiplier )
+	pos:Sub( ( flSwayVectorNeg * flRollTurn ) * .2 * MyTable.flAimMultiplier * ang:Up() )
 end
 
 local function CoverPose( MyTable, ply, vTarget, vTargetAngle )
@@ -632,7 +664,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	vTarget:Zero() // Cool ass C++ optimization
 	vTargetAngle:Zero() // Hire me rn VALVe I am SO cool with this basic piece of code
 
-	local flPitchTurn, flYawTurn = ApplyRecoil( MyTable, flFrameTime, MyTable.flAimMultiplier, ply, pos, ang )
+	local flPitchTurn, flYawTurn, flRollTurn = ApplyRecoil( MyTable, flFrameTime, MyTable.flAimMultiplier, ply, pos, ang )
 
 	vInstantTarget, vInstantTargetAngle = Vector(), Vector()
 	if IsValid( ply:GetNW2Entity "GAME_pVehicle" ) then vInstantTarget = vInstantTarget - Vector( 0, 0, 999999 ) end
@@ -824,7 +856,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 		vTargetAngle:Add( MyTable.vSprintAngle || WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE )
 	end
 
-	ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flFrameTime )
+	ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flRollTurn, flFrameTime )
 
 	vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
 	vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
