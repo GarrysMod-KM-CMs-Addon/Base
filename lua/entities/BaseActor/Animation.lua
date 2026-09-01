@@ -16,6 +16,8 @@ local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRat
 // You MUST call AnimationSystemHalt before this!
 
 function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
+	flSpeed = flSpeed || 1
+
 	local flLength = self:SetSequence( sSequence )
 
 	self:ResetSequenceInfo()
@@ -34,7 +36,6 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 
 	fFunction = fFunction || fEmpty
 
-
 	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
 	while CurTime() <= flEndTime do
 		if MyTable.sCallMeInRunBehaviour != sSequence then break end
@@ -48,6 +49,94 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 		local pLocomotion = CEntity_GetTable( self ).loco
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:Approach( self:GetPos(), 1 )
+
+		local tData = tSequenceEvents[ sSequence ]
+		if tData then
+			local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
+			for flTime, fFunction in pairs( tData ) do
+				// Normal progression, passing the event time
+				if flCycle > flTime && flLastCycle <= flTime ||
+				// Already passed the event time in the new loop
+				flCycle < flLastCycle && flCycle >= flTime ||
+				// The event was at the very end of the last loop
+				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self, MyTable, 1 ) end
+			end
+			tCurrentSequenceEvents[ sSequence ] = flCycle
+		end
+
+		if fFunction( self, flCycle ) then break end
+
+		coroutine_yield()
+	end
+
+	if !bDontReset then self:SetSequence( 0 ) end
+end
+
+function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction )
+	flSpeed = flSpeed || 1
+
+	local flLength = self:SetSequence( sSequence )
+
+	self:ResetSequenceInfo()
+	self:SetCycle( flSpeed > 0 && 0 || 1 )
+	self:SetPlaybackRate( flSpeed )
+
+	local MyTable = CEntity_GetTable( self )
+
+	MyTable.sCallMeInRunBehaviour = sSequence
+	MyTable.fCallMeInRunBehaviour = fEmpty
+
+	local flDuration = flLength / math_abs( flSpeed )
+	local flStartTime = CurTime()
+	local flEndTime = CurTime() + flDuration
+	local flInverseDuration = 1 / flDuration
+
+	local flPrevCycle = 0
+
+	fFunction = fFunction || fEmpty
+
+	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
+	while CurTime() <= flEndTime do
+		if MyTable.sCallMeInRunBehaviour != sSequence then break end
+
+		self:SetSequence( sSequence )
+		self:SetPlaybackRate( flSpeed )
+
+		local flCycle = ( CurTime() - flStartTime ) * flInverseDuration
+		self:SetCycle( flSpeed > 0 && flCycle || ( 1 - flCycle ) )
+
+		local _, v, a = self:GetSequenceMovement( self:GetSequence(), flPrevCycle, flCycle )
+
+		local aAngles = self:GetAngles()
+
+		v:Mul( self:GetModelScale() )
+		v:Rotate( aAngles )
+		v:Add( self:GetPos() )
+		a:Add( aAngles )
+
+		flPrevCycle = flCycle
+
+		local pLocomotion = CEntity_GetTable( self ).loco
+
+		pLocomotion:SetDesiredSpeed( 0 )
+		pLocomotion:Approach( self:GetPos(), 1 )
+
+		local tr = util.TraceHull {
+			start = v,
+			endpos = v,
+			mins = self:OBBMins(),
+			maxs = self:OBBMaxs(),
+			filter = self,
+			mask = MASK_SOLID
+		}
+
+		if tr.Hit then
+			self:ResetGravity( pLocomotion )
+		else
+			pLocomotion:SetGravity( 0 )
+			self:SetPos( v )
+			self:SetAngles( a )
+		end
 
 		local tData = tSequenceEvents[ sSequence ]
 		if tData then

@@ -15,6 +15,7 @@ include "Mind.lua"
 include "Pursuit.lua"
 include "Sentence.lua"
 include "Skill.lua"
+include "Defense.lua"
 
 local min = math.min
 local exp = math.exp
@@ -301,12 +302,15 @@ local IsValid = IsValid
 
 function ENT:DoPhysicsStuff( phys, MyTable ) end
 
+local sv_gravity = GetConVar "sv_gravity"
+
+function ENT:ResetGravity( pLocomotion ) ( pLocomotion || self.loco ):SetGravity( self.bPhysics && 0 || sv_gravity:GetFloat() ) end
+
 // Does the physics object take the lead, or the locomotion?
 // Do note that if the physics object takes the lead, the
 // locomotion will not work, but if the locomotion takes
-// the lead, the physics will, albeit only somewhat, work.
+// the lead, the physics will still somewhat work.
 ENT.bPhysics = false
-local sv_gravity = GetConVar "sv_gravity"
 function ENT:Think()
 	local MyTable = CEntity_GetTable( self )
 	local phys = CEntity_GetPhysicsObject( self )
@@ -319,7 +323,6 @@ function ENT:Think()
 			loco:SetStepHeight( 0 )
 			loco:SetJumpHeight( 0 )
 		else
-			MyTable.loco:SetGravity( sv_gravity:GetFloat() )
 			if IsValid( CEntity_GetParent( self ) ) then CEntity_PhysicsDestroy( self ) else
 				if CEntity_WaterLevel( self ) == 0 then
 					phys:SetPos( CEntity_GetPos( self ) )
@@ -329,7 +332,7 @@ function ENT:Think()
 				end
 			end
 		end
-	else MyTable.loco:SetGravity( sv_gravity:GetFloat() ) end
+	end
 	if IsValid( MyTable.GAME_pVehicle ) then
 		self:SetActiveWeapon( NULL )
 		if self:GetCollisionGroup() != COLLISION_GROUP_WORLD then self:SetCollisionGroup( COLLISION_GROUP_WORLD ) end
@@ -400,12 +403,10 @@ ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
 
 ENT.flAimStiffness = 64
-ENT.flAimDamping = -2
+ENT.flAimDamping = -8
 
 ENT.flBodyStiffness = 14
 ENT.flBodyDamping = -12
-
-ENT.flLastBodyYaw = 0
 
 ENT.m_flLastHandleTurningCall = 0
 
@@ -472,10 +473,6 @@ function ENT:HandleTurning( MyTable )
 
 	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )
 
-	local flBodyYaw = Angles[ 2 ]
-	CEntity_SetPoseParameter( self, sYaw, flYaw - math_AngleDifference( flBodyYaw, MyTable.flLastBodyYaw ) )
-	MyTable.flLastBodyYaw = flBodyYaw
-
 	MyTable.flYawVelocity = flYawVelocity
 
 	local pLocomotion = MyTable.loco
@@ -501,6 +498,8 @@ function ENT:RunBehaviour( MyTable )
 			local flNow = CurTime()
 			local flLast = MyTable.m_flLastRunBehaviourCall || flNow
 			local flFrameTime = flNow - flLast
+
+			if !MyTable.bPhysics then MyTable.loco:SetGravity( sv_gravity:GetFloat() ) end
 
 			MyTable.m_flLastRunBehaviourCall = flNow
 			MyTable.m_flFrameTime = flFrameTime

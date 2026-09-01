@@ -1,11 +1,5 @@
 // ENT.Schedule = nil
 
-// See Mind.lua for the new default implementation as of version 0.20.0
-// local ErrorNoHaltWithStack = ErrorNoHaltWithStack
-// function ENT:SelectSchedule( MyTable, Previous, PrevName, PrevReturn ) ErrorNoHaltWithStack "SelectSchedule Not Overriden" end
-
-// EDIT: 0.20.0?! Holy shit, this is OLD! (writing this as of developing commit 532)
-
 local rawget = rawget
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable

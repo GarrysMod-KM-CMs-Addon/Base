@@ -191,6 +191,8 @@ function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 		BullseyeTable.HAS_NOT_MELEE_ATTACK = true
 	end
 
+	CopyMeleeData( BullseyeTable, CEntity_GetTable( pTrueEnemy ) )
+
 	pBullseye:SetHealth( pTrueEnemy:Health() )
 	pBullseye:SetMaxHealth( pTrueEnemy:GetMaxHealth() )
 

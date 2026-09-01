@@ -146,6 +146,12 @@ function ENT:ComputeFlankPath( Path, pEnemy )
 	return Path, bStatus
 end
 
+// This is for your custom functions. Why is it called Internal, then?
+// Simple: this is a simple no argument function that plays regardless
+// of our jump context, and is primarily meant to be for large things
+// emitting sounds when they jump (for example, the IRVING)
+function ENT:PostJumpInternal() end
+
 // Tries to jump to vTarget
 function ENT:Jump( vTarget, bJumpGap, MyTable )
 	vTarget[ 3 ] = vTarget[ 3 ] + 20
@@ -182,6 +188,8 @@ function ENT:Jump( vTarget, bJumpGap, MyTable )
 	pLocomotion:SetJumpHeight( math_Clamp( math.abs( vTarget[ 3 ] - flZ ) * 2, 0, flJumpHeight ) )
 	pLocomotion:JumpAcrossGap( vTarget, self:GetForward() )
 	pLocomotion:SetJumpHeight( flJumpHeight )
+
+	self:PostJumpInternal()
 
 	self.m_flJumpStartTime = CurTime()
 	self.m_bJumping = true
@@ -311,6 +319,10 @@ end
 
 function ENT:HandleStuck() self.loco:ClearStuck() end
 
+// TODO: The funcs below should clamp the velocity so we can't move farther than flMaxJumpHeight * 3,
+// plus the IsInterceptJumpLegal functions should calculate the real intercept position instead of
+// just measuring the distance to the target itself.
+
 // Why is this called Legal and not Can? Simple.
 // Intercept jumps are cinematic, not physically correct,
 // 'cause fuck it the IRVING's ballin'.
@@ -372,6 +384,8 @@ function ENT:InterceptJump( pTarget, flDesiredJumpHeight, flMaxJumpHeight )
 	pLocomotion:SetJumpHeight( 1 )
 	pLocomotion:Jump()
 	pLocomotion:SetJumpHeight( flMaxJumpHeight )
+
+	self:PostJumpInternal()
 
 	pLocomotion:SetVelocity( vResult )
 
