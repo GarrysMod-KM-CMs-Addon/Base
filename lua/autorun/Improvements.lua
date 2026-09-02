@@ -275,7 +275,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	end
 
 	// Lovely crouch jumping fix! :D
-	if ply:IsOnGround() then
+	if ply:IsOnGround() && !cmd:KeyDown( IN_JUMP ) then
 		ply.GAME_bDuckLast = cmd:KeyDown( IN_DUCK )
 	else
 		if ply.GAME_bDuckLast then

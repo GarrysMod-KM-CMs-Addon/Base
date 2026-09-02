@@ -595,6 +595,40 @@ local cActorQueueCallsPerTick = CreateConVar(
 
 local ACTOR_QUEUE_CURRENT = nil
 
+ENTITY_BY_CLASS = ENTITY_BY_CLASS || {}
+
+local ENTITY_BY_CLASS = ENTITY_BY_CLASS
+
+ENTITY_BY_CLASS.light_environment = function( pEntity ) pEntity:Fire( IsValid( g_pCascadeShadowMapping ) && "turnoff" || "turnon" ) end
+
+ENTITY_BY_CLASS.prop_ragdoll = function( pEntity )
+	local flBlood = pEntity:GetNW2Float( "GAME_flBlood", 1 )
+	local f = pEntity:GetNW2Float( "GAME_flBleeding", 0 )
+
+	if flBlood > 0 && f > 0 && f > .0016 then
+		local flTimeLeft = pEntity.GAME_flBleedTimeLeft || 0
+		if flTimeLeft <= 0 then
+			local v = pEntity:GetPos()
+			v:Add( pEntity:OBBCenter() )
+			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * pEntity:BoundingRadius() * 4, pEntity ) end
+			pEntity.GAME_flBleedTimeLeft = 1
+		else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * Rand( .9, 1.1 ) * FrameTime() end
+	end
+
+	// We cannot regenerate blood if we're dead
+	//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
+	flBlood = math.Clamp( flBlood - f * FrameTime(), 0, 1 )
+	pEntity:SetNW2Float( "GAME_flBlood", flBlood )
+end
+
+ENTITY_BY_CLASS.env_tonemap_controller = function( pEntity )
+	if pEntity != g_pTonemapControllerInternal then
+		if IsValid( g_pTonemapControllerInternal ) then
+			pEntity:Remove()
+		else g_pTonemapControllerInternal = pEntity end
+	end
+end
+
 hook.Add( "Think", "GameImprovements", function()
 	if ACTOR_QUEUE_LAST && SysTime() > flNextActorQueueCall then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
@@ -606,9 +640,9 @@ hook.Add( "Think", "GameImprovements", function()
 			local pNode = ACTOR_QUEUE_CURRENT
 			local pNext = pNode.pNext
 			local coThread = pNode.coThread
-			local bError, bResult = coroutine_resume( coThread )
+			local bNoErrors, bResult = coroutine_resume( coThread )
 			if bResult == true || coroutine_status( coThread ) == "dead" then
-				if !bError then ErrorNoHaltWithStack( bResult ) end
+				if !bNoErrors then ErrorNoHaltWithStack( bResult ) end
 				if pNode.pNext == pNode then
 					ACTOR_QUEUE_LAST = nil
 					ACTOR_QUEUE_CURRENT = nil
@@ -629,50 +663,45 @@ hook.Add( "Think", "GameImprovements", function()
 		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 896 - engine_TickInterval(), 0, 1 )
 	else ACTOR_QUEUE_CURRENT = nil end
 
-	if IsValid( CascadeShadowMapping ) then
+	if IsValid( g_pCascadeShadowMapping ) then
 		if SUN_ANGLES then
-			CascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )
-			CascadeShadowMapping:SetYaw( SUN_ANGLES[ 2 ] )
-			CascadeShadowMapping:SetRoll( SUN_ANGLES[ 3 ] )
+			g_pCascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )
+			g_pCascadeShadowMapping:SetYaw( SUN_ANGLES[ 2 ] )
+			g_pCascadeShadowMapping:SetRoll( SUN_ANGLES[ 3 ] )
 			SUN_ANGLES = nil
 		end
+
 		if SUN_PITCH_OVERRIDE then
-			CascadeShadowMapping:SetPitch( SUN_PITCH_OVERRIDE )
+			g_pCascadeShadowMapping:SetPitch( SUN_PITCH_OVERRIDE )
 			SUN_PITCH_OVERRIDE = nil
 		end
+
 		if SUN_BRIGHTNESS then
-			CascadeShadowMapping:SetBrightness( SUN_BRIGHTNESS )
+			g_pCascadeShadowMapping:SetBrightness( SUN_BRIGHTNESS )
 			SUN_BRIGHTNESS = nil
 		end
+
 		if SUN_COLOR then
-			CascadeShadowMapping:SetLightColor( SUN_COLOR:ToVector() )
+			g_pCascadeShadowMapping:SetLightColor( SUN_COLOR:ToVector() )
 			SUN_COLOR = nil
 		end
+	end
+
+	local pTonemapController = g_pTonemapControllerInternal
+	if IsValid( pTonemapController ) then
+		pTonemapController:Fire( "SetTonemapRate", 1.5 )
+
+		pTonemapController:Fire( "SetBloomScale", 1 )
+
+		pTonemapController:Fire( "SetAutoExposureMin", .75 )
+		pTonemapController:Fire( "SetAutoExposureMax", 2 )
 	end
 
 	for _, pEntity in ents_Iterator() do
 		local sClass = CEntity_GetClass( pEntity )
 
-		if sClass == "light_environment" then pEntity:Fire( IsValid( CascadeShadowMapping ) && "turnoff" || "turnon" )
-		elseif sClass == "prop_ragdoll" then
-			local flBlood = pEntity:GetNW2Float( "GAME_flBlood", 1 )
-			local f = pEntity:GetNW2Float( "GAME_flBleeding", 0 )
-
-			if flBlood > 0 && f > 0 && f > .0016 then
-				local flTimeLeft = pEntity.GAME_flBleedTimeLeft || 0
-				if flTimeLeft <= 0 then
-					local v = pEntity:GetPos()
-					v:Add( pEntity:OBBCenter() )
-					for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * pEntity:BoundingRadius() * 4, pEntity ) end
-					pEntity.GAME_flBleedTimeLeft = 1
-				else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * Rand( .9, 1.1 ) * FrameTime() end
-			end
-
-			// We cannot regenerate blood if we're dead
-			//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
-			flBlood = math.Clamp( flBlood - f * FrameTime(), 0, 1 )
-			pEntity:SetNW2Float( "GAME_flBlood", flBlood )
-		end
+		local fFunction = ENTITY_BY_CLASS[ sClass ]
+		if fFunction then fFunction( pEntity ) end
 
 		local EntityTable = CEntity_GetTable( pEntity )
 
@@ -690,7 +719,7 @@ hook.Add( "Think", "GameImprovements", function()
 			end
 		end
 
-		if !DONT_CHANGE_DRAW_SHADOW[ sClass ] then pEntity:DrawShadow( !IsValid( CascadeShadowMapping ) ) end
+		if !DONT_CHANGE_DRAW_SHADOW[ sClass ] then pEntity:DrawShadow( !IsValid( g_pCascadeShadowMapping ) ) end
 
 		if EntityTable.GAME_Think then EntityTable.GAME_Think( pEntity, EntityTable ) end
 
@@ -1362,6 +1391,13 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 	local pEntity = Data.Entity
 	local pOwner = GetOwner( pEntity )
 
+	local bUnableToPinpointLocation = pEntity.SOUND_CONTEXT_bUnableToPinpointLocation
+
+	pEntity.SOUND_CONTEXT_sContext = nil
+	pEntity.SOUND_CONTEXT_bUnableToPinpointLocation = nil
+
+	local fCallOnAllHearers = pEntity.SOUND_CONTEXT_fCallOnAllHearers || function() end
+
 	local sSoundName = Data.SoundName
 	pEntity.GAME_sLastSoundPath = sSoundName
 
@@ -1378,9 +1414,14 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 		if pActor == pEntity || pActor == pOwner then continue end
 
 		local ActorTable = CEntity_GetTable( pActor )
-
-		if ActorTable.flHearingStrength > 0 && ActorTable.GetShootPos( pActor ):Distance( vPos ) <= ( flDistance * ActorTable.flHearingStrength ) then
-			ActorTable.OnHeardSomething( pActor, pOwner, Data )
+		if bUnableToPinpointLocation then
+			// Nothing, for now
+			// TODO: "What was that sound?", based on context
+		else
+			if ActorTable.flHearingStrength > 0 && ActorTable.GetShootPos( pActor ):Distance( vPos ) <= ( flDistance * ActorTable.flHearingStrength ) then
+				fCallOnAllHearers( pActor )
+				ActorTable.OnHeardSomething( pActor, pOwner, Data )
+			end
 		end
 	end
 
@@ -1404,6 +1445,8 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 		for _, ply in player_Iterator() do
 			if ply:EyePos():DistToSqr( vPos ) > flDistSqr then continue end
+
+			fCallOnAllHearers( ply )
 
 			table_insert( tCaptionPlayers, ply )
 

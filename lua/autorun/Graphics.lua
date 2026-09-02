@@ -31,6 +31,33 @@ if SERVER then
 	return
 end
 
+include "menu/problems/problems.lua"
+
+local SUPPORTS_HDR = true
+
+if render.GetDXLevel() < 80 then
+	ErrorNoHalt( language.GetPhrase "Problem_NoHighDynamicRange_DirectXLevel" .. " " .. language.GetPhrase "Problem_HighDynamicRangeRant" )
+
+	SUPPORTS_HDR = nil
+end
+
+local render_GetHDREnabled = render.GetHDREnabled
+local mat_hdr_level = GetConVar "mat_hdr_level"
+local function DynamicHighDynamicRangeCheck()
+	if !render_GetHDREnabled() then
+		if mat_hdr_level:GetInt() == 2 then // Fuck
+			if SUPPORTS_HDR then
+				ErrorNoHalt( language.GetPhrase "Problem_NoHighDynamicRange_NotSupported" .. " " .. language.GetPhrase "Problem_HighDynamicRangeRant" )
+				SUPPORTS_HDR = nil
+			end
+		else // Shit
+			ErrorNoHalt( language.GetPhrase "Problem_NoHighDynamicRange_Disabled" .. " " .. language.GetPhrase "Problem_HighDynamicRangeRant" )
+		end
+	end
+end
+
+DynamicHighDynamicRangeCheck()
+
 /*
 net.Start "EphemeralLight"
 	net.WriteFloat( 1 ) // Brightness
@@ -244,6 +271,8 @@ hook.Add( "Tick", "Graphics", function()
 	if !IsValid( self ) then return end
 
 	if RealTime() > flNextSendLuminosity then
+		DynamicHighDynamicRangeCheck() // Do this here for optimization reasons
+
 		flNextSendLuminosity = RealTime() + math_Rand( .1, .5 )
 
 		net_Start( "UpdateLuminosity", true )
@@ -350,8 +379,8 @@ hook.Add( "Tick", "Graphics", function()
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
 	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 1.33, 3 )
-	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1.33, 2 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 3 )
+	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 2 )
 	local f = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
 	flFogMaxDensity = Lerp( flTerror, f, math_max( f, .99 ) )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
@@ -400,7 +429,7 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		flBloomColorMultiply, 1, 1, 1
 	)
 
-	//DrawColorModify( tDrawColorModify )
+	DrawColorModify( tDrawColorModify )
 
 	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
