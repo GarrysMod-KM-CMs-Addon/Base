@@ -22,12 +22,12 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, sched, MyTable
 	a[ 3 ] = 0
 	pVehicle:Turn( a )
 	pVehicle:AimWeapon( vEnemy )
-	if !self.bHoldFire && pVehicle:DoesWeaponHit( vEnemy, pEnemy ) then pVehicle:FireWeapon() end
+	if !self.bHoldFire && pVehicle:DoesWeaponHit( vEnemy, pTrueEnemy ) then pVehicle:FireWeapon() end
 	local vShoot = self:GetShootPos()
 	local tr = util.TraceLine {
 		start = vShoot,
 		endpos = vEnemy,
-		filter = self:TraceFilter( pEnemy ),
+		filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ),
 		mask = MASK_SHOT_HULL
 	}
 	if tr.Hit && CurTime() > ( sched.flNextCheck || 0 ) then
@@ -43,9 +43,7 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, sched, MyTable
 						filter = self,
 						mask = MASK_SOLID
 					}
-					if trJustToBeSafe.Hit then
-						continue
-					end
+					if trJustToBeSafe.Hit then continue end
 					local tr = util.TraceLine {
 						start = vCenter,
 						endpos = vCenter + d * flDistance,

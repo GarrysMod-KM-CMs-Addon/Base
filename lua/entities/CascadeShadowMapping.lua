@@ -107,8 +107,8 @@ end
 function ENT:UpdateTransmitState() return TRANSMIT_ALWAYS end
 
 function ENT:Initialize()
-	if IsValid( CascadeShadowMapping ) then self:Remove() return end
-	CascadeShadowMapping = self
+	if IsValid( g_pCascadeShadowMapping ) then self:Remove() return end
+	g_pCascadeShadowMapping = self
 end
 
 function ENT:OnRemove()
@@ -116,12 +116,12 @@ function ENT:OnRemove()
 	SUN_PITCH_OVERRIDE = self:GetPitch()
 	SUN_BRIGHTNESS = self:GetBrightness()
 	SUN_COLOR = self:GetLightColor():ToColor()
-	CascadeShadowMapping = nil
+	g_pCascadeShadowMapping = nil
 end
 
 local cCascadeShadowMapping = CreateConVar( "bCascadeShadowMapping", "0", FCVAR_ARCHIVE + FCVAR_NEVER_AS_STRING, "Forces a CascadeShadowMapping to spawn" )
 hook.Add( "Think", "CascadeShadowMapping", function()
 	if cCascadeShadowMapping:GetBool() then
-		if !IsValid( CascadeShadowMapping ) then ents.Create( "CascadeShadowMapping" ):Spawn() end
-	elseif IsValid( CascadeShadowMapping ) then CascadeShadowMapping:Remove() end
+		if !IsValid( g_pCascadeShadowMapping ) then ents.Create( "CascadeShadowMapping" ):Spawn() end
+	elseif IsValid( g_pCascadeShadowMapping ) then g_pCascadeShadowMapping:Remove() end
 end )

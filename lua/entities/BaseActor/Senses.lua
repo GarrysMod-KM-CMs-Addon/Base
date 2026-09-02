@@ -79,17 +79,28 @@ ENT.tBullseyes = {} // EntityUniqueIdentifier -> { BaseActorBullseye, Source Ent
 local CEntity_Remove = CEntity.Remove
 function ENT:ReportPositionAsClear( vec, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
 	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
 	if tAllies then
 		for pAlly in pairs( tAllies ) do
-			for _, tData in pairs( CEntity_GetTable( pAlly ).tBullseyes ) do
+			local tBullseyes = CEntity_GetTable( pAlly ).tBullseyes
+			for Key, tData in pairs( tBullseyes ) do
 				local p = tData[ 1 ]
-				if !IsValid( p ) then continue end
+				if !IsValid( p ) then tBullseyes[ Key ] = nil continue end
 				if CEntity_GetPos( p ):DistToSqr( vec ) <= 65536/*256*/ then
 					CEntity_Remove( p )
+					tBullseyes[ Key ] = nil
 				end
 			end
 		end
+	end
+
+	if table.IsEmpty( MyTable.tBullseyes ) then
+		MyTable.PrepareAlert( self, MyTable )
+
+		MyTable.tAlertContext = { flEnemySeen = CurTime() }
+
+		MyTable.SetSchedule( self, "Alert", MyTable ).ALERT_PREPARED = true
 	end
 end
 
@@ -298,6 +309,21 @@ local ipairs = ipairs
 
 ENT.tLastVisionEntities = {}
 
+RegisterSchedule( "ShareAlertInstantly", { Execute = function( self, pSchedule, MyTable )
+	MyTable.EScheduleState = ACTOR_STATE_ALERT
+	local pAlly = pSchedule.pAlly
+	if !IsValid( pAlly ) then MyTable.SetSchedule( self, "Alert", MyTable ) return end
+	MyTable.ShareAlertContext( self, pAlly, MyTable )
+	MyTable.SetSchedule( self, "Alert", MyTable )
+end } )
+
+ENT.m_sDefaultShareAlertSchedule = "ShareAlertInstantly"
+
+function ENT:OnSeeUnalertedAlly( pAlly, MyTable )
+	if MyTable.Schedule && MyTable.Schedule.m_sName == MyTable.m_sDefaultShareAlertSchedule then return end
+	MyTable.SetSchedule( self, MyTable.m_sDefaultShareAlertSchedule, MyTable ).pAlly = pAlly
+end
+
 function ENT:Look( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
@@ -321,22 +347,32 @@ function ENT:Look( MyTable )
 	local bNotClear = !bClear
 	local bMelee, bRange
 	local tWeapons = {}
+	local bAlert = MyTable.EScheduleState == ACTOR_STATE_ALERT
 
 	for _, ent in ipairs( MyTable.tLastVisionEntities ) do
-		if !IsValid( ent ) then continue end
+		if !IsValid( ent ) || pEntity == self then continue end
 
 		if vEyePos:DistToSqr( CEntity_GetPos( ent ) + CEntity_OBBCenter( ent ) ) > flVisionDistSqr then continue end
 
 		local TheirTable = CEntity_GetTable( ent )
-		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( ent ) ) then
-			if TheirTable.__PROJECTILE__ ||
-			!TheirTable.__ACTOR_BULLSEYE__ &&
-			!MyTable.IsHateDisposition( self, ent ) ||
-			!MyTable.CanSee( self, ent ) then continue end
+		if !( bAlert && TheirTable.__ACTOR__ && MyTable.Disposition( self, ent ) == D_LI && ( TheirTable.EScheduleState || -1 ) < ACTOR_STATE_ALERT && !IsValid( TheirTable.Enemy ) ) then
+			if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( ent ) ) then
+				if TheirTable.__PROJECTILE__ ||
+				!TheirTable.__ACTOR_BULLSEYE__ &&
+				!MyTable.IsHateDisposition( self, ent ) ||
+				!MyTable.CanSee( self, ent ) then continue end
+			end
 		end
 
 		if tOldVisionStrength[ ent ] then
-			if TheirTable.__WEAPON__ && !IsValid( CEntity_GetOwner( ent ) ) then
+			if TheirTable.__ACTOR__ && MyTable.Disposition( self, ent ) == D_LI then
+				if bAlert && ( TheirTable.EScheduleState || -1 ) < ACTOR_STATE_ALERT && !IsValid( TheirTable.Enemy ) then
+					tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
+					if tVisionStrength[ ent ] >= 1 then
+						MyTable.OnSeeUnalertedAlly( self, ent, MyTable, TheirTable )
+					end
+				end
+			elseif TheirTable.__WEAPON__ && !IsValid( CEntity_GetOwner( ent ) ) then
 				if CurTime() > ( MyTable.tNextWeaponCheck[ ent ] || 0 ) && tOldVisionStrength[ ent ] >= 1 then // Omagad, a gun!!!
 					insert( tWeapons, { ent, ent:GetPos():DistToSqr( vEyePos ) } )
 					MyTable.tNextWeaponCheck[ ent ] = CurTime() + 2
@@ -435,14 +471,16 @@ function ENT:Look( MyTable )
 	local tLastVisionEntities = {}
 
 	for _, pEntity in ipairs( ents_FindInPVS( self ) ) do
-		if vEyePos:DistToSqr( CEntity_GetPos( pEntity ) + CEntity_OBBCenter( pEntity ) ) > flVisionDistSqr then continue end
+		if pEntity == self || vEyePos:DistToSqr( CEntity_GetPos( pEntity ) + CEntity_OBBCenter( pEntity ) ) > flVisionDistSqr then continue end
 
 		local TheirTable = CEntity_GetTable( pEntity )
-		if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( pEntity ) ) then
-			if TheirTable.__PROJECTILE__ ||
-			!TheirTable.__ACTOR_BULLSEYE__ &&
-			!MyTable.IsHateDisposition( self, pEntity ) ||
-			!MyTable.CanSee( self, pEntity ) then continue end
+		if !( bAlert && TheirTable.__ACTOR__ && MyTable.Disposition( self, pEntity ) == D_LI && ( TheirTable.EScheduleState || -1 ) < ACTOR_STATE_ALERT && !IsValid( TheirTable.Enemy ) ) then
+			if bNotClear || !TheirTable.__WEAPON__ || IsValid( CEntity_GetOwner( pEntity ) ) then
+				if TheirTable.__PROJECTILE__ ||
+				!TheirTable.__ACTOR_BULLSEYE__ &&
+				!MyTable.IsHateDisposition( self, pEntity ) ||
+				!MyTable.CanSee( self, pEntity ) then continue end
+			end
 		end
 
 		insert( tLastVisionEntities, pEntity )

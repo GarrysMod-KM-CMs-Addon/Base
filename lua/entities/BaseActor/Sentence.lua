@@ -43,5 +43,11 @@ function ENT:HandleSentences( MyTable )
 	MyTable.m_pNextSentence = pNext.pNext
 	pNext.pPrev.pNext = pNext.pNext
 	pNext.pNext.pPrev = pNext.pPrev
-	if pNext == pLast then  MyTable.m_pLastSentence = pNext.pPrev  end
+	if pNext == pLast then MyTable.m_pLastSentence = pNext.pPrev end
+end
+
+function ENT:PrioritySentence( tSentence, MyTable )
+	MyTable.m_pNextSentence = nil
+	MyTable.m_flSpeechTime = 0
+	MyTable.EmitSentence( self, tSentence, MyTable )
 end

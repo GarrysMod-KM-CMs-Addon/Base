@@ -55,15 +55,6 @@ function ENT:BehaveUpdate()
 	end
 end
 
-function ENT:TraceFilter( pEnemy )
-	local tFilter = { self, pEnemy }
-	local pVehicle = self.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
-	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
-	return tFilter
-end
-
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
 

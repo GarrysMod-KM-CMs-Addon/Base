@@ -155,11 +155,6 @@ function ENT:DLG_MaintainFire() end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
-// ENT.bMeleeChargeAgainstRange = true // Far Cry 3 Pirate Beheader
-// ENT.flMeleeChargeTauntMultiplier = 1
-
-function ENT:DLG_MeleeTaunt() end
-
 ENT.flMaintainFireTime = 0
 ENT.flMaintainFireTimeMin = 2
 ENT.flMaintainFireTimeMax = 6

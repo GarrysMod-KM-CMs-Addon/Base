@@ -14,7 +14,7 @@ RegisterSchedule( "VehicleAirMoveToLoS", { Execute = function( self, sched, MyTa
 	a[ 3 ] = 0
 	pVehicle:Turn( a )
 	pVehicle:AimWeapon( vEnemy )
-	if !self.bHoldFire && pVehicle:DoesWeaponHit( vEnemy, pEnemy ) then pVehicle:FireWeapon() end
+	if !self.bHoldFire && pVehicle:DoesWeaponHit( vEnemy, pTrueEnemy ) then pVehicle:FireWeapon() end
 	local vPoint = sched.vPoint
 	local tr = util.TraceLine {
 		start = vPoint,
