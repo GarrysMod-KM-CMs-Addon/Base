@@ -182,6 +182,7 @@ ENT.flWeaponPrimaryVolleyTimeNext = 0
 
 function ENT:WeaponPrimaryVolley( MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
 	if CurTime() > MyTable.flWeaponPrimaryVolleyTimeNext then
 		local t = CurTime() + math_Rand( MyTable.flWeaponPrimaryVolleyTimeMin, MyTable.flWeaponPrimaryVolleyTimeMax )
 		MyTable.flWeaponPrimaryVolleyTime = t
@@ -189,6 +190,7 @@ function ENT:WeaponPrimaryVolley( MyTable )
 			MyTable.flWeaponPrimaryVolleyBreakMin,
 			MyTable.flWeaponPrimaryVolleyBreakMax )
 	end
+
 	if CurTime() <= MyTable.flWeaponPrimaryVolleyTime && CurTime() > MyTable.flWeaponPrimaryVolleyNonAutomaticDelay && MyTable.WeaponPrimaryAttack( self, MyTable ) then
 		local wep = MyTable.Weapon
 		if IsValid( wep ) then
@@ -203,6 +205,39 @@ function ENT:WeaponPrimaryVolley( MyTable )
 	end
 end
 
+ENT.tWeaponPrimaryVolleyContainers = {}
+
+// For custom weapons, e.g. the GRAD's Kord
+function ENT:WeaponPrimaryVolleyContainer( sWeapon, bAutomatic, MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local tWeaponPrimaryVolleyContainers = MyTable.tWeaponPrimaryVolleyContainers
+	local tContainer = tWeaponPrimaryVolleyContainers[ sWeapon ]
+	if !tContainer then
+		tContainer = { flTime = 0, flNext = 0, flSemiDelay = 0 }
+		tWeaponPrimaryVolleyContainers[ sWeapon ] = tContainer
+	end
+
+	if CurTime() > tContainer.flNext then
+		local t = CurTime() + math_Rand( MyTable.flWeaponPrimaryVolleyTimeMin, MyTable.flWeaponPrimaryVolleyTimeMax )
+		tContainer.flTime = t
+		tContainer.flNext = t + math_Rand(
+			MyTable.flWeaponPrimaryVolleyBreakMin,
+			MyTable.flWeaponPrimaryVolleyBreakMax )
+	end
+
+	if CurTime() <= tContainer.flTime && CurTime() > tContainer.flSemiDelay then
+		if !bAutomatic then
+			tContainer.flSemiDelay = CurTime() +
+				math_Rand(
+					MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin,
+					MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax )
+		end
+
+		return true
+	end
+end
+
 function ENT:GetWeaponClipPrimary() local w = ( MyTable || CEntity_GetTable( self ) ).Weapon if IsValid( w ) then return w:Clip1() else return -1 end end
 function ENT:GetWeaponClipSizePrimary() local w = ( MyTable || CEntity_GetTable( self ) ).Weapon if IsValid( w ) then return w:GetMaxClip1() else return -1 end end
 
@@ -213,6 +248,9 @@ local math_max = math.max
 local math_min = math.min
 local math_AngleDifference = math.AngleDifference
 local isentity = isentity
+local rad = math.rad
+local cos = math.cos
+
 function ENT:CanAttackHelper( VecOrEnt, MyTable, vOverride, bNoStitching )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if MyTable.GetWeaponClipPrimary( self, MyTable ) <= 0 then return end
@@ -232,12 +270,48 @@ function ENT:CanAttackHelper( VecOrEnt, MyTable, vOverride, bNoStitching )
 			if ( vPoint - vShoot ):GetNormalized():Dot( vAim ) > flDot then return end
 		end
 	end
-	//	if vec then
-	//		local aCurrent, aAim = ( vec - vShoot ):Angle(), vAim:Angle()
-	//		if math_abs( math_AngleDifference( aCurrent.y, aAim.y ) ) > 1 || math_abs( math_AngleDifference( aCurrent.p, aAim.p ) ) > 1 then return end
-	//	end
-	if bNoStitching || !IsValid( pTarget ) then return ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > flDot end
-	if ( vTarget - vShoot ):GetNormalized():Dot( vAim ) > math_max( math_min( flDot, math.rad( MyTable.flTurnRate ) ), ( IsValid( pWeapon ) && pWeapon.flRecoil ) && math_min( math.cos( pWeapon.flRecoil * 2.5 ) ) || 0 ) then return true end
+	local flTargetDot = ( vTarget - vShoot ):GetNormalized():Dot( vAim )
+	if bNoStitching || !IsValid( pTarget ) then return flTargetDot > flDot end
+	if flTargetDot > math_max( math_min( flDot, cos( rad( MyTable.flTurnRate ) ) ), ( IsValid( pWeapon ) && pWeapon.flRecoil ) && math_min( math.cos( pWeapon.flRecoil * 2.5 ) ) || 0 ) then return true end
+end
+
+function ENT:CanAttackCustom( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vShoot, flSpreadX, flSpreadY, flStitch )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local pTarget, vTarget
+
+	if isentity( VecOrEnt ) then
+		pTarget = VecOrEnt
+		vTarget = vOverride || pTarget:GetPos() + pTarget:OBBCenter()
+	else vTarget = VecOrEnt end
+
+	if IsValid( pTrueEnemy ) then
+		if util.TraceLine( {
+			start = vShoot,
+			endpos = vTarget,
+			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ),
+			mask = MASK_SHOT_HULL
+		} ).Hit then return end
+	end
+
+	local pWeapon = MyTable.Weapon
+
+	local flDot = 1 - math_max( flSpreadX || .05, flSpreadY || .05 )
+
+	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	if tAllies then
+		for pAlly in pairs( tAllies ) do
+			if !IsValid( pAlly ) || self == pAlly then continue end
+			local vPoint = pAlly:NearestPoint( vShoot )
+			if ( vPoint - vShoot ):GetNormalized():Dot( vAim ) > flDot then return end
+		end
+	end
+
+	local flTargetDot = ( vTarget - vShoot ):GetNormalized():Dot( vAim )
+
+	if !IsValid( pTarget ) then return flTargetDot > flDot end
+
+	if flTargetDot > math_max( math_min( flDot, cos( rad( flStitch || 10 ) ) ) ) then return true end
 end
 
 function ENT:GatherShootingBounds()

@@ -85,10 +85,10 @@ RegisterSchedule( "AlertLookAround", { Execute = function( self, pSchedule, MyTa
 	if !bNoErrors then return true end
 end } )
 
+// TODO: As they walk, they should turn their head left and/or right
+// using tracelines to aforementioned directions
 local function GoToDestination( self, pSchedule, MyTable )
-	local vStart = self:GetPos()
-	local vGoal = pSchedule.pDestination:GetRandomPoint()
-	local vMove = vGoal
+	local vGoal = pSchedule.pDestination:GetCenter()
 
 	local pPath = pSchedule.pPath
 	if !pPath then
@@ -106,25 +106,12 @@ local function GoToDestination( self, pSchedule, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
 
-		if LevelOfDetail( pSchedule, "flNextPath" ) then MyTable.ComputePath( self, pPath, vMove ) end
+		if LevelOfDetail( pSchedule, "flNextPath" ) then MyTable.ComputePath( self, pPath, vGoal ) end
 
 		MyTable.MoveAlongPath( self, pPath, MyTable.flPowerWalkSpeed || MyTable.flWalkSpeed )
 
-		if self:GetPos():DistToSqr( vMove ) <= self:OBBMaxs()[ 1 ] * 1.25 then
-			if math.random( 8 ) == 1 then
-				if bDoubleChecked then
-					if bTripleChecked then
-						MyTable.SetSchedule( self, "AlertLookAround", MyTable )
-						return
-					else
-						vMove = vGoal
-						bTripleChecked = true
-					end
-				else
-					vMove = vStart
-					bDoubleChecked = true
-				end
-			else MyTable.SetSchedule( self, "AlertLookAround", MyTable ) return end
+		if self:GetPos():DistToSqr( vGoal ) <= self:OBBMaxs()[ 1 ] * 1.25 then
+			MyTable.SetSchedule( self, "AlertLookAround", MyTable )
 		end
 
 		local f = MyTable.flWalkSpeed * MyTable.m_flFrameTime
@@ -139,16 +126,6 @@ local function GoToDestination( self, pSchedule, MyTable )
 	end
 
 	MyTable.SetSchedule( self, "AlertLookAround", MyTable ).bShutTheHellUp = math.random( 3 ) == 1 && !pSchedule.bShutTheHellUp || !!pSchedule.bShutTheHellUp
-end
-
-local function ClearSearchTables( MyTable )
-	MyTable.tAlertSearchedAreas = {}
-
-	for pAlly in pairs( MyTable.GetAlliesByClass( nil, MyTable ) ) do
-		if pAlly.EScheduleState == ACTOR_STATE_ALERT then
-			pAlly.tAlertSearchedAreas = {}
-		end
-	end
 end
 
 local function TellAlliesTheAreaIsClear( MyTable, EIdentifier )
@@ -189,98 +166,70 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
 			local pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
-			local vHiddenOne, vHiddenTwo
+			local vHidden
 
 			while true do
-				if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
+				for i = 1, 8 do
+					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-				local pArea = pIterator()
-				if pArea == nil then
-					pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
-					ClearSearchTables( MyTable )
-					continue
+					local pArea = pIterator()
+					if pArea == nil then
+						MyTable.SetSchedule( self, "AlertLookAround", MyTable )
+						return true
+					end
+	
+					if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
+						coroutine.yield()
+						continue
+					end
+	
+					if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
+						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
+						coroutine.yield()
+						continue
+					end
+	
+					vHidden = pArea:GetCenter()
+					break
 				end
 
-				if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
-					coroutine.yield()
-					continue
-				end
-
-				if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
-					TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
-					coroutine.yield()
-					continue
-				end
-
-				vHiddenOne = pArea:GetCenter()
-				break
+				if vHidden then break end
 			end
 
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-			local pIterator = MyTable.SearchAreas( self, vHiddenOne, function() return math.random() end, MyTable )
-			vHiddenOne[ 3 ] = vHiddenOne[ 3 ] + MyTable.vHullMaxs[ 3 ] * .5
+			local pIterator = MyTable.SearchAreas( self, vHidden, function() return math.random() end, MyTable )
+			vHidden[ 3 ] = vHidden[ 3 ] + MyTable.vHullMaxs[ 3 ] * .5
 
 			while true do
-				if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
+				for i = 1, 8 do
+					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-				local pArea = pIterator()
-				if pArea == nil then
-					pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
-					ClearSearchTables( MyTable )
-					continue
-				end
-
-				if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
-					coroutine.yield()
-					continue
-				end
-
-				if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
+					local pArea = pIterator()
+					if pArea == nil then
+						MyTable.SetSchedule( self, "AlertLookAround", MyTable )
+						return true
+					end
+	
+					if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
+						coroutine.yield()
+						continue
+					end
+	
+					if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
+						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
+						coroutine.yield()
+						continue
+					elseif pArea:IsVisible( vHidden ) then
+						coroutine.yield()
+						continue
+					end
+	
 					TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
-					coroutine.yield()
-					continue
+					pSchedule.pDestination = pArea
+	
+					return true
 				end
-
-				if pArea:IsVisible( vHiddenOne ) then
-					coroutine.yield()
-					continue
-				end
-
-				vHiddenTwo = pArea:GetCenter()
-				break
-			end
-
-			local pIterator = MyTable.SearchAreas( self, vHiddenTwo, function() return math.random() end, MyTable )
-			vHiddenTwo[ 3 ] = vHiddenTwo[ 3 ] + MyTable.vHullMaxs[ 3 ] * .5
-
-			while true do
-				if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
-
-				local pArea = pIterator()
-				if pArea == nil then
-					pIterator = MyTable.SearchAreas( self, vHidden, function() return math.random() end, MyTable )
-					ClearSearchTables( MyTable )
-					continue
-				end
-
-				if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
-					coroutine.yield()
-					continue
-				end
-
-				if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
-					TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
-					coroutine.yield()
-					continue
-				elseif pArea:IsVisible( vHiddenOne ) || pArea:IsVisible( vHiddenTwo ) then
-					coroutine.yield()
-					continue
-				end
-
-				pSchedule.pDestination = pArea
-
-				return true
 			end
 		end )
 
