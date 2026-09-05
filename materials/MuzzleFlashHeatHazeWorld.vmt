@@ -1,0 +1,15 @@
+"Refract" {
+	"$model" "1"
+	"$normalmap" "sprites/heatwave"
+
+	"$refractamount" ".005"
+	"$bluramount" ".05"
+
+	"$nofb" "0" // For correct refraction
+
+	"$vertexalpha" "1" // Lets GLua fuck around with alpha
+	"$vertexcolor" "1" // Reads vertex color
+
+	"$translucent" "1"
+	"$forcerefract" "1"
+}
