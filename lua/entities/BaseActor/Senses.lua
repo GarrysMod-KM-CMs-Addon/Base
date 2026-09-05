@@ -212,23 +212,7 @@ end
 
 local pairs = pairs
 
-function ENT:OnOtherKilled( ent )
-	local n, t = EntityUniqueIdentifier( ent ), self:GetAlliesByClass()
-	if t then
-		for ally in pairs( t ) do
-			if !ally.__ACTOR__ then continue end
-			local b = ally.tBullseyes
-			if b then
-				local t = b[ n ]
-				if t then
-					local v = t[ 1 ]
-					if IsValid( v ) then v:Remove() end
-					b[ n ] = nil
-				end
-			end
-		end
-	end
-end
+function ENT:OnOtherKilled( ent ) self:ReportPositionAsClear( ent:GetPos() + ent:OBBCenter() ) end
 
 ENT.flMaxVisionRange = 131072
 
