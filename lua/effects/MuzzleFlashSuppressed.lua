@@ -79,7 +79,6 @@ function EFFECT:Init( pData )
 	local flLifeTime = 1 / pData:GetMagnitude()
 	local flScale = 1 - .75 * math_random() * math_random()
 
-	// Fun fact: realistic muzzleflashes are so big that they cover half the screen
 	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then flScale = flScale * .5 end
 
 	local aAngles = pData:GetAngles()
@@ -93,7 +92,7 @@ function EFFECT:Init( pData )
 		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
 		local flResultingSpreadUp = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
 		local vAdd = ( vForward + flResultingSpreadRight * vRight + flResultingSpreadUp * vUp ):GetNormalized()
-		pPart:SetVelocity( vVelocity + vAdd / math_max( .1, abs( flResultingSpreadRight ) + abs( flResultingSpreadUp ) ) * flScale / flLifeTime * 4 )
+		pPart:SetVelocity( vAdd / math_max( .1, abs( flResultingSpreadRight ) + abs( flResultingSpreadUp ) ) * flScale / flLifeTime * 4 )
 		pPart.m_vOffset = Vector()
 
 		pPart:SetDieTime( flLifeTime * math_Rand( 4, 8 ) )

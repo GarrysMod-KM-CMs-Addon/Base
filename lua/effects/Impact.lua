@@ -60,6 +60,8 @@ local EFFECTS = {
 	[ util.GetSurfaceIndex "metal" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
 
+		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
+
 		EmitSound( "BulletImpactMetal", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
 		local pLight = EphemeralLight()
@@ -140,6 +142,8 @@ local EFFECTS = {
 
 	[ util.GetSurfaceIndex "concrete" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
+
+		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
 
 		EmitSound( "BulletImpactConcrete", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
@@ -253,6 +257,8 @@ local EFFECTS = {
 
 	[ util.GetSurfaceIndex "brick" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
+
+		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
 
 		EmitSound( "BulletImpactConcrete", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
@@ -479,6 +485,12 @@ local EFFECTS = {
 		end
 		pEmitter:Finish()
 	end,
+
+	[ util.GetSurfaceIndex "dirt" ] = function( self, pData )
+		FX_EjectaCloud( pData:GetOrigin(), 300, pData:GetSurfaceProp() )
+	end,
+
+	[ util.GetSurfaceIndex "flesh" ] = function( self, pData ) end,
 
 	// Now used as default
 	//	[ util.GetSurfaceIndex "plaster" ] = function( self, pData )
