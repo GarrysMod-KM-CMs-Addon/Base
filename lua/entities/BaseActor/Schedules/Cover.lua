@@ -225,7 +225,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 	local tCover = MyTable.tCover
 
 	if !tCover || !vCover then
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return
 	end
 
@@ -331,14 +331,14 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 		if self:GetPos():DistToSqr( vCover ) > ( f * f ) then
 			MyTable.vCover = nil
 			MyTable.tCover = nil
-			MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+			MyTable.SetSchedule( self, "TakeCover", MyTable )
 			return
 		end
 
 		if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) then
 			MyTable.vCover = nil
 			MyTable.tCover = nil
-			MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+			MyTable.SetSchedule( self, "TakeCover", MyTable )
 			return
 		end
 	end
