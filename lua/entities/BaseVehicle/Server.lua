@@ -9,10 +9,9 @@ function ENT:Turn( vDirection ) end
 function ENT:TurnLeft() end
 function ENT:TurnRight() end
 function ENT:AimWeapon( vAim ) end // Global vector, NOT direction
-function ENT:CanWeapon() end // Can we have a weapon?
-function ENT:HasWeapon() end // Do we have a weapon?
-function ENT:DoesWeaponHit( v ) end
-function ENT:FireWeapon() end
+function ENT:MachineGunWeaponCanHit( v, pClear ) end
+function ENT:MachineGunWeaponHits( v, pClear ) end
+function ENT:FireMachineGunWeapon() end
 function ENT:GetShootPos() end
 function ENT:GetForwardDirection() return self:GetForward() end
 

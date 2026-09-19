@@ -1,106 +1,101 @@
 local util_TraceLine = util.TraceLine
 
-RegisterSchedule( "TakeCoverMove", { Execute = function( self, sched, MyTable )
-	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
-	local tEnemies = sched.tEnemies || self.tEnemies
-	if table.IsEmpty( tEnemies ) then return {} end
-	if MyTable.GAME_flSuppression > self:Health() * 4 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
-	local enemy = sched.Enemy
-	if !IsValid( enemy ) then enemy = self.Enemy if !IsValid( enemy ) then return false end end
-	local enemy, trueenemy = self:SetupEnemy( enemy )
-	local c = self:GetWeaponClipPrimary()
-	if c != -1 && c <= 0 then self:WeaponReload() end
-	if !self.tCover then return false end
-	local vec = self.vCover
-	local tAllies = self:GetAlliesByClass()
-	if tAllies then
-		local f = self:BoundingRadius() * .25
-		f = f * f
-		for ally in pairs( tAllies ) do
-			if self == ally then continue end
-			if ally.vActualCover && ally.vActualCover:DistToSqr( vec ) <= f || ally.vActualTarget && ally.vActualTarget:DistToSqr( vec ) <= f then self.vCover = nil self.pCover = nil self:SetSchedule "TakeCover" return end
+local function fAttemptReturn( self, pSchedule, MyTable )
+	local pPath = pSchedule.pPath
+	if !pPath then
+		MyTable.vCover = pSchedule.vCoverFrom
+		MyTable.tCover = pSchedule.pCoverFrom
+		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		return true
+	end
+
+	// If we haven't ran THAT far yet, try to return back to the cover we came from.
+	// Note this is NOT .5, as we still need to do a 180,
+	// which can be very bad for someone getting, you know, shot at
+
+	pPath:MoveCursorToClosestPosition( self:GetPos() )
+
+	if pPath:GetCursorPosition() <= pPath:GetLength() * 1 / 3 then
+		MyTable.vCover = pSchedule.vCoverFrom
+		MyTable.tCover = pSchedule.pCoverFrom
+		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		return true
+	end
+end
+
+RegisterSchedule( "TakeCoverMove", {
+	SomeoneIsPeekingMe = function( self, pSchedule, MyTable ) fAttemptReturn( self, pSchedule, MyTable ) end,
+
+	Execute = function( self, pSchedule, MyTable )
+		MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
+
+		local tEnemies = pSchedule.tEnemies || MyTable.tEnemies
+		if table.IsEmpty( tEnemies ) then return true end
+
+		if MyTable.GAME_flSuppression > self:Health() * 4 then MyTable.SetSchedule( self, "TakeCover", MyTable ) return end
+
+		local pEnemy = MyTable.Enemy
+		if !IsValid( pEnemy ) then return true end
+
+		local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
+
+		local iClip = MyTable.GetWeaponClipPrimary( self, MyTable )
+		if iClip != -1 && iClip <= 0 then MyTable.WeaponReload( self, MyTable ) end
+
+		local vCover = MyTable.vCover
+		local tCover = MyTable.tCover
+
+		if !tCover || !vCover then
+			MyTable.SetSchedule( self, "TakeCover", MyTable )
+			return
 		end
-	end
-	local vMaxs = self.vHullDuckMaxs || self.vHullMaxs
-	local v = vec + Vector( 0, 0, MyTable.vHullDuckMaxs[ 3 ] )
-	local pEnemyPath = MyTable.pEnemyPath
-	if !pEnemyPath then
-		pEnemyPath = Path "Follow"
-		MyTable.pEnemyPath = pEnemyPath
-	end
-	MyTable.ComputePath( self, pEnemyPath, enemy:GetPos(), MyTable )
-	pEnemyPath:MoveCursorToClosestPosition( vec )
-	local d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() )
-	pEnemyPath:MoveCursor( self:BoundingRadius() * MyTable.flPathStabilizer )
-	d = pEnemyPath:GetPositionOnPath( pEnemyPath:GetCursorPosition() ) - d
-	d[ 3 ] = 0
-	d:Normalize()
-	if d:IsZero() then d = enemy:GetPos() - vec d[ 3 ] = 0 d:Normalize() end
-	if !util_TraceLine( {
-		start = v,
-		endpos = v + d * MyTable.vHullMaxs[ 1 ] * COVER_BOUND_SIZE,
-		mask = MASK_SHOT_HULL,
-		filter = self
-	} ).Hit then
-		MyTable.vCover = nil
-		MyTable.tCover = nil
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
-		return
-	end
-	if !sched.Path then sched.Path = Path "Follow" end
-	self:ComputePath( sched.Path, self.vCover )
-	local v = self:GetPos() + Vector( 0, 0, vMaxs[ 3 ] )
-	if util_TraceLine( {
-		start = v,
-		endpos = v + d * vMaxs[ 1 ] * COVER_BOUND_SIZE,
-		filter = self
-	} ).Hit then
-		local f = self.flPathTolerance
-		if self:GetPos():DistToSqr( vec ) <= ( f * f ) then return true end
-	end
-	local tNearestEnemies = {}
-	for ent in pairs( tEnemies ) do if IsValid( ent ) then table.insert( tNearestEnemies, { ent, ent:GetPos():DistToSqr( self:GetPos() ) } ) end end
-	table.SortByMember( tNearestEnemies, 2, true )
-	local tAllies, pEnemy = self:GetAlliesByClass()
-	for _, d in ipairs( tNearestEnemies ) do
-		local ent = d[ 1 ]
-		local v = ent:GetPos() + ent:OBBCenter()
-		local tr = util.TraceLine {
-			start = self:GetShootPos(),
-			endpos = v,
-			mask = MASK_SHOT_HULL,
-			filter = { self, ent }
-		}
-		if !tr.Hit || tr.Fraction > self.flSuppressionTraceFraction && tr.HitPos:Distance( v ) <= RANGE_ATTACK_SUPPRESSION_BOUND_SIZE then
-			local b = true
-			if ent.GAME_tSuppressionAmount then
-				local flThreshold, flSoFar = ent:Health() * .1, 0
-				for other, am in pairs( ent.GAME_tSuppressionAmount ) do
-					if other == self || self:Disposition( other ) != D_LI || CurTime() <= ( other.flWeaponReloadTime || 0 ) then continue end
-					flSoFar = flSoFar + am
-					if flSoFar > flThreshold then continue end
-				end
-				if flSoFar > flThreshold then continue end
-			else b = true end
-			if b then
-				MyTable.CenterTarget( self, ent:GetPos() + ent:OBBCenter(), MyTable )
-				pEnemy = ent
-				if self:CanAttackHelper( ent ) then self:RangeAttack() end
-				break
+
+		local pPath = pSchedule.pPath
+		if !pPath then
+			pPath = Path "Follow"
+			pSchedule.pPath = pPath
+		end
+
+		MyTable.ComputePath( self, pPath, MyTable.vCover )
+
+		if !MyTable.CanExpose( self, MyTable ) && fAttemptReturn( self, pSchedule, MyTable ) then return end
+
+		local pEnemyPath = MyTable.pEnemyPath
+		if !pEnemyPath then
+			pEnemyPath = Path "Follow"
+			MyTable.pEnemyPath = pEnemyPath
+		end
+
+		if LevelOfDetail( pSchedule, "flNextEnemyPath" ) then
+			MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy )
+		end
+
+		local flTolerance = self:OBBMaxs()[ 1 ] * ( 1 / 3 )
+		if self:GetPos():DistToSqr( vCover ) <= flTolerance * flTolerance then return true end
+
+		if LevelOfDetail( pSchedule, "flNextCheck" ) then
+			if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) then
+				// Pray to God that it's closer and we aren't dying for no reason lmao
+				MyTable.vCover = pSchedule.vCoverFrom
+				MyTable.tCover = pSchedule.pCoverFrom
+				MyTable.SetSchedule( self, "TakeCover", MyTable )
+				return
 			end
 		end
-	end
-	if IsValid( pEnemy ) then
-		if self.bCoverDuck == true then sched.bCoverStand = nil
-		elseif sched.bCoverStand == nil then sched.bCoverStand = math.random( 2 ) == 1 end
-		self:MoveAlongPath( sched.Path, self.flJogSpeed, 1 )
-	else
-		local goal = sched.Path:GetCurrentGoal()
-		if goal then
-			self.vaAimTargetBody = ( goal.pos - self:GetPos() ):Angle()
-			self.vaAimTargetPose = self.vaAimTargetBody
-			self:ModifyMoveAimVector( self.vaAimTargetBody, self.flTopSpeed, 1 )
+
+		local vSuppress = MyTable.ManageOnTheMoveSuppressionTarget( self, pSchedule, pEnemy, pTrueEnemy, pEnemyPath )
+		if vSuppress then
+			MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, 1 )
+			MyTable.CenterTarget( self, v, MyTable )
+			if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
+		else
+			local pGoal = pPath:GetCurrentGoal()
+			if pGoal then
+				MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			end
+
+			MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] / 3 )
 		end
-		self:MoveAlongPathToCover( sched.Path )
 	end
-end } )
+} )

@@ -80,7 +80,7 @@ local CEntity_Remove = CEntity.Remove
 function ENT:ReportPositionAsClear( vec, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
-	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	local tAllies = MyTable:GetAlliesByClass()
 	if tAllies then
 		for pAlly in pairs( tAllies ) do
 			local tBullseyes = CEntity_GetTable( pAlly ).tBullseyes
@@ -109,7 +109,7 @@ function ENT:UpdateEnemyMemory( pEnemy, vPos, aAngles ) self:SetupBullseye( pEne
 // For external senses, e.g. the GRAD's tactile laser
 function ENT:UpdateMemory( pObject )
 	if self:Disposition( pObject ) == D_HT then
-		self:SetupBullseye( pObject )
+		self:SetupBullseye( pObject, nil, nil, nil, true )
 		return "Hostile"
 	end
 end
@@ -118,13 +118,16 @@ local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 local math_min = math.min
 
-function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
+ACTOR_FREE_KNOWLEDGE = 2
+
+function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable, bSense, bSenseRecursion )
 	MyTable = MyTable || CEntity_GetTable( self )
 
 	if !vPos then
 		vPos = pEnemy:GetPos()
 		vPos:Add( pEnemy:OBBCenter() )
 	end
+
 	if !aAngles then aAngles = ( pEnemy.GetAimVector && pEnemy:GetAimVector() || pEnemy:GetForward() ):Angle() end
 
 	local pTrueEnemy = pEnemy
@@ -155,13 +158,11 @@ function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 	BullseyeTable.__VELOCITY__ = GetVelocity( pEnemy )
 
 	// TODO: We should use a trace here. Why don't we? Simple. I'm lazy and don't wanna write it right now.
-	//	if !enemy.__ACTOR_BULLSEYE__ then
-	//		local v = GetVelocity( enemy )
-	//		local l = v:Length()
-	//		v:Normalize()
-	//		v:Mul( math_min( l, self:BoundingRadius() ) )
-	//		vPos:Add( v )
-	//	end
+	//	local v = GetVelocity( pTrueEnemy )
+	//	local l = v:Length()
+	//	v:Normalize()
+	//	v:Mul( math_min( l, self:BoundingRadius() ) )
+	//	vPos:Add( v )
 
 	pBullseye:SetPos( vPos )
 	pBullseye:SetAngles( aAngles )
@@ -206,6 +207,18 @@ function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable )
 
 	pBullseye:SetHealth( pTrueEnemy:Health() )
 	pBullseye:SetMaxHealth( pTrueEnemy:GetMaxHealth() )
+
+	if bSense && !bSenseRecursion then
+		local flFreeKnowledgeEndTime = CurTime() + ACTOR_FREE_KNOWLEDGE
+
+		local sTimer = "ActorFreeKnowledge_" .. EntityUniqueIdentifier( self ) .. "_" .. EntityUniqueIdentifier( pTrueEnemy )
+
+		timer.Create( sTimer, 0, 0, function()
+			if !IsValid( self ) || !IsValid( pTrueEnemy ) || CurTime() > flFreeKnowledgeEndTime then timer.Remove( sTimer, flFreeKnowledgeEndTime ) return end
+
+			MyTable.SetupBullseye( self, pTrueEnemy, nil, nil, MyTable, true, true )
+		end )
+	end
 
 	return pBullseye
 end
@@ -557,12 +570,11 @@ function ENT:OnHeardSomething( Other, Data )
 				MyTable.DLG_Startle( self, Other, MyTable )
 			end )
 			MyTable.flLastEnemy = CurTime()
-			MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
+			MyTable.SetupBullseye( self, Other, nil, nil, MyTable, true )
 		else
 			MyTable.flLastEnemy = CurTime()
-			MyTable.SetupBullseye( self, Other, nil, nil, MyTable )
-			// Important
-			MyTable.bHoldFire = nil
+			MyTable.SetupBullseye( self, Other, nil, nil, MyTable, true )
+			MyTable.bHoldFire = nil // Important!
 		end
 	end
 end

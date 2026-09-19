@@ -8,7 +8,9 @@ local util_TraceHull = util.TraceHull
 
 local math_max = math.max
 
-function ENT:FreeMovementCoverHealth( MyTable ) return self:Health() * ( math_max( MyTable.flCombatState, 0 ) * 2 + 2 ) end
+function ENT:FreeMovementCoverHealth( MyTable )
+	return MyTable.GetMySuppressionHealth( self, MyTable ) * ( 1 + math_max( MyTable.flCombatState, 0 ) )
+end
 
 // This is intentionally short.
 // You are almost never going to FreeMovement to suppress!
@@ -623,7 +625,7 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 		local vDuckOffset = Vector( 0, 0, MyTable.GetViewOffsetDucked( self, MyTable ) )
 		local vStandOffset = Vector( 0, 0, MyTable.GetViewOffset( self, MyTable ) )
 
-		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		local tAllies = MyTable:GetAlliesByClass()
 
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 
@@ -721,7 +723,7 @@ RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTab
 			//		mask = MASK_SHOT_HULL,
 			//		filter = tFilter
 			//	} ).Hit then
-				local tAllies, b = MyTable.GetAlliesByClass( self, MyTable ) || {}, true
+				local tAllies, b = MyTable:GetAlliesByClass() || {}, true
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vPoint ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vPoint ) <= flTakenDistSqr then b = nil break end
@@ -794,7 +796,7 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 		local vDuckOffset = Vector( 0, 0, MyTable.GetViewOffsetDucked( self, MyTable ) )
 		local vStandOffset = Vector( 0, 0, MyTable.GetViewOffset( self, MyTable ) )
 
-		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		local tAllies = MyTable:GetAlliesByClass()
 
 		local vMaxs = MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 
@@ -890,7 +892,7 @@ RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyT
 			//		mask = MASK_SHOT_HULL,
 			//		filter = tFilter
 			//	} ).Hit then
-				local tAllies, b = MyTable.GetAlliesByClass( self, MyTable ) || {}, true
+				local tAllies, b = MyTable:GetAlliesByClass() || {}, true
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vPoint ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vPoint ) <= flTakenDistSqr then b = nil break end

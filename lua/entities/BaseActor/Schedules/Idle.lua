@@ -32,7 +32,7 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 	end
 
 	if !sched.vGoal then
-		local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+		local tAllies = MyTable:GetAlliesByClass()
 
 		if !MyTable.bCantUse then
 			local flAlarm, vPos, pAlarm = math.huge, MyTable.GetShootPos( self ), NULL // NULL because ent.pAlarm ( if nil ) == pAlarm ( which is nil )

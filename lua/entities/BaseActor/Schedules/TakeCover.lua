@@ -8,17 +8,13 @@ local insert = table.insert
 local DistanceToLine = util.DistanceToLine
 local SortByMember = table.SortByMember
 
-RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
+RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 	MyTable.WEAPON_STANCE = MyTable.Moving_WEAPON_STANCE
 
-	local tEnemies = MyTable.tEnemies
-	if table.IsEmpty( tEnemies ) then return true end
+	local pEnemy = MyTable.Enemy
+	if !IsValid( pEnemy ) then return true end
 
-	local pEnemy = sched.Enemy
-
-	if !IsValid( pEnemy ) then pEnemy = MyTable.Enemy if !IsValid( pEnemy ) then return true end end
-
-	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
+	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
 
 	MyTable.bWantsCover = true
 
@@ -32,9 +28,11 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 	local tCover = MyTable.tCover
 
 	if !vCover || !tCover then
+		// TODO: This should use new yielded pathing.
+		// That, and also, the entire suppression thing here should be replaced with MangaeOnTheMoveSuppressionTarget
 		MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy )
 
-		if sched.bBeganSearching then
+		if pSchedule.bBeganSearching then
 			MyTable.WEAPON_STANCE = WEAPON_STANCE_AIMING
 
 			local iClip = MyTable.GetWeaponClipPrimary( self, MyTable )
@@ -72,11 +70,11 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 				end
 
 				if !trStandToCenter.Hit && !trDuckToCenter.Hit then
-					if CurTime() > ( sched.flNextDuck || 0 ) then
-						sched.bDuck = math.random() <= .5
-						sched.flNextDuck = CurTime() + math.Rand( 0, 8 )
+					if CurTime() > ( pSchedule.flNextDuck || 0 ) then
+						pSchedule.bDuck = math.random() <= .5
+						pSchedule.flNextDuck = CurTime() + math.Rand( 0, 8 )
 					end
-					MyTable.Stand( self, sched.bDuck && 0 || 1, MyTable )
+					MyTable.Stand( self, pSchedule.bDuck && 0 || 1, MyTable )
 				else MyTable.Stand( self, trStandToCenter.Hit && 0 || 1, MyTable ) end
 
 				MyTable.vaAimTargetBody = vEnemyCenter
@@ -105,7 +103,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 			else
 				local flDistSqr = math.max( 512, math.Remap( vPos:Distance( pEnemy:GetPos() ), 0, 4096, 512, 1024 ) ) / MyTable.flCombatState
 				flDistSqr = flDistSqr * flDistSqr
-				local vSuppressionPoint = sched.vSuppressionPoint
+				local vSuppressionPoint = pSchedule.vSuppressionPoint
 				// TODO: Validate the point, duh xD
 				if vSuppressionPoint then
 					local trStandToCenter, trDuckToCenter = util_TraceLine {
@@ -120,14 +118,14 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 						filter = tFilter
 					}
 
-					if trStandToCenter.Hit && trDuckToCenter.Hit then sched.vSuppressionPoint = nil return end
+					if trStandToCenter.Hit && trDuckToCenter.Hit then pSchedule.vSuppressionPoint = nil return end
 
 					if !trStandToCenter.Hit && !trDuckToCenter.Hit then
-						if CurTime() > ( sched.flNextDuck || 0 ) then
-							sched.bDuck = math.random() <= .5
-							sched.flNextDuck = CurTime() + math.Rand( 0, 8 )
+						if CurTime() > ( pSchedule.flNextDuck || 0 ) then
+							pSchedule.bDuck = math.random() <= .5
+							pSchedule.flNextDuck = CurTime() + math.Rand( 0, 8 )
 						end
-						MyTable.Stand( self, sched.bDuck && 0 || 1, MyTable )
+						MyTable.Stand( self, pSchedule.bDuck && 0 || 1, MyTable )
 					else MyTable.Stand( self, trStandToCenter.Hit && 0 || 1, MyTable ) end
 
 					MyTable.vaAimTargetBody = vSuppressionPoint
@@ -139,7 +137,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 					if MyTable.CanAttackHelper( self, vSuppressionPoint, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
 				else
 					// Suppression searches are relatively light, especially when we use SHORT angles
-					if !LevelOfDetail( sched, "flNextSuppressionSearch", .1 ) then return end
+					if !LevelOfDetail( pSchedule, "flNextSuppressionSearch", .1 ) then return end
 					vPos = vPos + Vector( 0, 0, MyTable.vHullMaxs[ 3 ] )
 					pEnemyPath:MoveCursorToClosestPosition( self:GetPos() )
 					local iCursor = pEnemyPath:GetCursorPosition()
@@ -165,7 +163,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 								mask = MASK_SHOT_HULL,
 								filter = tFilter
 							} ).Hit || vPoint:DistToSqr( vTarget ) > flDistSqr then continue end
-							sched.vSuppressionPoint = vPoint
+							pSchedule.vSuppressionPoint = vPoint
 							return
 						end
 					end
@@ -174,10 +172,10 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 			return
 		end
 
-		sched.bBeganSearching = true
+		pSchedule.bBeganSearching = true
 
 		ACTOR_QUEUE( function()
-			if !IsValid( self ) || MyTable.Schedule != sched || !IsValid( pEnemy ) then return true end
+			if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
 
 			MyTable.vCover = nil
 
@@ -185,10 +183,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 
 			local pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
 
-			local vEnemy = pEnemy:GetPos()
-			local vTarget = vEnemy + pEnemy:OBBCenter()
-
-			local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+			local tAllies = MyTable:GetAlliesByClass()
 
 			local flTakenDistSqr = self:OBBMaxs()[ 1 ]
 			flTakenDistSqr = flTakenDistSqr * flTakenDistSqr
@@ -203,7 +198,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 			local tCovers
 
 			while true do
-				if !IsValid( self ) || MyTable.Schedule != sched || !IsValid( pEnemy ) then return true end
+				if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
 
 				local pArea = pIterator()
 				if pArea == nil then
@@ -221,7 +216,11 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 				SortByMember( tCovers, 2, true )
 
 				for _, tData in ipairs( tCovers ) do
+					if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
+
 					local tCover = tData[ 1 ]
+
+					if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
 
 					local vStart, vEnd = tCover.vStart, tCover.vEnd
 
@@ -238,8 +237,6 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 
 					local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
 					vOff = vOff * vMaxs[ 1 ] * 1.2
-
-					if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
 
 					for flCurrent = flStart, flEnd, flStep do
 						local vCover = vStart + vDirection * flCurrent + vOff
@@ -267,7 +264,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 						MyTable.vCover = vCover
 						MyTable.tCover = tCover
 
-						sched.bBeganSearching = nil
+						pSchedule.bBeganSearching = nil
 
 						return true
 					end
@@ -281,43 +278,29 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 
 	MyTable.vActualCover = vCover
 
-	local pPath = sched.pPath
-	if !pPath then pPath = Path "Follow" sched.pPath = pPath end
+	local pPath = pSchedule.pPath
+	if !pPath then pPath = Path "Follow" pSchedule.pPath = pPath end
 
-	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputePath( self, pPath, vCover ) end
+	if LevelOfDetail( pSchedule, "flNextPath" ) then MyTable.ComputePath( self, pPath, vCover ) end
 
-	if LevelOfDetail( sched, "flNextEnemyPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy ) end
+	if LevelOfDetail( pSchedule, "flNextEnemyPath" ) then MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy ) end
 
-	if LevelOfDetail( sched, "flNextCheck" ) && ( !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) ) then
+	if LevelOfDetail( pSchedule, "flNextCheck" ) && ( !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) ) then
 		MyTable.vCover = nil
 		MyTable.tCover = nil
 		// Purge the schedule instead of trying to search with this one again
-		MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return
 	end
 
-	local f = MyTable.flPathTolerance
+	local f = self:OBBMaxs()[ 1 ] * ( 1 / 3 )
 	if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
 
 	local iClip = MyTable.GetWeaponClipPrimary( self, MyTable )
 	if iClip != -1 && iClip <= 0 then MyTable.WeaponReload( self, MyTable ) end
 
-	// TODO: This is a gross oversimplification.
-	// Actors should be able to suppress too.
-	// Original old suppression code is bullshit.
-	// But I am too lazy to rewrite it.
-	// So yeah. Shit.
-	local bShoot
-
-	local v = pEnemy:GetPos() + pEnemy:OBBCenter()
-	local tr = util.TraceLine {
-		start = MyTable.GetShootPos( self, MyTable ),
-		endpos = v,
-		mask = MASK_SHOT_HULL,
-		filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
-	}
-
-	if !tr.Hit then
+	local vSuppress = MyTable.ManageOnTheMoveSuppressionTarget( self, pSchedule, pEnemy, pTrueEnemy, pEnemyPath )
+	if vSuppress then
 		MyTable.MoveAlongPath( self, pPath, MyTable.flJogSpeed, 1 )
 		MyTable.CenterTarget( self, v, MyTable )
 		if MyTable.CanAttackHelper( self, pEnemy, MyTable ) then MyTable.RangeAttack( self, MyTable ) end
@@ -326,8 +309,8 @@ RegisterSchedule( "TakeCover", { Execute = function( self, sched, MyTable )
 		if pGoal then
 			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
-			if bEnemyValid then MyTable.ModifyMoveAimVector( self, MyTable.vaAimTargetBody, MyTable.flTopSpeed, 1 ) end
 		end
-		MyTable.MoveAlongPath( self, pPath, bEnemyValid && MyTable.flTopSpeed || MyTable.flJogSpeed, 1 )
+
+		MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] / 3 )
 	end
 end } )

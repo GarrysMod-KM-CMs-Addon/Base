@@ -10,11 +10,11 @@ local __ACTOR_TABLE_BY_CLASS_LOCAL__ = __ACTOR_TABLE_BY_CLASS__
 function ENT.GetActorTableByClass() return __ACTOR_TABLE_BY_CLASS_LOCAL__ end
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 local CLASS_NONE = CLASS_NONE
-function ENT:GetAlliesByClass( x )
-	x = x || CEntity_GetTable( self )
-	x = x.iClass || x.iDefaultClass
-	if x == CLASS_NONE then return end
-	return __ACTOR_TABLE_BY_CLASS_LOCAL__[ x ]
+function ENT:GetAlliesByClass()
+	self = self || CEntity_GetTable( self )
+	self = self.iClass || self.iDefaultClass
+	if self == CLASS_NONE then return end
+	return __ACTOR_TABLE_BY_CLASS_LOCAL__[ self ]
 end
 
 local isentity, IsValid = isentity, IsValid

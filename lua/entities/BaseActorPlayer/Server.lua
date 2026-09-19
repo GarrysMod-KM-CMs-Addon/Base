@@ -6,14 +6,9 @@ ENT.vHullMaxs = HULL_HUMAN_MAXS
 ENT.vHullDuckMins = HULL_HUMAN_DUCK_MINS
 ENT.vHullDuckMaxs = HULL_HUMAN_DUCK_MAXS
 
-ENT.bSimpleDuck = true
-ENT.bCanMove = true
-ENT.bCanMoveShoot = true
-ENT.bCanDuck = true
-ENT.bCanDuckShoot = true
-ENT.bCanDuckMove = true
-ENT.bCanDuckMoveShoot = true
 ENT.bCanSlide = true
+
+ENT.bIsFootSoldier = true
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
@@ -42,22 +37,22 @@ function ENT:PreScheduleResetVariables( MyTable )
 	self:SetNW2Int( "WEAPON_STANCE", MyTable.WEAPON_STANCE || WEAPON_STANCE_DEFAULT )
 end
 
-function ENT:MoveAlongPathToCover( pPath, tFilter )
+function ENT:MoveAlongPathToCover( pPath, tFilter, flTolerance )
+	local flDistSqr = flTolerance && ( flTolerance * 3 ) || self.flPathTolerance
+	if pPath:GetEnd():DistToSqr( self:GetPos() ) <= flDistSqr * flDistSqr then
+		self:MoveAlongPath( pPath, self.flWalkSpeed, 1, tFilter, nil, flTolerance )
+		return
+	end
+
 	local pLocomotion = self.loco
 	if self:GetNW2Bool "CTRL_bSliding" then
-		// HACK: Rapidly decelerate
-		local f = self.flPathTolerance
-		f = f * f
-		if self:GetPos():DistToSqr( pPath:GetEnd() ) <= ( self:GetSlideLength() * .2 ) then
-			f = self:GetNW2Float( "CTRL_flSlideSpeed", 0 )
-			self:SetNW2Float( "CTRL_flSlideSpeed", f - ( self.GAME_flSlideSpeed || self:GetRunSpeed() * 1.5 ) * ( self.CTRL_flSlideSpeedDecay || .8 ) * FrameTime() )
-		end
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:SetAcceleration( 0 )
 		pLocomotion:SetDeceleration( 0 )
 		self:GrountMovement( pPath, self.flTopSpeed, tFilter )
 		return
 	end
+
 	if self.bCanSlide && QuickSlide_Can( self ) then
 		pPath:MoveCursorToClosestPosition( self:GetPos() )
 		local f, n = math.abs( pPath:GetLength() - pPath:GetCursorPosition() ), self:GetSlideLength()
@@ -70,6 +65,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter )
 			return
 		end
 	end
+
 	self:MoveAlongPath( pPath, self.flTopSpeed, 1, tFilter, true )
 end
 
@@ -87,7 +83,8 @@ end
 
 function ENT:TranslateActivity( n ) return hook.Run( "TranslateActivity", self, n ) end
 
-local sv_gravity = GetConVar "sv_gravity"
+ENT.flJumpHeight = HUMAN_JUMP_HEIGHT
+
 function ENT:Behaviour()
 	local act, seq = hook.Run( "CalcMainActivity", self, self.loco:GetVelocity() )
 	if !self.CalcIdeal then self.CalcIdeal = -1 end
@@ -98,8 +95,7 @@ function ENT:Behaviour()
 	hook.Run( "UpdateAnimation", self, self.loco:GetVelocity(), self:GetSequenceGroundSpeed( self.CalcSeqOverride ) )
 	self:PromoteSequence( self.CalcSeqOverride, self:GetPlaybackRate() )
 	self:AnimationSystemTick()
-	self.loco:SetGravity( sv_gravity:GetFloat() )
-	self.loco:SetJumpHeight( self:CalcJumpHeight() )
+	self.loco:SetJumpHeight( self.flJumpHeight )
 	if self.CalcIdeal == ACT_MP_CROUCH_IDLE || self.CalcIdeal == ACT_MP_CROUCHWALK then
 		local hm, hn, cm, cn = self.vHullDuckMins, self.vHullDuckMaxs, self:GetCollisionBounds()
 		if hm != cm || hn != cn then
@@ -143,21 +139,29 @@ function ENT:OnKilled( dmg )
 	self:BecomeRagdoll( dmg )
 end
 
-local sv_friction, sv_gravity = GetConVar "sv_friction", GetConVar "sv_gravity"
 function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, flToleranceOverride )
 	if flHeight == nil then flHeight = 1 end
-	if !bAllowSliding then self:SetNW2Bool( "CTRL_bSliding", false ) end
+
+	if !bAllowSliding then
+		self:SetNW2Bool( "CTRL_bSliding", false )
+		self:SetNW2Float( "CTRL_flSlideSpeed", 0 )
+	end
+
 	self:SetCrouchTarget( flHeight )
+
 	if flHeight > .5 then flSpeed = math.min( self.flTopSpeed, flSpeed )
 	else flSpeed = math.min( self.flWalkSpeed, flSpeed ) end
+
 	if self.flTopSpeed > self.flJogSpeed && flSpeed >= self.flTopSpeed then
 		self:SetNW2Bool( "CTRL_bSprinting", true )
 	else self:SetNW2Bool "CTRL_bSprinting" end
+
 	local pLocomotion = self.loco
 	pLocomotion:SetDesiredSpeed( flSpeed )
 	local f = flSpeed * ACCELERATION_NORMAL
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
+
 	self:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 end
 

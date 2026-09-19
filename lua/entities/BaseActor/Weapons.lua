@@ -192,16 +192,7 @@ function ENT:WeaponPrimaryVolley( MyTable )
 	end
 
 	if CurTime() <= MyTable.flWeaponPrimaryVolleyTime && CurTime() > MyTable.flWeaponPrimaryVolleyNonAutomaticDelay && MyTable.WeaponPrimaryAttack( self, MyTable ) then
-		local wep = MyTable.Weapon
-		if IsValid( wep ) then
-			local p = wep.Primary
-			if p && !p.Automatic then
-				MyTable.flWeaponPrimaryVolleyNonAutomaticDelay = CurTime() +
-					math_Rand(
-						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin,
-						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax )
-			end
-		end
+		MyTable.m_bFiringIsAllowed = true
 	end
 end
 
@@ -262,7 +253,7 @@ function ENT:CanAttackHelper( VecOrEnt, MyTable, vOverride, bNoStitching )
 	local vShoot, vAim = MyTable.GetShootPos( self, MyTable ), MyTable.GetAimVector( self, MyTable )
 	local pWeapon = MyTable.Weapon
 	local flDot = IsValid( pWeapon ) && ( 1 - math_max( pWeapon.Primary_flSpreadX || .05, pWeapon.Primary_flSpreadY || .05 ) ) || .95
-	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	local tAllies = MyTable:GetAlliesByClass()
 	if tAllies then
 		for pAlly in pairs( tAllies ) do
 			if !IsValid( pAlly ) || self == pAlly then continue end
@@ -298,7 +289,7 @@ function ENT:CanAttackCustom( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vS
 
 	local flDot = 1 - math_max( flSpreadX || .05, flSpreadY || .05 )
 
-	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	local tAllies = MyTable:GetAlliesByClass()
 	if tAllies then
 		for pAlly in pairs( tAllies ) do
 			if !IsValid( pAlly ) || self == pAlly then continue end

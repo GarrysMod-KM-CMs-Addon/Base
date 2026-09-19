@@ -3,11 +3,12 @@ ENT.tAlertContext = {}
 
 function ENT:PrepareAlert( MyTable )
 	MyTable.tAlertSearchedAreas = {}
-	MyTable.tAlertContext = {}
+	//	MyTable.tAlertContext = {}
 end
 
 function ENT:ShareAlertContext( pOther, MyTable )
-	pOther.tAlertSearchedAreas = {}
+	// Nuh uh!
+	//	pOther.tAlertSearchedAreas = {}
 	pOther.tAlertContext = table.Copy( MyTable.tAlertContext )
 	pOther:SetSchedule( "Alert" ).ALERT_PREPARED = true
 end
@@ -24,6 +25,11 @@ RegisterSchedule( "Alert", { Execute = function( self, pSchedule, MyTable )
 end } )
 
 local function LookAround( self, pSchedule, MyTable )
+	if math.random( 3 ) == 1 then
+		MyTable.SetSchedule( self, "AlertFindDestination", MyTable ).bShutTheHellUp = math.random( 3 ) == 1 && !pSchedule.bShutTheHellUp || !!pSchedule.bShutTheHellUp
+		return
+	end
+
 	local flTime = CurTime() + math.random() * math.random() * 8
 
 	while CurTime() <= flTime do
@@ -34,6 +40,11 @@ local function LookAround( self, pSchedule, MyTable )
 		end
 
 		coroutine.yield()
+	end
+
+	if math.random( 3 ) == 1 then
+		MyTable.SetSchedule( self, "AlertFindDestination", MyTable ).bShutTheHellUp = math.random( 3 ) == 1 && !pSchedule.bShutTheHellUp || !!pSchedule.bShutTheHellUp
+		return
 	end
 
 	MyTable.vaAimTargetBody = ( -pSchedule.aInitialFacing:Forward() ):Angle()
@@ -110,7 +121,8 @@ local function GoToDestination( self, pSchedule, MyTable )
 
 		MyTable.MoveAlongPath( self, pPath, MyTable.flPowerWalkSpeed || MyTable.flWalkSpeed )
 
-		if self:GetPos():DistToSqr( vGoal ) <= self:OBBMaxs()[ 1 ] * 1.25 then
+		local f = self:OBBMaxs()[ 1 ]
+		if self:GetPos():DistToSqr( vGoal ) <= f * f then
 			MyTable.SetSchedule( self, "AlertLookAround", MyTable )
 		end
 
@@ -129,12 +141,11 @@ local function GoToDestination( self, pSchedule, MyTable )
 end
 
 local function TellAlliesTheAreaIsClear( MyTable, EIdentifier )
-	MyTable.tAlertSearchedAreas[ EIdentifier ] = true
+	MyTable.tAlertSearchedAreas[ EIdentifier ] = CurTime()
 
-	// Yes, fun fact, it can work like this, without self!
-	for pAlly in pairs( MyTable.GetAlliesByClass( nil, MyTable ) ) do
+	for pAlly in pairs( MyTable:GetAlliesByClass() ) do
 		if pAlly.EScheduleState == ACTOR_STATE_ALERT then
-			pAlly.tAlertSearchedAreas[ EIdentifier ] = true
+			pAlly.tAlertSearchedAreas[ EIdentifier ] = CurTime()
 		end
 	end
 end
@@ -165,7 +176,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 		ACTOR_QUEUE( function()
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-			local pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
+			local pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
 			local vHidden
 
 			while true do
@@ -183,7 +194,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 						continue
 					end
 	
-					if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
+					if pArea:IsPartiallyVisible( self:GetPos() + self:OBBCenter(), self ) then
 						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
 						coroutine.yield()
 						continue
@@ -198,7 +209,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-			local pIterator = MyTable.SearchAreas( self, vHidden, function() return math.random() end, MyTable )
+			local pIterator = MyTable.SearchAreas( self, vHidden, nil, MyTable )
 			vHidden[ 3 ] = vHidden[ 3 ] + MyTable.vHullMaxs[ 3 ] * .5
 
 			while true do
@@ -216,11 +227,11 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 						continue
 					end
 	
-					if pArea:IsVisible( self:GetPos() + self:OBBCenter() ) then
+					if pArea:IsPartiallyVisible( self:GetPos() + self:OBBCenter(), self ) then
 						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
 						coroutine.yield()
 						continue
-					elseif pArea:IsVisible( vHidden ) then
+					elseif pArea:IsPartiallyVisible( vHidden, self ) then
 						coroutine.yield()
 						continue
 					end

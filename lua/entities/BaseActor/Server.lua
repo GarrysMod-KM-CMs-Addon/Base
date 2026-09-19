@@ -33,20 +33,54 @@ local CEntity_GetTable = CEntity.GetTable
 local coroutine_create = coroutine.create
 local coroutine_status = coroutine.status
 local coroutine_resume = coroutine.resume
+
+ENT.flLastCall = 0
+function ENT:RapidFireCode( MyTable )
+	if MyTable.m_bFiringIsAllowed then
+		MyTable.WeaponPrimaryAttack( self, MyTable )
+
+		local pWeapon = MyTable.Weapon
+		if IsValid( pWeapon ) then
+			local pPrimary = pWeapon.Primary
+			if pPrimary && !pPrimary.Automatic then
+				MyTable.flWeaponPrimaryVolleyNonAutomaticDelay = CurTime() +
+					math.Rand(
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMin,
+						MyTable.flWeaponPrimaryVolleyNonAutomaticDelayMax )
+			end
+		end
+	end
+end
+
 function ENT:BehaveStart()
 	local MyTable = CEntity_GetTable( self )
+
 	MyTable.RunBehaviour( self, MyTable )
+
+	local sTimer = EntityUniqueIdentifier( self )
+	timer.Create( sTimer, 0, 0, function()
+		if !IsValid( self ) then timer.Remove( sTimer ) return end
+
+		MyTable.RapidFireCode( self, MyTable )
+	end )
 end
+
 function ENT:BehaveUpdate()
 	local MyTable = CEntity_GetTable( self )
+
+	MyTable.RapidFireCode( self, MyTable )
+
 	local coBehaveThread = MyTable.m_coBehaveThread
+
 	if !coBehaveThread then return end
+
 	if coroutine_status( coBehaveThread ) == "dead" then
 		MyTable.m_coBehaveThread = nil
 		MyTable.RunBehaviour( self, MyTable )
 		ErrorNoHalt( self, "MY COROUTINE DIED!\n" )
 		return
 	end
+
 	local bOk, sMessage = coroutine_resume( coBehaveThread, MyTable )
 	if bOk == false then
 		MyTable.m_coBehaveThread = nil
@@ -54,6 +88,8 @@ function ENT:BehaveUpdate()
 		MyTable.RunBehaviour( self, MyTable )
 	end
 end
+
+function ENT:GAME_Think( MyTable ) MyTable.RapidFireCode( self, MyTable ) end
 
 ENT.vHullMins = HULL_HUMAN_MINS
 ENT.vHullMaxs = HULL_HUMAN_MAXS
@@ -179,7 +215,7 @@ function ENT:ClearThreatToClass( MyTable )
 end
 
 function ENT:MoveAlongPath() end
-function ENT:MoveAlongPathToCover( pPath, tFilter ) self:MoveAlongPath( pPath, math.abs( pPath:GetLength() - pPath:GetCursorPosition() ) <= self.flWalkSpeed && self.flWalkSpeed || self.flTopSpeed, 1, tFilter ) end
+function ENT:MoveAlongPathToCover( pPath, tFilter, flTolerance ) self:MoveAlongPath( pPath, math.abs( pPath:GetLength() - pPath:GetCursorPosition() ) <= ( flTolerance || self.flPathTolerance ) && self.flWalkSpeed || self.flTopSpeed, 1, tFilter ) end
 
 ENT.bHoldFire = true
 
@@ -237,14 +273,14 @@ function ENT:OnTakeDamage( dDamage )
 	MyTable.ELastHitGroup = HITGROUP_GENERIC
 	MyTable.BloodSplatter( self, dDamage )
 	MyTable.bHoldFire = nil
-	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) + dDamage:GetDamage() / ( self:GetMaxHealth() * 112 ) )
+	self:SetNW2Float( "GAME_flBleeding", math.min( self.GAME_flMaxBleedingPerHit || MAX_BLEEDING_PER_HIT, self:GetNW2Float( "GAME_flBleeding", 0 ) + dDamage:GetDamage() / ( self:GetMaxHealth() * 112 ) ) )
 end
 
 ENT.flHearingStrength = 1
 
-ENT.iState = NPC_STATE_NONE
-function ENT:GetNPCState() return self.iState end
-function ENT:SetNPCState( i ) self.iState = i end
+ENT.EDumbNPCState = NPC_STATE_NONE
+function ENT:GetNPCState() return self.EDumbNPCState end
+function ENT:SetNPCState( i ) self.EDumbNPCState = i end
 
 function ENT:GetShootPos()
 	local v = self:GetPos()
@@ -295,7 +331,14 @@ function ENT:DoPhysicsStuff( phys, MyTable ) end
 
 local sv_gravity = GetConVar "sv_gravity"
 
-function ENT:ResetGravity( pLocomotion ) ( pLocomotion || self.loco ):SetGravity( self.bPhysics && 0 || sv_gravity:GetFloat() ) end
+// Overwhelming size overwhelms air resistance.
+// To slow an object down, air resistance has to create enough upward force to match the object's weight.
+// For example, read the Gekko's.
+ENT.flGravityMultiplierInAir = 1
+
+function ENT:GetMyGravity() return sv_gravity:GetFloat() * self.flGravityMultiplierInAir end
+
+function ENT:ResetGravity( pLocomotion ) ( pLocomotion || self.loco ):SetGravity( self.bPhysics && 0 || self:GetMyGravity() ) end
 
 // Does the physics object take the lead, or the locomotion?
 // Do note that if the physics object takes the lead, the
@@ -304,6 +347,7 @@ function ENT:ResetGravity( pLocomotion ) ( pLocomotion || self.loco ):SetGravity
 ENT.bPhysics = false
 function ENT:Think()
 	local MyTable = CEntity_GetTable( self )
+	MyTable.RapidFireCode( self, MyTable )
 	local phys = CEntity_GetPhysicsObject( self )
 	if IsValid( phys ) then
 		MyTable.DoPhysicsStuff( self, phys, MyTable )
@@ -324,10 +368,14 @@ function ENT:Think()
 			end
 		end
 	end
+
+	//	MyTable.BehaveUpdate( self, nil, MyTable )
+
 	if IsValid( MyTable.GAME_pVehicle ) then
 		self:SetActiveWeapon( NULL )
 		if self:GetCollisionGroup() != COLLISION_GROUP_WORLD then self:SetCollisionGroup( COLLISION_GROUP_WORLD ) end
 	else if self:GetCollisionGroup() != COLLISION_GROUP_NPC then self:SetCollisionGroup( COLLISION_GROUP_NPC ) end end
+
 	MyTable.Tick( self, MyTable )
 end
 
@@ -490,7 +538,7 @@ function ENT:RunBehaviour( MyTable )
 			local flLast = MyTable.m_flLastRunBehaviourCall || flNow
 			local flFrameTime = flNow - flLast
 
-			if !MyTable.bPhysics then MyTable.loco:SetGravity( sv_gravity:GetFloat() ) end
+			MyTable.ResetGravity( self )
 
 			MyTable.m_flLastRunBehaviourCall = flNow
 			MyTable.m_flFrameTime = flFrameTime

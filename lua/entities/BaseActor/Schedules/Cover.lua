@@ -208,16 +208,15 @@ function ENT:IsValidCoverPoint( vCover, tCover, pEnemy, pEnemyPath, MyTable, vMa
 	} ).Hit
 end
 
+include "TryLineOfSightAdvanceSearchIfHaventMovedForTooLong.lua"
+
 RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
-	local tEnemies = pSchedule.tEnemies || MyTable.tEnemies
-	if table_IsEmpty( tEnemies ) then return true end
-
-	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovementStand", MyTable ) return end
-
 	local pEnemy = MyTable.Enemy
 	if !IsValid( pEnemy ) then return true end
 
 	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
+
+	//	if !MyTable.bEnemiesHaveRangeAttack && HasRangeAttack( self ) then MyTable.SetSchedule( self, "FreeMovementStand", MyTable ) return end
 
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 
@@ -345,7 +344,9 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 
 	MyTable.vActualCover = vCover
 
-	if MyTable.GAME_flSuppression > self:Health() then
+	if pSchedule.bBusy then return end
+
+	if MyTable.GAME_flSuppression > self:Health() || MyTable.TryCallInteraction( self, MyTable, "ShouldStayInCover" ) then
 		flNextPeek = CurTime() + Rand( 0, 2 )
 		pSchedule.flNextPeek = flNextPeek
 		return
@@ -416,7 +417,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && vCover:DistToSqr( vStart ) <= MyTable.GetMaxLateralPeekDistSqr( self, MyTable ) then
 			if !bCheckedStart then
-				local tAllies = MyTable.GetAlliesByClass( self, MyTable ) || {}
+				local tAllies = MyTable:GetAlliesByClass() || {}
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vStart ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vStart ) <= flTakenDistSqr then bStartResults = nil break end
@@ -444,7 +445,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && vCover:DistToSqr( vEnd ) <= MyTable.GetMaxLateralPeekDistSqr( self, MyTable ) then
 			if !bCheckedEnd then
-				local tAllies = MyTable.GetAlliesByClass( self, MyTable ) || {}
+				local tAllies = MyTable:GetAlliesByClass() || {}
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vEnd ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vEnd ) <= flTakenDistSqr then bEndResults = nil break end
@@ -470,7 +471,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && vCover:DistToSqr( vStart ) <= MyTable.GetMaxLateralPeekDistSqr( self, MyTable ) then
 			if !bCheckedStart then
-				local tAllies = MyTable.GetAlliesByClass( self, MyTable ) || {}
+				local tAllies = MyTable:GetAlliesByClass() || {}
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vStart ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vStart ) <= flTakenDistSqr then bStartResults = nil break end
@@ -496,7 +497,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
 		} ).Hit && vCover:DistToSqr( vEnd ) <= MyTable.GetMaxLateralPeekDistSqr( self, MyTable ) then
 			if !bCheckedEnd then
-				local tAllies = MyTable.GetAlliesByClass( self, MyTable ) || {}
+				local tAllies = MyTable:GetAlliesByClass() || {}
 				for pAlly in pairs( tAllies ) do
 					if self == pAlly then continue end
 					if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vEnd ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vEnd ) <= flTakenDistSqr then bEndResults = nil break end
@@ -525,35 +526,49 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 		if iOptions > 0 then
 			local sPeek = tOptions[ random( 1, iOptions ) ]
 			if sPeek == "UP" then
+				if MyTable.TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( self, pSchedule, MyTable, pEnemy, pTrueEnemy, true ) then return end
+
 				local pPeek = MyTable.SetSchedule( self, "PeekIn", MyTable )
 				pPeek.bVertical = true
 				pPeek.bAtThem = true
 				pPeek.vSuppress = vEnemy
+				return
 
 			elseif sPeek == "START" then
+				if MyTable.TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( self, pSchedule, MyTable, pEnemy, pTrueEnemy, vStart + MyTable.vViewOffset ) then return end
+
 				local pPeek = MyTable.SetSchedule( self, "PeekIn", MyTable )
 				pPeek.bAtThem = true
 				pPeek.vPeek = vStart
 				pPeek.vSuppress = vEnemy
+				return
 			elseif sPeek == "END" then
+				if MyTable.TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( self, pSchedule, MyTable, pEnemy, pTrueEnemy, vEnd + MyTable.vViewOffset ) then return end
 				local pPeek = MyTable.SetSchedule( self, "PeekIn", MyTable )
 				pPeek.bAtThem = true
 				pPeek.vPeek = vEnd
 				pPeek.vSuppress = vEnemy
+				return
 
 			elseif sPeek == "STARTD" then
+				if MyTable.TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( self, pSchedule, MyTable, pEnemy, pTrueEnemy, vStart + MyTable.vViewOffsetDucked ) then return end
 				local pPeek = MyTable.SetSchedule( self, "PeekIn", MyTable )
 				pPeek.bAtThem = true
 				pPeek.bDuck = true
 				pPeek.vPeek = vStart
 				pPeek.vSuppress = vEnemy
+				return
 			elseif sPeek == "ENDD" then
+				if MyTable.TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( self, pSchedule, MyTable, pEnemy, pTrueEnemy, vEnd + MyTable.vViewOffsetDucked ) then return end
 				local pPeek = MyTable.SetSchedule( self, "PeekIn", MyTable )
 				pPeek.bAtThem = true
 				pPeek.bDuck = true
 				pPeek.vPeek = vEnd
 				pPeek.vSuppress = vEnemy
+				return
 			end
 		end
+
+		// TODO: Suppress, I guess? Or move.
 	end
 end } )

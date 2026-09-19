@@ -19,10 +19,5 @@ function ENT:SetCrouchTarget( flHeight )
 end
 
 ENT.flDefaultJumpHeight = HUMAN_JUMP_HEIGHT
-function ENT:GetJumpPower() return self.flJumpPower || ( 2 * GetConVarNumber "sv_gravity" * self.flDefaultJumpHeight ) ^ .5 end
-function ENT:SetJumpPower( p ) self.flJumpPower = p end
-function ENT:CalcJumpHeight() return self.flJumpPower && ( self.flJumpPower ^ 2 / ( 2 * self.loco:GetGravity() ) ) || self.flDefaultJumpHeight end
-/*
-local sv_gravity = GetConVar "sv_gravity"
-function ENT:CalcJumpHeight() return self:GetJumpPower() ^ 2 / ( 2 * sv_gravity:GetFloat() ) end
-*/
+function ENT:GetJumpPower() return ( 2 * self:GetMyGravity() * self.flDefaultJumpHeight ) ^ .5 end
+function ENT:SetJumpPower() end

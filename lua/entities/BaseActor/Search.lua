@@ -21,7 +21,7 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 
 	local bCantClimb, flJumpHeight, flNegDeathDrop = !MyTable.bCanClimb, MyTable.loco:GetJumpHeight(), -MyTable.loco:GetDeathDropHeight()
 
-	local tAllies = MyTable.GetAlliesByClass( self, MyTable )
+	local tAllies = MyTable:GetAlliesByClass()
 
 	local flOff = math.max( math.abs( self:OBBMaxs().x ), math.abs( self:OBBMins().x ) ) * 1.5
 
@@ -67,14 +67,12 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 	end
 end
 
-// TODO: Implement flSpacing in a way that isn't CPU heavy as shit
-function ENT:SearchNodes( vPos, fWeighter, flSpacing )
+function ENT:SearchNodes( vPos, fWeighter )
 	if !vPos then vPos = self:GetPos() end
 
 	local area = GetNearestNavArea( vPos )
 	if !area then return function() end end
 
-	// flSpacing = self:BoundingRadius() * ( flSpacing || 10 )
 	local tQueue, tVisited = { { true, area, 0, 0, vPos } }, { [ area:GetID() ] = true }
 	local bCantClimb, flJumpHeight, flNegDeathDrop = !self.bCanClimb, self.loco:GetJumpHeight(), -self.loco:GetDeathDropHeight()
 	local tAllies = self:GetAlliesByClass()
@@ -89,6 +87,7 @@ function ENT:SearchNodes( vPos, fWeighter, flSpacing )
 			local bIsArea, area, dist, weight, vPrev = unpack( remove( tQueue ) )
 			if bIsArea then
 				local vCenter = area:GetCenter()
+
 				local f
 				for _, t in ipairs( area:GetAdjacentAreaDistances() ) do
 					local new = t.area
@@ -100,12 +99,10 @@ function ENT:SearchNodes( vPos, fWeighter, flSpacing )
 					if bCantClimb && d > flJumpHeight || d <= flNegDeathDrop then continue end
 					insert( tQueue, { true, new, dist + t.dist, fWeighter( new:GetClosestPointOnArea( vCenter ), dist, t.dist, new ), vCenter } )
 				end
-				local v = area:GetCorner( 0 ) // NORTH_WEST
-				local flCornerX, flCornerY = v.x, v.y
-				local flSizeX, flSizeY = area:GetSizeX(), area:GetSizeY()
-				f = vCenter:Distance( vPrev )
-				local n = dist + f
-				insert( tQueue, { false, vCenter, n, fWeighter( v, dist, n ), vCenter } )
+
+				local n = dist + vCenter:Distance( vPrev )
+				insert( tQueue, { false, vCenter, n, fWeighter( vCenter, dist, n ), vCenter } )
+
 				// Sorting is expensive. We need to only sort this if we actually did something.
 				SortByMember( tQueue, 4 )
 				return F(), area, dist

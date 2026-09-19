@@ -37,15 +37,20 @@ sound.Add {
 	channel = CHAN_STATIC,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = { "npc/strider/strider_minigun.wav", "npc/strider/strider_minigun.wav2" }
+	sound = {
+		"CombineGunship/PulseCannonFire1.wav",
+		"CombineGunship/PulseCannonFire2.wav",
+		"CombineGunship/PulseCannonFire3.wav",
+		"CombineGunship/PulseCannonFire4.wav"
+	}
 }
 
 if CLIENT then return end
 
 ENT.bNightVision = true
 
-ENT.Primary_flDelay = .08
-ENT.Primary_flDamage = 80
+ENT.Primary_flDelay = .1
+ENT.Primary_flDamage = 60
 ENT.Primary_flSpreadX = .02
 ENT.Primary_flSpreadY = .02
 
@@ -53,29 +58,43 @@ function ENT:HasWeapon() return true end
 
 ENT.sWeaponAttachment = "muzzle"
 
-function ENT:DoesWeaponHit( v, pClear )
+function ENT:MachineGunWeaponCanHit( v, pClear )
 	local at = self:GetAttachment( self:LookupAttachment( self.sWeaponAttachment ) )
+
 	if !at then return end
-	local d = ( v - at.Pos ):Angle()
-	local a = LerpAngle( 1, at.Ang, d )
-	if math.AngleDifference( a[ 1 ], d[ 1 ] ) > 1 || math.AngleDifference( a[ 2 ], d[ 2 ] ) > 1 then return end
+
 	local tFilter = { self }
 	if IsValid( pClear ) then
 		table.insert( tFilter, pClear )
 		local pVehicle = pClear.GAME_pVehicle
 		if IsValid( pVehicle ) then table.insert( tFilter, pVehicle ) end
 	end
+
 	if util.TraceLine( {
 		start = at.Pos,
 		endpos = v,
 		filter = tFilter,
 		mask = MASK_SHOT_HULL
 	} ).Hit then return end
+
+	return true
+end
+
+function ENT:MachineGunWeaponHits( v, pClear )
+	local at = self:GetAttachment( self:LookupAttachment( self.sWeaponAttachment ) )
+
+	if !at then return end
+
+	local d = ( v - at.Pos ):Angle()
+	local a = LerpAngle( 1, at.Ang, d )
+
+	if math.AngleDifference( a[ 1 ], d[ 1 ] ) > 1 || math.AngleDifference( a[ 2 ], d[ 2 ] ) > 1 then return end
+
 	return true
 end
 
 ENT.flNextShot = 0
-function ENT:FireWeapon()
+function ENT:FireMachineGunWeapon()
 	if CurTime() <= self.flNextShot then return end
 	local l = self:LookupAttachment( self.sWeaponAttachment )
 	local at = self:GetAttachment( l )
@@ -126,25 +145,23 @@ ENT.HAS_RANGE_ATTACK = true
 
 function ENT:Initialize()
 	self:SetModel "models/gunship.mdl"
-	self:SetHealth( 131072 )
-	self:SetMaxHealth( 131072 )
+	self:SetHealth( 16384 )
+	self:SetMaxHealth( 16384 )
 	self:SetBloodColor( BLOOD_COLOR_MECH )
 	self:SetCollisionBounds( self.vHullMins, self.vHullMaxs )
 	self:PhysicsInit( SOLID_OBB )
 	self.GAME_pVehicle = self
 	self:SetNW2Entity( "GAME_pVehicle", self )
 	self.pDriver = self
+
 	local p = CreateSound( self, "CombineGunshipRotorLoop" )
 	p:PlayEx( 0, 0 )
 	self.m_pRotorLoop = p
+
 	local p = CreateSound( self, "CombineGunshipWhineLoop" )
 	p:PlayEx( 0, 0 )
 	self.m_pWhineLoop = p
-	// TODO: Doesn't seem to work in multiplayer, for... some... reason...?
-	// FIXME: This doesn't work in singleplayer too... watafak?
-	self.m_iRotorLayer = self:AddGestureSequence( self:LookupSequence "prop_turn", false )
-	// HACK: The gunship has waaay too many engines on the model,
-	// so just pretend this is a helicopter just for the sake of it
+
 	self:GetPhysicsObject():EnableGravity( false )
 	BaseClass.Initialize( self )
 end
@@ -168,7 +185,6 @@ function ENT:Think()
 	local p = self.m_pWhineLoop
 	if p then p:ChangeVolume( flVolume ) p:ChangePitch( flPitch ) end
 	local flSpeed = math.Clamp( flRoundsPerMinute / flRoundsPerMinuteIdle, 0, 1 ) * 1.5 + math.Clamp( ( flRoundsPerMinute - flRoundsPerMinuteIdle ) / flRoundsPerMinuteLimit, 0, 1 ) * 5
-	self:SetLayerPlaybackRate( self.m_iRotorLayer, flSpeed )
 	self:SetSkin( flSpeed > 1 && 0 || 1 )
 	local vMove = self.m_vMove
 	if vMove then
@@ -218,4 +234,10 @@ function ENT:OnKilled( dDamage )
 	if BaseClass.OnKilled( self, dDamage ) then return end
 	self:SetSkin( 1 )
 	self:BecomeRagdoll( dDamage )
+end
+
+function ENT:OnTakeDamage( dDamage )
+	dDamage:ScaleDamage( math.Remap( dDamage:GetDamage(), 0, self:Health(), .1, 1 ) )
+
+	return BaseClass.OnTakeDamage( self, dDamage )
 end

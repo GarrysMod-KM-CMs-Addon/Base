@@ -30,6 +30,8 @@ end
 local __SCHEDULE__ = __SCHEDULE__
 
 ENT.tPreScheduleResetVariables = {}
+ENT.tPreScheduleResetVariables.m_bFiringIsAllowed = false
+ENT.tPreScheduleResetVariables.EDumbNPCState = NPC_STATE_IDLE
 ENT.tPreScheduleResetVariables.bCharging = false
 ENT.tPreScheduleResetVariables.bTaunting = false
 ENT.tPreScheduleResetVariables.bAttacking = false
@@ -38,7 +40,7 @@ ENT.tPreScheduleResetVariables.EScheduleState = ACTOR_STATE_IDLE
 function ENT:SelectScheduleInternal( MyTable, ... )
 	if MyTable.m_bScript then return end
 	MyTable.Schedule = nil
-	local p = MyTable.GAME_pBehaviour
+	local p = MyTable.GAME_pInteraction
 	if p then if p:SelectSchedule( self, MyTable, ... ) then return end end
 	local veh = MyTable.GAME_pVehicle
 	if IsValid( veh ) then MyTable.SetSchedule( self, "VehicleBase", MyTable )
