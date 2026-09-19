@@ -9,6 +9,57 @@ end
 
 DMG_RAYLEIGH = DMG_CLUB + DMG_SONIC + DMG_BLAST
 
+if CLIENT then
+	hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COMP )
+		if COMP then
+			if COMP.KM_CMs_Addon then return
+			else COMP.KM_CMs_Addon = true end
+		end
+	
+		hook.Run( "EntityFireBullets", pShooter, Data, { KM_CMs_Addon = true } )
+	
+		if Data.AmmoType != "" then
+			Data.Damage = game.GetAmmoPlayerDamage( game.GetAmmoID( Data.AmmoType ) )
+			Data.AmmoType = ""
+		end
+	
+		local fOldCallback = Data.Callback || function() return { damage = true, effects = true } end
+	
+		local flDamage = Data.Damage
+	
+		if !Data.TracerName then Data.TracerName = "Bullet" end
+	
+		local bTracer = Data.Tracer > 0
+	
+		local pOwner = GetOwner( pShooter )
+	
+		local flForce = math.max( Data.Force, 1 )
+		Data.Callback = function( atk, tr, dmg )
+			local pTarget = tr.Entity
+			local bTarget = IsValid( pTarget )
+	
+			local tCallbackResult = fOldCallback( atk, tr, dDamage ) || { damage = true, effects = true }
+	
+			if tCallbackResult.damage && bTarget then
+				local f = pTarget.SetLastHitGroup
+				if f then f( pTarget, tr.HitGroup ) end
+			end
+	
+			local bEffects = tCallbackResult.effects
+			if !bTracer || !bEffects then return { damage = false, effects = bEffects } end
+		
+			return { damage = false, effects = true }
+		end
+	
+		return true
+	end )
+end
+
+// Adding this here so I won't have to write a huge table every time I need this
+function IsBullshitNonSolidEntity( pEntity )
+	if pEntity:GetClass() == "func_lod" then return true end
+end
+
 local ents_Create = ents.Create
 
 function GetAnimationDonor()
@@ -66,8 +117,6 @@ function SimpleRelatedFilterDouble( pEntity, pEnemy )
 	local tFilter = { pEntity, pEnemy }
 	local pVehicle = pEntity.GAME_pVehicle
 	if IsValid( pVehicle ) then insert( tFilter, pVehicle ) end
-	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then insert( tFilter, pEnemy ) end
 	return tFilter
 end
 
@@ -82,8 +131,6 @@ function SimpleRelatedFilterTriple( pEntity, pBullseye, pEnemy )
 	local tFilter = { pEntity, pEnemy, pBullseye }
 	local pVehicle = pEntity.GAME_pVehicle
 	if IsValid( pVehicle ) then insert( tFilter, pVehicle ) end
-	local pVehicle = pEnemy.GAME_pVehicle
-	if IsValid( pEnemy ) then insert( tFilter, pEnemy ) end
 	return tFilter
 end
 
@@ -103,12 +150,13 @@ BIOLOGICAL_ONLY_DAMAGE_TYPES = {
 	// No DMG_ACID, as armor takes damage from acid over time!
 }
 
+FRICTION_NORMAL = 4
 ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 1200
 
-HUMAN_SPRINT_SPEED = 350
-HUMAN_JOG_SPEED = 200 + 1 / .03
-HUMAN_WALK_SPEED = 75
+HUMAN_SPRINT_SPEED = 300
+HUMAN_JOG_SPEED = 200
+HUMAN_WALK_SPEED = 70
 
 HUMAN_JUMP_HEIGHT = 48
 
@@ -191,8 +239,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 
 	local PlyTable = CEntity_GetTable( ply )
 
-	local flFrameTime = SysTime() - ( PlyTable.GAME_flLastStartCommandCall || SysTime() )
-	PlyTable.GAME_flLastStartCommandCall = SysTime()
+	local flFrameTime = CurTime() - ( PlyTable.GAME_flLastStartCommandCall || CurTime() )
+	PlyTable.GAME_flLastStartCommandCall = CurTime()
 
 	local pActiveWeapon = ply:GetActiveWeapon()
 	local flDelay, flRecoil, flMultiplier = .1, 1, 1
@@ -204,6 +252,14 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		if tPrimary then bAutomatic = tPrimary.Automatic end
 
 		if WeaponTable.__WEAPON__ then
+			if cmd:KeyDown( IN_ZOOM ) then
+				if WeaponTable.bPreventIronsightReloads && CurTime() <= WeaponTable.flReloadTime then
+					cmd:RemoveKey( IN_ZOOM )
+				elseif WeaponTable.bPreventIronsightDraws && CurTime() <= WeaponTable.flDrawTime then
+					cmd:RemoveKey( IN_ZOOM )
+				end
+			end
+
 			flDelay = WeaponTable.Primary_flDelay || flDelay
 			if flDelay then
 				flDelay = min( flDelay, .2 )
@@ -213,7 +269,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		end
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * .85 ) ^ 2 * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * ( 2 / 3 ) ) ^ 2 * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
@@ -221,8 +277,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local flRecoilImpulseRight = math_Approach( PlyTable.GAME_flRecoilImpulseRight || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseRight = flRecoilImpulseRight
 
-	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flMultiplier * flFrameTime
-	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flMultiplier * flFrameTime
+	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flMultiplier * 3 * flFrameTime
+	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flMultiplier * 3 * flFrameTime
 
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 		local flBreathe = RealTime() * .5
@@ -250,8 +306,15 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	end
 
 	if CLIENT then
-		if cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
-		elseif ply.GAME_bWalkPressed then ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk ply.GAME_bWalkPressed = nil end
+		if cmd:KeyDown( IN_SPEED ) then
+			ply.GAME_bWantsToWalk = nil
+			ply.GAME_bWalkPressed = nil 
+		elseif cmd:KeyDown( IN_WALK ) then ply.GAME_bWalkPressed = true
+		elseif ply.GAME_bWalkPressed then
+			ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk
+			ply.GAME_bWalkPressed = nil 
+		end
+
 		if ply.GAME_bWantsToWalk then cmd:AddKey( IN_WALK ) end
 		if ply:GetNW2Bool "CTRL_bSliding" then
 			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
@@ -264,7 +327,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
 			local bVelocity = GetVelocity( ply ):LengthSqr() > 256
 			local p = ply:GetActiveWeapon()
-			if ( !IsValid( p ) || CurTime() > p:GetNextPrimaryFire() && CurTime() > p:GetNextSecondaryFire() ) && !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
+			if ( !IsValid( p ) || ( CurTime() <= ( p.flReloadTime || 0 ) || CurTime() > ( p.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() > p:GetNextPrimaryFire() + 1 / 3 && CurTime() > p:GetNextSecondaryFire() + 1 / 3 ) ) && !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
 				cmd:RemoveKey( IN_DUCK )
 				ply.GAME_bWantsToDuck = nil
 				ply.GAME_bDuckPressed = nil
@@ -289,6 +352,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	end
 
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
+
+	if SERVER then CallPlayerClassHook( ply, "PostStartCommandServer", PlyTable, cmd, flFrameTime ) end
 end )
 
 local cDisableLevelOfDetail = CreateConVar(
@@ -508,6 +573,8 @@ hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
 	end
 end )
 
+function CalculateJumpPower( flHeight ) return ( 2 * GetConVarNumber "sv_gravity" * flHeight ) ^ .5 end
+
 function SetHumanPlayer( ply )
 	ply:SetNPCClass( CLASS_HUMAN )
 	ply:SetHealth( 100 )
@@ -515,7 +582,7 @@ function SetHumanPlayer( ply )
 	ply:SetRunSpeed( HUMAN_SPRINT_SPEED )
 	ply:SetWalkSpeed( HUMAN_JOG_SPEED )
 	ply:SetSlowWalkSpeed( HUMAN_WALK_SPEED )
-	ply:SetJumpPower( ( 2 * GetConVarNumber "sv_gravity" * HUMAN_JUMP_HEIGHT ) ^ .5 )
+	ply:SetJumpPower( CalculateJumpPower( HUMAN_JUMP_HEIGHT ) )
 	ply:SetDuckSpeed( .25 )
 	ply:SetUnDuckSpeed( .25 )
 	ply:SetCrouchedWalkSpeed( 1 )
@@ -525,10 +592,12 @@ function SetHumanPlayer( ply )
 	ply:SetHullDuck( Vector( -16, -16, 0 ), Vector( 16, 16, 32 ) )
 end
 
+local player_manager_GetPlayerClass = player_manager.GetPlayerClass
+
 hook.Add( "PlayerSpawn", "Improvements", function( ply )
 	timer.Simple( 0, function()
 		if !IsValid( ply ) then return end
-		local sClass = player_manager.GetPlayerClass( ply )
+		local sClass = player_manager_GetPlayerClass( ply )
 		if sClass == "player_default" || sClass == "player_sandbox" then SetHumanPlayer( ply ) end
 	end )
 end )
@@ -536,7 +605,7 @@ end )
 hook.Add( "PlayerInitialSpawn", "Improvements", function( ply )
 	timer.Simple( 0, function()
 		if !IsValid( ply ) then return end
-		local sClass = player_manager.GetPlayerClass( ply )
+		local sClass = player_manager_GetPlayerClass( ply )
 		if sClass == "player_default" || sClass == "player_sandbox" then SetHumanPlayer( ply ) end
 	end )
 end )
@@ -606,7 +675,7 @@ end
 if CLIENT then
 	g_pActiveGlowEntities = g_pActiveGlowEntities || {}
 
-	hook.Add( "PostDrawTranslucentRenderables", "ZBufferFuckery", function( bDepth, bSkybox )
+	hook.Add( "PostDrawTranslucentRenderables", "DrawShine", function( bDepth, bSkybox )
 		if bSkybox then return end
 
 		for pEntity, fFunction in pairs( g_pActiveGlowEntities ) do
@@ -620,4 +689,75 @@ if CLIENT then
 			fFunction( pEntity )
 		end
 	end )
+end
+
+local CPlayer = FindMetaTable "Player"
+
+if SERVER then
+	Add_NPC_Class "CLASS_HUMAN"
+
+	function CPlayer:SetNPCClass( EClass ) self:SetNW2Int( "m_iClass", EClass ) end
+end
+
+function CPlayer:GetNPCClass() return self:GetNW2Int( "m_iClass", -1 ) end
+function CPlayer:Classify() return self:GetNW2Int( "m_iClass", -1 ) end
+
+/*
+Optimized version, for classes that support it
+Do not confuse with player_manager.GetPlayerClassTable
+This avoids table.Copy overhead but only works with
+classes that do
+
+	self.Player:SetNW2String( "m_sClass", "CLASS" )
+	self.Player.m_pClass = CLASS
+
+in their Spawn function
+*/
+
+function GetPlayerClassTable( pPlayer )
+	local sClass = player_manager_GetPlayerClass( pPlayer )
+	if sClass != pPlayer:GetNW2String "m_sClass" then return end
+	return pPlayer.m_pClass
+end
+
+function CallPlayerClassHook( pPlayer, sHook, ... )
+	local sClass = player_manager_GetPlayerClass( pPlayer )
+	if sClass != pPlayer:GetNW2String "m_sClass" then return end
+
+	local fHook = pPlayer.m_pClass[ sHook ]
+	if fHook then return fHook( pPlayer, ... ) end
+end
+
+// For blazing speed if you don't want thirty goddamn ifs
+function CallHook( pPlayer, pClass, sHook, ... )
+	local fHook = pClass[ sHook ]
+	if fHook then return fHook( pPlayer, ... ) end
+end
+
+local sMap = game.GetMap()
+
+local sFile = "MapShared/" .. sMap .. ".lua"
+if file.Exists( sFile, "LUA" ) then
+	AddCSLuaFile( sFile )
+	include( sFile )
+end
+
+if SERVER then
+	sFile = "MapServer/" .. sMap .. ".lua"
+	if file.Exists( sFile, "LUA" ) then
+		include( sFile )
+	end
+end
+
+// "In Multiplayer this does not return the current map in the CLIENT realm before GM:Initialize."
+if CLIENT then
+	hook.Add( "Initialize", "Improvements", function()
+		hook.Remove( "Initialize", "Improvements" )
+
+		sFile = "MapClient/" .. sMap .. ".lua"
+		if file.Exists( sFile, "LUA" ) then include( sFile ) end
+	end )
+else
+	sFile = "MapClient/" .. sMap .. ".lua"
+	if file.Exists( sFile, "LUA" ) then AddCSLuaFile( sFile ) end
 end

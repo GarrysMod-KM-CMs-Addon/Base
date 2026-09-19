@@ -16,6 +16,9 @@ function EFFECT:Init( pData )
 
 	local v = pData:GetStart()
 	local pEntity = pData:GetEntity()
+
+	if !IsValid( pEntity ) then return end
+
 	local pOwner = pEntity:GetOwner()
 
 	local fGetMuzzleFlashPosition = pEntity.GetMuzzleFlashPosition

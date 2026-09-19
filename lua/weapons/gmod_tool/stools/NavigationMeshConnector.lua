@@ -12,10 +12,14 @@ function TOOL:LeftClick()
 		mask = MASK_SOLID_BRUSHONLY,
 		filter = pOwner
 	}
+
 	local pArea = navmesh.GetNearestNavArea( tr.HitPos )
 	if !pArea then return end
+
 	local pOther = self.pOther
 	if pOther then
+		if pOther == pArea then self.pOther = nil return end
+
 		if pArea:IsConnected( pOther ) && pOther:IsConnected( pArea ) then
 			pArea:Disconnect( pOther )
 			pOther:Disconnect( pArea )
@@ -23,9 +27,11 @@ function TOOL:LeftClick()
 			pArea:ConnectTo( pOther )
 			pOther:ConnectTo( pArea )
 		end
-		navmesh.Save()
+
 		self.pOther = nil
 	else self.pOther = pArea end
 end
 
-function TOOL:Reload() self.pOther = nil end
+function TOOL:Reload()
+	navmesh.Save()
+end

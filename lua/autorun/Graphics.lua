@@ -31,8 +31,6 @@ if SERVER then
 	return
 end
 
-include "menu/problems/problems.lua"
-
 local SUPPORTS_HDR = true
 
 if render.GetDXLevel() < 80 then
@@ -387,20 +385,24 @@ hook.Add( "Tick", "Graphics", function()
 	local tr = util_TraceLine {
 		start = vEye,
 		endpos = vEye + dEye * 999999,
-		mask = MASK_VISIBLE_AND_NPCS,
+		mask = MASK_OPAQUE_AND_NPCS,
 		filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
 	}
+
 	local flDistance = tr.HitPos:Distance( EyePos() ) * Lerp( self:GetNW2Float( "BODY_flTerror", 0 ), 1.2, .8 )
+
 	flDepthOfField = Lerp(
 		FRILerpRate( 5, flFrameTime ),
 		flDepthOfField,	
 		flDistance
 	)
+
 	flSpacing = Lerp(
 		FRILerpRate( 5, flFrameTime ),
 		flSpacing,
 		math_Clamp( flDistance, 0, 1024 )
 	)
+
 	if tr.HitSky then
 		flActualDoFBegin = Lerp( FRILerpRate( 1.5, flFrameTime ), flActualDoFBegin, math_Clamp( ( flDepthOfField / flDistance ) ^ 10 * 5, 0, 5 ) )
 	else
@@ -674,8 +676,10 @@ local PRECOMPUTED = 360 / ( 2 * math.pi ) * .8
 
 hook.Add( "HUDPaint", "Graphics", function()
 	DIRECTOR_CLIENT_TICK()
+
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
+
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
 	local i = 1
 	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
@@ -736,19 +740,23 @@ hook.Add( "HUDPaint", "Graphics", function()
 			end
 		end
 	end
+
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
-	if f <= 0 then flProgress = 0 return end
-	flProgress = Lerp( FRILerpRate( 1, RealFrameTime() ), flProgress, f )
-	draw_NoTexture()
-	local flHeight, flWidth = ScrH(), ScrW()
-	local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05
-	surface_SetDrawColor( 0, 0, 0 )
-	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * .033, flLabelWidth, flLabelHeight )
-	draw_DrawText( language.GetPhrase "ReinforcementsBar", "ReinforcementsBar", flWidth * .5, flHeight * .033, Color( 255, 255, 255, 255 ), TEXT_ALIGN_CENTER )
-	surface_SetDrawColor( 64, 64, 64 )
-	flLabelWidth = flLabelWidth * .9
-	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flLabelWidth, flHeight * .008 )
-	// The flashing is only activated when the true lerped progress is less than a half, not the smoothened one
-	surface_SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
-	surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
+	if f <= 0 then
+		flProgress = 0
+	else
+		flProgress = Lerp( FRILerpRate( 1, RealFrameTime() ), flProgress, f )
+		draw_NoTexture()
+		local flHeight, flWidth = ScrH(), ScrW()
+		local flLabelWidth, flLabelHeight = flHeight * .3, flHeight * .05
+		surface_SetDrawColor( 0, 0, 0 )
+		surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * .033, flLabelWidth, flLabelHeight )
+		draw_DrawText( language.GetPhrase "ReinforcementsBar", "ReinforcementsBar", flWidth * .5, flHeight * .033, Color( 255, 255, 255, 255 ), TEXT_ALIGN_CENTER )
+		surface_SetDrawColor( 64, 64, 64 )
+		flLabelWidth = flLabelWidth * .9
+		surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flLabelWidth, flHeight * .008 )
+		// The flashing is only activated when the true lerped progress is less than a half, not the smoothened one
+		surface_SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
+		surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
+	end
 end )

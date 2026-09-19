@@ -98,6 +98,9 @@ local VectorZ28 = Vector( 0, 0, 28 )
 hook.Add( "Tick", "Director", function()
 	for _, ply in player_Iterator() do
 		local PlyTable = CEntity_GetTable( ply )
+
+		CallPlayerClassHook( ply, "PlayerTick", PlyTable )
+
 		local pFlashlight = PlyTable.GAME_pFlashlight
 		local vEyePos = ply:EyePos()
 		local aAim = ply:EyeAngles()
@@ -181,6 +184,9 @@ hook.Add( "Tick", "Director", function()
 					PlyTable.GAME_flBleedTimeLeft = 1
 				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
+
+			ply:SetNW2Float( "GAME_flBleeding", math_Clamp( f - .00005 * FrameTime(), 0, 1 ) )
+
 			flBlood = math_Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 			ply:SetNW2Float( "GAME_flBlood", flBlood )
 			o = o - FrameTime()

@@ -12,21 +12,25 @@ local SURFACE_PROP_EJECTA_COLORS = {
 	}
 }
 
-function FX_EjectaCloud( vPos, flMagnitude, ESurfaceProp )
+function FX_EjectaCloud( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
 	// TODO: FX_EjectaCloudWater
-	FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp )
+	FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
 end
 
-function FX_EjectaCloudWater( vPos, flMagnitude )
+function FX_EjectaCloudWater( vPos, flMagnitude, flStrengthOverride )
 	// TODO
 end
 
-function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp )
+function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
 	local pEmitter = ParticleEmitter( vPos )
 
 	local flScale = flMagnitude / 800
+
 	local flTimeScale = flScale
-	if flTimeScale < 1 then flTimeScale = flTimeScale ^ .2 end
+
+	if flStrengthOverride then flTimeScale = flStrengthOverride / 800 end
+
+	if flTimeScale < 1 then flTimeScale = flTimeScale ^ .4 end
 
 	// TODO: Optionally, autofind surfaceprops
 	local tColors = SURFACE_PROP_EJECTA_COLORS[ ESurfaceProp ] || SURFACE_PROP_EJECTA_COLORS[ -1 ]
@@ -38,7 +42,7 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp )
         local pPart = pEmitter:Add( "particle/particle_composite", vPos )
         if pPart then
             pPart:SetVelocity( VectorRand():GetNormalized() * math.random( 100, 400 ) * flScale )
-            pPart:SetDieTime( math.Rand( 6, 12 ) * flTimeScale )
+            pPart:SetDieTime( math.Rand( 2, 12 ) * flTimeScale )
             pPart:SetStartAlpha( 230 )
             pPart:SetEndAlpha( 0 )
             pPart:SetStartSize( 50 * flScale )
@@ -57,7 +61,7 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp )
         local pPart = pEmitter:Add( "particle/smokesprites_000" .. math.random( 1, 9 ), vPos )
         if pPart then
             pPart:SetVelocity( VectorRand():GetNormalized() * math.random( 200, 600 ) * flScale )
-            pPart:SetDieTime( math.Rand( 6, 12 ) * flTimeScale )
+            pPart:SetDieTime( math.Rand( 2, 12 ) * flTimeScale )
             pPart:SetStartAlpha( 255 - 200 * math.random() * math.random() * math.random() )
             pPart:SetEndAlpha( 0 )
             pPart:SetStartSize( 80 * flScale )

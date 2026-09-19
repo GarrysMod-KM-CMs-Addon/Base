@@ -38,6 +38,7 @@ SWEP.UseHands = true
 SWEP.__WEAPON__ = true
 
 SWEP.flReloadTime = 0
+SWEP.flDrawTime = 0
 SWEP.flLastShot = 0
 
 function SWEP:Initialize()
@@ -65,10 +66,30 @@ local PISTOL_REVOLVER_ETC = { Pistol = true, Revolver = true, Melee = true, Slam
 // Far Cry 3 Pirates hipfire from the hip (normal Shotgun hold type), 'cause they stupid
 // Oh, and also make low ranking units use the Shotgun hold type for rifles too
 
+function SWEP:TranslateAttackActivity( EIntendedActivity, EActivity )
+	if EIntendedActivity >= 1011/*ACT_MP_ATTACK_STAND_PRIMARYFIRE*/ && EIntendedActivity <= 1143/*ACT_MP_ATTACK_AIRWALK_GRENADE_SECONDARY*/ then
+		if EActivity <= ACT_MP_ATTACK_AIRWALK_PRIMARY then
+			local sHoldTypeShoot = self.sHoldTypeShoot
+			if sHoldTypeShoot then
+				local sHoldType = self:GetHoldType()
+				self:SetWeaponHoldType( sHoldTypeShoot )
+				EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+				self:SetWeaponHoldType( sHoldType )
+				return EActivity
+			end
+		end
+
+		return EActivity
+	end
+end
+
 function SWEP:TranslateActivity( EIntendedActivity )
 	local EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+
 	// Don't translate attack/reload, rifles don't magically reload like shotguns when held at the hip! xD
-	if EIntendedActivity >= 1011/*ACT_MP_ATTACK_STAND_PRIMARYFIRE*/ && EIntendedActivity <= 1143/*ACT_MP_ATTACK_AIRWALK_GRENADE_SECONDARY*/ then return EActivity end
+	local EShoot = self:TranslateAttackActivity( EIntendedActivity, EActivity )
+	if EShoot then return EShoot end
+
 	local pOwner = self:GetOwner()
 	if IsValid( pOwner ) then
 		if pOwner:GetNW2Bool "CTRL_bSprinting" && GetVelocity( pOwner ):Length() > 10 then
@@ -158,6 +179,7 @@ if CLIENT then
 
 	function SWEP:LastShot() self.flLastShot = CurTime() end
 	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
+	function SWEP:DrawTime( f ) self.flDrawTime = CurTime() + f end
 
 	function SWEP:RecoilImpulseUp( f )
 		local pOwner = self:GetOwner()
@@ -247,7 +269,7 @@ function SWEP:Reload()
 		if !pReloadOwner:IsPlayer() then return end
 		f = pReloadOwner:GetViewModel()
 		f = f:SequenceDuration( f:SelectWeightedSequence( ACT ) )
-		self.flReloadTime = f
+		self.flReloadTime = CurTime() + f
 		self:CallOnClient( "ReloadTime", f )
 	else self:SetClip1( f ) end
 end
@@ -269,7 +291,7 @@ SWEP.bNoPrimaryInCover = true
 
 function SWEP:CanPrimaryAttack( MyTable, bIgnoreAmmo )
 	// Believe it or not, some people (including VALVe!) have the AUDACITY to ignore this check!
-	if CurTime() <= self:GetNextPrimaryFire() then return end
+	if CurTime() <= self:GetNextPrimaryFire() || CurTime() <= self.flReloadTime || CurTime() <= self.flDrawTime then return end
 
 	local pOwner = CEntity_GetOwner( self )
 	if pOwner:GetNW2Bool "CTRL_bPredictedCantShoot" || pOwner:GetNW2Bool "CTRL_bSliding" || pOwner:GetNW2Bool "CTRL_bInCover" then return end
@@ -354,18 +376,30 @@ end
 
 function SWEP:HolsterWasNotRan() self.m_bHolsterWasRan = nil end
 
-function SWEP:BaseWeaponDraw( iActivity )
+function SWEP:BaseWeaponDraw( EActivity )
 	local pOwner = self:GetOwner()
+
 	if !IsValid( pOwner ) then return end
+
 	self:HolsterWasNotRan()
+
 	if SERVER then self:CallOnClient "HolsterWasNotRan" end
+
 	if !pOwner.GetViewModel then return end
+
 	local pViewModel = self:GetOwner():GetViewModel()
-	local f = pViewModel:SelectWeightedSequence( iActivity )
+
+	local f = pViewModel:SelectWeightedSequence( EActivity )
 	pViewModel:SendViewModelMatchingSequence( f )
-	local flTime = CurTime() + pViewModel:SequenceDuration( f )
-	if flTime > self:GetNextPrimaryFire() then self:SetNextPrimaryFire( flTime ) end
-	if flTime > self:GetNextSecondaryFire() then self:SetNextSecondaryFire( flTime ) end
+
+	local flDuration = pViewModel:SequenceDuration( f )
+	self:CallOnClient( "DrawTime", flDuration )
+
+	local flTime = CurTime() + flDuration
+	self.flDrawTime = flTime
+
+	//	if flTime > self:GetNextPrimaryFire() then self:SetNextPrimaryFire( flTime ) end
+	//	if flTime > self:GetNextSecondaryFire() then self:SetNextSecondaryFire( flTime ) end
 end
 
 function SWEP:GetAimVector()
@@ -397,7 +431,14 @@ function SWEP:CalculateRecoilMultiplier( pOwner, MyTable )
 	if pOwner:IsOnGround() then
 		local f = pOwner.KeyDown
 		if f && f( pOwner, IN_ZOOM ) then flMultiplier = flMultiplier * .5 end
-	else flMultiplier = flMultiplier * 1.5 end
+	else
+		local f = pOwner.KeyDown
+		if f && f( pOwner, IN_ZOOM ) then
+			flMultiplier = flMultiplier * 1.25
+		else
+			flMultiplier = flMultiplier * 1.5
+		end
+	end
 
 	return flMultiplier
 end

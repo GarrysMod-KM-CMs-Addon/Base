@@ -23,7 +23,6 @@ local CEntity_WaterLevel = CEntity.WaterLevel
 local CEntity_Extinguish = CEntity.Extinguish
 local ents_Iterator = ents.Iterator
 local util_Decal = util.Decal
-local flNextActorQueueCall = 0
 local coroutine_resume = coroutine.resume
 local coroutine_status = coroutine.status
 local physenv_GetLastSimulationTime = physenv.GetLastSimulationTime
@@ -74,7 +73,7 @@ end )
 include "autorun/Improvements.lua"
 
 RunConsoleCommand( "sv_accelerate", ACCELERATION_NORMAL )
-RunConsoleCommand( "sv_friction", ACCELERATION_NORMAL )
+RunConsoleCommand( "sv_friction", FRICTION_NORMAL )
 
 RunConsoleCommand( "sv_gravity", GRAVITY_NORMAL )
 
@@ -244,8 +243,8 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 					if !IsValid( pActor ) then return end
 					pActor:DLG_Startle( Owner )
 				end )
-				pActor.Enemy = pActor:SetupBullseye( Owner, vStart, aAngle )
-			else pActor:SetupBullseye( Owner, vStart, aAngle ) end
+				pActor.Enemy = pActor:SetupBullseye( Owner, vStart, aAngle, nil, true )
+			else pActor:SetupBullseye( Owner, vStart, aAngle, nil, true ) end
 		end
 	end
 end
@@ -365,9 +364,11 @@ hook.Add( "PlayerCanPickupItem", "GameImprovements", function( ply, item )
 	return tr.Entity == item
 end )
 
+MAX_BLEEDING_PER_HIT = .1
+
 hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, flDamage )
-	ply:SetNW2Float( "GAME_flBleeding", ply:GetNW2Float( "GAME_flBleeding", 0 ) +
-	flDamage / ( max( ply:Health(), ply:GetMaxHealth() ) * 112 ) )
+	ply:SetNW2Float( "GAME_flBleeding", min( ply.GAME_flMaxBleedingPerHit || MAX_BLEEDING_PER_HIT, ply:GetNW2Float( "GAME_flBleeding", 0 ) +
+	flDamage / ( max( ply:Health(), ply:GetMaxHealth() ) * 112 ) ) )
 end )
 
 hook.Add( "PlayerCanHearPlayersVoice", "GameImprovements", function( pListener, pSpeaker )
@@ -411,7 +412,7 @@ TRACER_COLOR = {
 
 local TRACER_COLOR = TRACER_COLOR
 
-TRACER_SIZE = { Bullet = 4 }
+TRACER_SIZE = { Bullet = 2 }
 local TRACER_SIZE = TRACER_SIZE
 
 hook.Add( "ScalePlayerDamage", "GameImprovements", function( ply, EHitGroup, dDamage )
@@ -465,10 +466,11 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 	if cSGT:GetBool() && pOwner.__ACTOR__ then
 		local vSpread = Data.Spread
 
-		vSpread[ 1 ] = vSpread[ 1 ] * math_Clamp( math_Remap( vSpread[ 1 ], 0, .1, 10, 1 ), 1, 10 )
-		vSpread[ 2 ] = vSpread[ 2 ] * math_Clamp( math_Remap( vSpread[ 1 ], 0, .1, 10, 1 ), 1, 10 )
+		local f = math_Clamp( math_Remap( vSpread[ 1 ], 0, .1, 2, 1 ), 1, 2 )
+		vSpread[ 1 ] = vSpread[ 1 ] * f
+		vSpread[ 2 ] = vSpread[ 2 ] * f
 
-		Data.Damage = Data.Damage * ( 1 / 3 )
+		Data.Damage = Data.Damage * .1
 	end
 
 	local flMuzzleFlashTime = math_Clamp( ( pShooter.Primary_flDelay || .1 ) * Rand( .1, .15 ), 0, .2 )
@@ -516,6 +518,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 	
 		return { damage = false, effects = true }
 	end
+
 	return true
 end )
 
@@ -529,17 +532,20 @@ hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	if IsValid( at ) then
 		local f = at.GAME_OnHurtSomething
 		if f && f( at, pEntity, dDamage ) then return true end
-		if at.GetEnemy && dDamage:GetDamage() > 0 then at.GAME_bHurtEnemy = true end
+		if at.GetEnemy && IsValid( at:GetEnemy() ) && dDamage:GetDamage() >= 1 then at.GAME_bHurtEnemy = true end
 	end
 
-	if pEntity:IsPlayer() then AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() ) end
+	if pEntity:IsPlayer() then
+		AddVelocity( pEntity, dDamage:GetDamageForce() / pEntity:GetPhysicsObject():GetMass() )
+		CallPlayerClassHook( pEntity, "OnTakeDamage", dDamage )
+	end
 
 	local fBloodSplatter = pEntity.BloodSplatter
 	if fBloodSplatter then fBloodSplatter( pEntity, dDamage ) end
 
 	if pEntity:GetClass() == "prop_ragdoll" && pEntity.GAME_flOldMaxHealth then
-		pEntity:SetNW2Float( "GAME_flBleeding", pEntity:GetNW2Float( "GAME_flBleeding", 0 ) +
-		dDamage:GetDamage() / ( pEntity.GAME_flOldMaxHealth * 112 ) )
+		pEntity:SetNW2Float( "GAME_flBleeding", min( pEntity.GAME_flMaxBleedingPerHit || MAX_BLEEDING_PER_HIT, pEntity:GetNW2Float( "GAME_flBleeding", 0 ) +
+		dDamage:GetDamage() / ( pEntity.GAME_flOldMaxHealth * 112 ) ) )
 	end
 
 	if pEntity.__WEAPON__ then
@@ -594,6 +600,7 @@ local cActorQueueCallsPerTick = CreateConVar(
 )
 
 local ACTOR_QUEUE_CURRENT = nil
+local ACTOR_QUEUE_PATH_CURRENT = nil
 
 ENTITY_BY_CLASS = ENTITY_BY_CLASS || {}
 
@@ -630,7 +637,7 @@ ENTITY_BY_CLASS.env_tonemap_controller = function( pEntity )
 end
 
 hook.Add( "Think", "GameImprovements", function()
-	if ACTOR_QUEUE_LAST && SysTime() > flNextActorQueueCall then
+	if ACTOR_QUEUE_LAST then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
 
 		local iCalls = 0
@@ -659,9 +666,38 @@ hook.Add( "Think", "GameImprovements", function()
 			end
 			if !ACTOR_QUEUE_LAST then break end
 		end
-
-		flNextActorQueueCall = SysTime() + math_Clamp( physenv_GetLastSimulationTime() * 896 - engine_TickInterval(), 0, 1 )
 	else ACTOR_QUEUE_CURRENT = nil end
+
+	if ACTOR_QUEUE_PATH_LAST then
+		if !ACTOR_QUEUE_PATH_CURRENT then ACTOR_QUEUE_PATH_CURRENT = ACTOR_QUEUE_PATH_LAST.pNext end
+
+		local iCalls = 0
+		local flActorQueueCallsPerTick = cActorQueueCallsPerTick:GetInt()
+
+		while iCalls < flActorQueueCallsPerTick && ACTOR_QUEUE_PATH_LAST != nil do
+			local pNode = ACTOR_QUEUE_PATH_CURRENT
+			local pNext = pNode.pNext
+			local coThread = pNode.coThread
+			local bNoErrors, bResult = coroutine_resume( coThread )
+			if bResult == true || coroutine_status( coThread ) == "dead" then
+				if !bNoErrors then ErrorNoHaltWithStack( bResult ) end
+				if pNode.pNext == pNode then
+					ACTOR_QUEUE_PATH_LAST = nil
+					ACTOR_QUEUE_PATH_CURRENT = nil
+				else
+					pNode.pPrev.pNext = pNode.pNext
+					pNode.pNext.pPrev = pNode.pPrev
+					if pNode == ACTOR_QUEUE_PATH_LAST then ACTOR_QUEUE_PATH_LAST = pNode.pPrev end
+					ACTOR_QUEUE_PATH_CURRENT = pNext
+				end
+			else
+				// DO NOT.
+				//	ACTOR_QUEUE_PATH_CURRENT = pNext
+				if bResult != false then iCalls = iCalls + 1 end
+			end
+			if !ACTOR_QUEUE_PATH_LAST then break end
+		end
+	else ACTOR_QUEUE_PATH_CURRENT = nil end
 
 	if IsValid( g_pCascadeShadowMapping ) then
 		if SUN_ANGLES then
@@ -693,7 +729,7 @@ hook.Add( "Think", "GameImprovements", function()
 
 		pTonemapController:Fire( "SetBloomScale", 1 )
 
-		pTonemapController:Fire( "SetAutoExposureMin", .75 )
+		pTonemapController:Fire( "SetAutoExposureMin", .8 )
 		pTonemapController:Fire( "SetAutoExposureMax", 2 )
 	end
 
@@ -742,7 +778,8 @@ COVER_BOUND_SIZE = 2
 local function BloodlossStuff( ply, cmd )
 	local flBlood = ply:GetNW2Float( "GAME_flBlood", 1 )
 	if flBlood <= .8 then cmd:RemoveKey( IN_SPEED ) end
-	if flBlood <= .6 then cmd:AddKey( IN_DUCK ) cmd:AddKey( IN_WALK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
+	if flBlood <= .6 then cmd:AddKey( IN_WALK ) end
+	if flBlood <= .4 then cmd:AddKey( IN_DUCK ) end // Crawling (no proper animation, but that's what I'm trying to simulate)
 end
 
 function GameImprovements_StartCommand( ply, cmd )
@@ -822,7 +859,7 @@ function GameImprovements_StartCommand( ply, cmd )
 	elseif !cmd:KeyDown( IN_SPEED ) then
 		if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then cmd:AddKey( IN_WALK ) else
 			local pWeapon = ply:GetActiveWeapon()
-			if IsValid( pWeapon ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() || CurTime() <= pWeapon:GetNextSecondaryFire() ) then cmd:AddKey( IN_WALK ) end
+			if IsValid( pWeapon ) && ( ( CurTime() <= ( pWeapon.flReloadTime || 0 ) || CurTime() > ( pWeapon.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() + 1 / 3 || CurTime() <= pWeapon:GetNextSecondaryFire() + 1 / 3 ) ) then cmd:AddKey( IN_WALK ) end
 		end
 	end
 
@@ -838,10 +875,9 @@ function GameImprovements_StartCommand( ply, cmd )
 		if !bCrouchingAndNotSliding && cmd:KeyDown( IN_SPEED ) then
 			cmd:AddKey( IN_SPEED )
 			local pWeapon = ply:GetActiveWeapon()
-			if cmd:GetForwardMove() < 0 || cmd:GetForwardMove() <= 0 && cmd:GetSideMove() == 0 || IsValid( pWeapon ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() || CurTime() <= pWeapon:GetNextSecondaryFire() ) then
+			if cmd:GetForwardMove() < 0 || cmd:GetForwardMove() <= 0 && cmd:GetSideMove() == 0 || IsValid( pWeapon ) && ( ( CurTime() <= ( pWeapon.flReloadTime || 0 ) || CurTime() > ( pWeapon.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() + 1 / 3 || CurTime() <= pWeapon:GetNextSecondaryFire() + 1 / 3 ) ) then
 				cmd:RemoveKey( IN_SPEED )
 				ply:SetNW2Bool( "CTRL_bSprinting", false )
-
 			else
 				cmd:SetForwardMove( CPlayer_GetRunSpeed( ply ) )
 				cmd:SetSideMove( math_Clamp( cmd:GetSideMove(), -cmd:GetForwardMove(), cmd:GetForwardMove() ) )
@@ -870,7 +906,7 @@ function GameImprovements_StartCommand( ply, cmd )
 				PlyTable.GAME_flPeekUpMinimumTime = nil
 				return
 			end
-			if !PlyTable.GAME_flPeekUpMinimumTime then PlyTable.GAME_flPeekUpMinimumTime = CurTime() + .25 end
+			if !PlyTable.GAME_flPeekUpMinimumTime then PlyTable.GAME_flPeekUpMinimumTime = CurTime() + .2 end
 			if CurTime() <= PlyTable.GAME_flPeekUpMinimumTime then
 				ply:SetNW2Bool( "CTRL_bPredictedCantShoot", true )
 				cmd:RemoveKey( IN_ATTACK )
@@ -1001,6 +1037,7 @@ function GameImprovements_StartCommand( ply, cmd )
 					end
 				} ).Hit
 			end
+
 			if bMove then
 				PlyTable.GAME_flPeekUpMinimumTime = math.max( ply.GAME_flPeekUpMinimumTime, CurTime() + .15 )
 				PlyTable.GAME_flPeekTime = CurTime() + .15
@@ -1010,6 +1047,7 @@ function GameImprovements_StartCommand( ply, cmd )
 				cmd:SetForwardMove( ply:GetRunSpeed() * d:Dot( ply:GetForward() ) )
 				cmd:SetSideMove( ply:GetRunSpeed() * d:Dot( ply:GetRight() ) )
 			else ply:SetNW2Bool( "CTRL_bPredictedCantShoot", bPredictedCantShoot ) end
+
 		else//if s == "FROM" then
 			PlyTable.GAME_flPeekTime = nil
 			ply:SetNW2Bool "CTRL_bPredictedCantShoot"
@@ -1502,7 +1540,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 				ply:SendLua( "Director_VoiceLineHook(\"" .. sSoundName .. "\")" )
 
-				local t = RealTime() + math.min( SoundDuration( sSoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
+				local t = RealTime() + min( SoundDuration( sSoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
 				PlyTable.DR_flIAmAlreadyInDangerForSomeTime = t
 
 				if f <= 0 then PlyTable.DR_flVoWait = RealTime()
@@ -1539,9 +1577,3 @@ hook.Add( "EntityRemoved", "GameImprovements", function( pEntity )
 	end
 	pEntity.GAME_tIWantACallBackWhenThisIsRemoved = nil
 end )
-
-if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end
-
-function CPlayer:GetNPCClass() return CEntity_GetTable( self ).m_iClass || CLASS_HUMAN end
-function CPlayer:Classify() return CEntity_GetTable( self ).m_iClass || CLASS_HUMAN end
-function CPlayer:SetNPCClass( i ) CEntity_GetTable( self ).m_iClass = i end

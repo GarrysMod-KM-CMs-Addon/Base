@@ -24,9 +24,8 @@ function Alarm_IsClouded( vOrigin, vPos, pAlarm )
 	return tr.Fraction <= .33 && tr.HitPos:DistToSqr( vPos ) > ( RANGE_ATTACK_SUPPRESSION_BOUND_SIZE * RANGE_ATTACK_SUPPRESSION_BOUND_SIZE )
 end
 
-// ACTOR_QUEUE_LAST
-
 local coroutine_create = coroutine.create
+
 function ACTOR_QUEUE( fFunction )
 	if ACTOR_QUEUE_LAST then
 		local pNew = { coThread = coroutine_create( fFunction ) }
@@ -43,10 +42,38 @@ function ACTOR_QUEUE( fFunction )
 	end
 end
 
-// Cover: ( Vector vStart, Vector vEnd, Boolean bLeftSide, Table tConnections )
-// CNavArea:GetID() -> SequentialTable[ Cover ]
+function ACTOR_QUEUE_PATH( fFunction )
+	if ACTOR_QUEUE_PATH_LAST then
+		local pNew = { coThread = coroutine_create( fFunction ) }
+		local pHead = ACTOR_QUEUE_PATH_LAST.pNext
+		pNew.pPrev = ACTOR_QUEUE_PATH_LAST
+		pNew.pNext = pHead
+		ACTOR_QUEUE_PATH_LAST.pNext = pNew
+		pHead.pPrev = pNew
+		ACTOR_QUEUE_PATH_LAST = pNew
+	else
+		ACTOR_QUEUE_PATH_LAST = { coThread = coroutine_create( fFunction ) }
+		ACTOR_QUEUE_PATH_LAST.pPrev = ACTOR_QUEUE_PATH_LAST
+		ACTOR_QUEUE_PATH_LAST.pNext = ACTOR_QUEUE_PATH_LAST
+	end
+end
+
+/*
+Cover_t : {
+	Vector vStart,
+	Vector vEnd, 
+	Boolean bLeftSide,
+	Table tLinks = {
+		[ NavigationMeshArea ] = {
+			[ INDEX ] = true,
+			...
+		}
+	}
+}
+*/
+
+// NavigationMeshArea:GetID() -> SequentialTable[ Cover_t ]
 __COVERS_STATIC__ = __COVERS_STATIC__ || util.JSONToTable( file.Read( "Covers/" .. game.GetMap() .. "_" .. game.GetMapVersion() .. ".json" ) || "[]", true )
-__COVER_DYNAMIC_CONNECTIONS__ = {} // Cover -> { Entity -> { Any -> CNavArea:GetID() } }
 
 local FLAGS = FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE + FCVAR_CHEAT
 

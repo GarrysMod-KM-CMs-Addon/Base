@@ -23,17 +23,20 @@ SWEP.Primary_flSpreadY = 0
 SWEP.flCrosshairAlpha = 255
 
 function SWEP:GatherCrosshairPosition( MyTable )
-	return ScrW() * .5, ScrH() * .5
-	//	if cThirdPerson:GetBool() then return ScrW() * .5, ScrH() * .5 end
-	//	local v = LocalPlayer():GetNW2Entity "GAME_pVehicle"
-	//	local tr = util_TraceLine {
-	//		start = LocalPlayer():GetShootPos(),
-	//		endpos = LocalPlayer():GetShootPos() + self:GetAimVector() * 999999,
-	//		mask = MASK_SOLID,
-	//		filter = IsValid( v ) && { LocalPlayer(), v } || LocalPlayer()
-	//	}
-	//	local t = tr.HitPos:ToScreen()
-	//	return t.x, t.y
+	if !MyTable.m_bDrawSniperScope then return ScrW() * .5, ScrH() * .5 end
+
+	local pVehicle = LocalPlayer():GetNW2Entity "GAME_pVehicle"
+
+	local tr = util_TraceLine {
+		start = LocalPlayer():GetShootPos(),
+		endpos = LocalPlayer():GetShootPos() + self:GetAimVector() * 999999,
+		mask = MASK_SOLID,
+		filter = IsValid( pVehicle ) && { LocalPlayer(), pVehicle } || LocalPlayer()
+	}
+
+	local tToScreen = tr.HitPos:ToScreen()
+
+	return tToScreen.x, tToScreen.y
 end
 
 local math_max = math.max
@@ -93,7 +96,6 @@ __WEAPON_CROSSHAIR_TABLE__ = {
 		local flHeight, flWidth = ScrH(), ScrW()
 		local flRadius = flSpread * flWidth * ( 90 / MyTable.flFoV ) * .5
 		local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-		local f = .004 * flHeight
 		local flCrosshairAlpha = MyTable.flCrosshairAlpha
 		surface_DrawCircle( flX, flY, flRadius - 1, R, G, B, flCrosshairAlpha )
 		surface_DrawCircle( flX, flY, flRadius, R, G, B, flCrosshairAlpha )
@@ -352,6 +354,8 @@ function SWEP:DoDrawCrosshair()
 
 	local MyTable = CEntity_GetTable( self )
 
+	MyTable.m_bDrawSniperScope = nil
+
 	local ply = LocalPlayer()
 
 	local flDelay, f = min( MyTable.Primary_flDelay, .2 )
@@ -417,9 +421,12 @@ function SWEP:DoDrawCrosshair()
 	end
 
 	if MyTable.bSniper && flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then
+		MyTable.m_bDrawSniperScope = true
 		MyTable.DrawSniperScope( self, MyTable )
 		return true
 	end
+
+	if CallPlayerClassHook( ply, "BaseWeapon_DoDrawCrosshair", self, MyTable ) then return true end
 
 	if !MyTable.bDontDrawAmmo then
 		local flClip = math_max( self:Clip1(), self:GetMaxClip1() )

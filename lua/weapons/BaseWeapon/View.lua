@@ -74,8 +74,8 @@ SWEP.flAimMultiplier = 1
 SWEP.flFoV = UNIVERSAL_FOV
 SWEP.flLastEyeYaw = 0
 SWEP.flBobScale = 1
-SWEP.flAimSway = .33
-SWEP.flPartiallyModeledAimSway = .33
+SWEP.flAimSway = 1 / 3
+SWEP.flPartiallyModeledAimSway = 1 / 3
 SNIPER_AIMING_MULTIPLIER = .5
 SNIPER_AIMING_SWAY_MULTIPLIER = .5
 local SPRING_STIFFNESS_CURRENT, SPRING_DAMPING_CURRENT
@@ -105,27 +105,17 @@ end
 local util_TraceLine = util.TraceLine
 local flLastCalcViewCall = 0
 
+local function GenericCameraSprintingAnimation( f )
+	SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
+	local flBreathe = RealTime() * 18
+	vTargetAngle = vTargetAngle + Vector( math_cos( flBreathe ) * 1.5, math_sin( flBreathe * .5 ) * .5, math_cos( flBreathe * .5 ) * 1.25 ) * f
+end
+
 local SPRINT_ANIMATION_CAMERA = {
-	[ WPN_PISTOL ] = function( f )
-		SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
-		local flBreathe = RealTime() * 18
-		vTargetAngle = vTargetAngle + Vector( math_cos( flBreathe ), 0, math_cos( flBreathe * .5 ) ) * f
-	end,
-	[ WPN_RIFLE ] = function( f )
-		SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
-		local flBreathe = RealTime() * 18
-		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
-	end,
-	[ WPN_RIFLEUP ] = function( f )
-		SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
-		local flBreathe = RealTime() * 18
-		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
-	end,
-	[ WPN_SNIPER ] = function( f )
-		SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
-		local flBreathe = RealTime() * 18
-		vTargetAngle = vTargetAngle + Vector( math_sin( flBreathe ), 0, math_sin( flBreathe * .5 ) ) * f
-	end
+	[ WPN_PISTOL ] = GenericCameraSprintingAnimation,
+	[ WPN_RIFLE ] = GenericCameraSprintingAnimation,
+	[ WPN_RIFLEUP ] = GenericCameraSprintingAnimation,
+	[ WPN_SNIPER ] = GenericCameraSprintingAnimation
 }
 
 local flRecoilCameraShakeLerped = 0
@@ -159,11 +149,17 @@ function SWEP:CalcView( ply, pos, ang )
 
 				local flBreathe = RealTime() * 12
 
-				vTargetAngle:Add( Vector( math_sin( flBreathe ) * .5, math_cos( flBreathe * .5 ) * .5 ) * f * MyTable.flAimMultiplier )
+				vTargetAngle:Add( Vector( math_sin( flBreathe ), math_cos( flBreathe * .5 ), math_sin( flBreathe * .5 ) ) * f * MyTable.flAimMultiplier )
 
-				f = f * ( 1 - MyTable.flAimMultiplier )
-				vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * .33, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
-				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * .33 )
+				f = f * ( 1 - MyTable.flAimMultiplier ) * 1 / 3
+				vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * 2 / 3, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
+				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * 2 / 3 )
+			end
+
+			if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - .5 * flVelocity / CPlayer_GetWalkSpeed( ply )
+			elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + .5 * flVelocity / CPlayer_GetWalkSpeed( ply )
 			end
 		end
 	end
@@ -649,7 +645,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	local bSprinting = CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )
 	local bSliding = CEntity_GetNW2Bool( ply, "CTRL_bSliding" )
 	local bInCover = CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" )
-	local bZoom = !bSprinting && !bSliding && !bInCover && CEntity_IsOnGround( ply ) && CPlayer_KeyDown( ply, IN_ZOOM )
+	local bZoom = ( !MyTable.bPreventIronsightReloads || CurTime() > MyTable.flReloadTime ) && ( !MyTable.bPreventIronsightDraws || CurTime() > MyTable.flDrawTime ) && !bSprinting && !bSliding && !bInCover && CEntity_IsOnGround( ply ) && CPlayer_KeyDown( ply, IN_ZOOM )
 
 	// This is not how that works lmao
 	//	local vAim = MyTable.vViewModelAim

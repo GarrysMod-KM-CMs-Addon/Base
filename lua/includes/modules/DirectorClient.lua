@@ -15,6 +15,8 @@ if SERVER then AddCSLuaFile "includes/modules/DirectorClient.lua" return end
 // make the themes change based on the PLAYER'S stealth intensity,
 // it's more like that one dream idea you can do on words but can't do in real life 'cause you're too weak
 
+// TODO: We should probably move to IGModAudioChannel's
+
 // Here are some weapon things that are too small to give them another file
 VIEWMODEL_CAMERA_ANIMATIONS = VIEWMODEL_CAMERA_ANIMATIONS || {}
 
@@ -185,6 +187,14 @@ local __VARNAME__ = {
 	[ DIRECTOR_THREAT_COMBAT ] = "DIRECTOR_NUM_COMBAT_THEMES"
 }
 
+local __CVARNAME__ = {
+	[ DIRECTOR_THREAT_HEAT ] = CreateConVar( "DirectorMusicHeatThemeOverride", "", FCVAR_NONE, "Custom user override" ),
+	[ DIRECTOR_THREAT_ALERT ] = CreateConVar( "DirectorMusicAlertThemeOverride", "", FCVAR_NONE, "Custom user override" ),
+	[ DIRECTOR_THREAT_AGGRESSIVE_SEARCH ] = CreateConVar( "DirectorMusicAggressiveSearchThemeOverride", "", FCVAR_NONE, "Custom user override" ),
+	[ DIRECTOR_THREAT_HOLD_FIRE ] = CreateConVar( "DirectorMusicHoldFireThemeOverride", "", FCVAR_NONE, "Custom user override" ),
+	[ DIRECTOR_THREAT_COMBAT ] = CreateConVar( "DirectorMusicCombatThemeOverride", "", FCVAR_NONE, "Custom user override" )
+}
+
 function DirectorContainerInternal()
 	return {
 		tHandles = {},
@@ -254,16 +264,23 @@ DIRECTOR_ALLOCATE_TRANSITION_FROM_COMBAT( "DIRECTOR_TRANSITION_FROM_COMBAT_Fade"
 				flVolumeB = math_Approach( flVolumeB, 0, flInterval )
 				return false, flVolumeA, flVolumeB
 			end
+	
 			if self.m_ELayerFrom == DIRECTOR_THREAT_NULL || flVolumeA >= 1 then return 0 end
+
 			flVolumeA = math_Approach( flVolumeA, 1, flInterval )
+
 			return false, flVolumeA, flVolumeB
 		end
+
 		if flVolumeA > 0 then
 			flVolumeA = math_Approach( flVolumeA, 0, flInterval )
 			return false, flVolumeA, flVolumeB
 		end
+
 		if self.m_ELayerTo == DIRECTOR_THREAT_NULL || flVolumeB >= 1 then return true end
+
 		flVolumeB = math_Approach( flVolumeB, 1, flInterval )
+
 		return false, flVolumeA, flVolumeB
 	end
 } )
@@ -278,7 +295,7 @@ function DirectorUpdateContainerInternal( self, ... )
 	local t = self.m_pTable
 	local flInterval = SysTime() - LAST_DIRECTOR_CLIENT_TICK
 
-	t.Execute( self, SysTime() - self.m_flLastExecute, ... )
+	t.Execute( self, ( SysTime() - self.m_flLastExecute ) * 8, ... )
 	self.m_flLastExecute = SysTime()
 
 	local tHandles = self.tHandles
@@ -311,10 +328,11 @@ function DirectorUpdateContainerInternal( self, ... )
 
 	local flLastExecute = self.m_flLastExecute
 	self.m_flLastExecute = SysTime()
-	return t.Execute( self, SysTime() - flLastExecute, ... )
+	return t.Execute( self, ( SysTime() - flLastExecute ) * 8, ... )
 end
 
-local DirectorUpdateContainerInternal = DirectorUpdateContainerInternal
+// Always use the _G one
+//	local DirectorUpdateContainerInternal = DirectorUpdateContainerInternal
 
 // FIXME: Until I implement support for m_pContainerFrom instead of
 // m_ELayerFrom, this is gonna break when one special changes to another
@@ -393,7 +411,25 @@ function DIRECTOR_CLIENT_TICK()
 	if !IsValid( ply ) then LAST_DIRECTOR_CLIENT_TICK = SysTime() return end // NO!
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		if !DIRECTOR_MUSIC[ ELayer ] then
-			local t = DIRECTOR_MUSIC_TABLE[ ELayer ][ math_random( 1, _G[ __VARNAME__[ ELayer ] ] ) ]
+			local t
+
+			local cv = __CVARNAME__[ ELayer ]
+			if cv then
+				local s = cv:GetString()
+				if s != "" then
+					t = DIRECTOR_MUSIC_TABLE[ ELayer ][ _G[ s ] ]
+					if !t then t = DIRECTOR_MUSIC_TABLE[ ELayer ][ math_random( 1, _G[ __VARNAME__[ ELayer ] ] ) ] end
+				end
+			else
+				t = DIRECTOR_MUSIC_TABLE[ ELayer ][ math_random( 1, _G[ __VARNAME__[ ELayer ] ] ) ]
+			end
+
+			local p = DirectorContainerInternal()
+			p.m_pTable = t
+			p.m_flStartTime = SysTime()
+			local f = p.Time
+			p.m_flEndTime = f && f() || ( SysTime() + math_Rand( 120, 240 ) )
+
 			if t then
 				local b
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
@@ -401,15 +437,9 @@ function DIRECTOR_CLIENT_TICK()
 					if p && p.m_pTable == t then b = true break end
 				end
 				if b then continue end
-				local p = DirectorContainerInternal()
-				p.m_pTable = t
-				p.m_flStartTime = SysTime()
-				local f = p.Time
-				p.m_flEndTime = f && f() || ( SysTime() + math_Rand( 120, 240 ) )
 				t.Load = t.Load || function() end
 				DIRECTOR_MUSIC[ ELayer ] = p
 			else
-				local p = DirectorContainerInternal()
 				p.m_pTable = { Execute = function() end, Load = function() end }
 				DIRECTOR_MUSIC[ ELayer ] = p
 			end
@@ -447,7 +477,7 @@ function DIRECTOR_CLIENT_TICK()
 					if ELayer == ELayerFrom then
 						pContainer.m_flVolume = flVolumeA
 					else
-						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+						pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 					DirectorUpdateContainerInternal( pContainer )
 				end
@@ -473,7 +503,7 @@ function DIRECTOR_CLIENT_TICK()
 					if ELayer == ELayerFrom then
 						pContainer.m_flVolume = flVolumeA
 					else
-						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+						pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 					DirectorUpdateContainerInternal( pContainer )
 				end
@@ -485,11 +515,11 @@ function DIRECTOR_CLIENT_TICK()
 		end
 		for ELayer, pContainer in pairs( DIRECTOR_MUSIC ) do
 			if pContainer then
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+				pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 				DirectorUpdateContainerInternal( pContainer )
 			end
 		end
-		DIRECTOR_SPECIAL.m_flVolume = math.Approach( DIRECTOR_SPECIAL.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+		DIRECTOR_SPECIAL.m_flVolume = math_Approach( DIRECTOR_SPECIAL.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 		DirectorUpdateContainerInternal( DIRECTOR_SPECIAL )
 		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
@@ -504,7 +534,7 @@ function DIRECTOR_CLIENT_TICK()
 						DirectorUpdateContainerInternal( pContainer )
 						if ELayer == DIRECTOR_THREAT_HOLD_FIRE then
 							pContainer.m_flVolume = 1
-						else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
+						else pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 					end
 				end
 			else
@@ -548,14 +578,14 @@ function DIRECTOR_CLIENT_TICK()
 					if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 						DIRECTOR_TRANSITION = nil
 					else
-						DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+						DIRECTOR_TRANSITION.m_flVolume = math_Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 				end
 				for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 					local pContainer = DIRECTOR_MUSIC[ ELayer ]
 					if pContainer then
 						DirectorUpdateContainerInternal( pContainer )
-						pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+						pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 					end
 				end
 				local pHoldFire = DIRECTOR_MUSIC[ DIRECTOR_THREAT_HOLD_FIRE ]
@@ -603,7 +633,7 @@ function DIRECTOR_CLIENT_TICK()
 				elseif ELayer == ELayerTo then
 					pContainer.m_flVolume = flVolumeB
 				else
-					pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+					pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 				end
 				DirectorUpdateContainerInternal( pContainer )
 			end
@@ -620,7 +650,7 @@ function DIRECTOR_CLIENT_TICK()
 			if pContainer then
 				if ELayer == DIRECTOR_THREAT then
 					pContainer.m_flVolume = 1
-				else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
+				else pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 				DirectorUpdateContainerInternal( pContainer )
 			end
 		end
@@ -629,7 +659,7 @@ function DIRECTOR_CLIENT_TICK()
 			if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 				DIRECTOR_TRANSITION = nil
 			else
-				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+				DIRECTOR_TRANSITION.m_flVolume = math_Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 			end
 		end
 	elseif DIRECTOR_MUSIC_WAS_HOLD_FIRE then
@@ -647,8 +677,8 @@ function DIRECTOR_CLIENT_TICK()
 				else pContainer.m_flVolume = 0 end
 				//	if ELayer == DIRECTOR_THREAT then
 				//		if pContainer.m_flVolume == 1 then DIRECTOR_MUSIC_WAS_HOLD_FIRE = nil end
-				//		pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
-				//	else pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
+				//		pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 1, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+				//	else pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK ) end
 				DirectorUpdateContainerInternal( pContainer )
 			end
 		end
@@ -657,7 +687,7 @@ function DIRECTOR_CLIENT_TICK()
 			if DIRECTOR_TRANSITION.m_flVolume <= 0 then
 				DIRECTOR_TRANSITION = nil
 			else
-				DIRECTOR_TRANSITION.m_flVolume = math.Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
+				DIRECTOR_TRANSITION.m_flVolume = math_Approach( DIRECTOR_TRANSITION.m_flVolume, 0, SysTime() - LAST_DIRECTOR_CLIENT_TICK )
 			end
 		end
 		LAST_DIRECTOR_CLIENT_TICK = SysTime()
@@ -683,23 +713,26 @@ function DIRECTOR_CLIENT_TICK()
 		LAST_DIRECTOR_CLIENT_TICK = SysTime()
 		return
 	end
+
 	// Do NOT mistake this for the fade transition!
 	// This is completely different, and used to fade between
 	// idle/heat/alert tracks!
+
 	for _, ELayer in ipairs( DIRECTOR_LAYER_TABLE ) do
 		local pContainer = DIRECTOR_MUSIC[ ELayer ]
 		if pContainer then
 			DirectorUpdateContainerInternal( pContainer )
 			if ELayer == DIRECTOR_THREAT then
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 1, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
+				pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 1, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
 			else
 				if table.IsEmpty( pContainer.tHandles ) || pContainer.m_flVolume <= 0 then pContainer.m_flVolume = 0 end
 				DirectorUpdateContainerInternal( pContainer )
-				pContainer.m_flVolume = math.Approach( pContainer.m_flVolume, 0, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
+				pContainer.m_flVolume = math_Approach( pContainer.m_flVolume, 0, .1 * ( SysTime() - LAST_DIRECTOR_CLIENT_TICK ) )
 				if pContainer.m_flVolume <= 0 && SysTime() > ( pContainer.m_flEndTime || 0 ) then DIRECTOR_MUSIC[ ELayer ] = nil end
 			end
 		end
 	end
+
 	LAST_DIRECTOR_CLIENT_TICK = SysTime()
 end
 
