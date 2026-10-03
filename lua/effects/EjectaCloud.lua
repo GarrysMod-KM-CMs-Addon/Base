@@ -12,16 +12,27 @@ local SURFACE_PROP_EJECTA_COLORS = {
 	}
 }
 
-function FX_EjectaCloud( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
+function FX_EjectaCloud( tData )
 	// TODO: FX_EjectaCloudWater
-	FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
+	FX_EjectaCloudLand( tData )
 end
 
-function FX_EjectaCloudWater( vPos, flMagnitude, flStrengthOverride )
+function FX_EjectaCloudWater( tData )
 	// TODO
 end
 
-function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride )
+function FX_EjectaCloudLand( tData )
+	local vPos = tData.vOrigin
+	local flMagnitude = tData.flMagnitude
+	local ESurfaceProp = tData.ESurfaceProp
+	local flStrengthOverride = tData.flStrengthOverride
+
+	// Only use this if you know what you're doing!
+	// This is NOT meant to be used for footsteps, the Metal Gear RAY
+	// uses it for them because it's huge.
+	// There should be dirt parameters for footsteps soon.
+	local vBaseVelocity = tData.vBaseVelocity || vector_origin
+
 	local pEmitter = ParticleEmitter( vPos )
 
 	local flScale = flMagnitude / 800
@@ -41,7 +52,7 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride
     for _ = 1, 10 * flScale do
         local pPart = pEmitter:Add( "particle/particle_composite", vPos )
         if pPart then
-            pPart:SetVelocity( VectorRand():GetNormalized() * math.random( 100, 400 ) * flScale )
+            pPart:SetVelocity( vBaseVelocity + VectorRand():GetNormalized() * math.random( 100, 400 ) * flScale )
             pPart:SetDieTime( math.Rand( 2, 12 ) * flTimeScale )
             pPart:SetStartAlpha( 230 )
             pPart:SetEndAlpha( 0 )
@@ -60,7 +71,7 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride
     for _ = 1, 7 * flScale do
         local pPart = pEmitter:Add( "particle/smokesprites_000" .. math.random( 1, 9 ), vPos )
         if pPart then
-            pPart:SetVelocity( VectorRand():GetNormalized() * math.random( 200, 600 ) * flScale )
+            pPart:SetVelocity( vBaseVelocity + VectorRand():GetNormalized() * math.random( 200, 600 ) * flScale )
             pPart:SetDieTime( math.Rand( 2, 12 ) * flTimeScale )
             pPart:SetStartAlpha( 255 - 200 * math.random() * math.random() * math.random() )
             pPart:SetEndAlpha( 0 )
@@ -79,7 +90,7 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride
     for _ = 1, 12 * flScale do
         local pPart = pEmitter:Add( "effects/fleck_cement" .. math.random( 1, 2 ), vPos )
         if pPart then
-            pPart:SetVelocity( VectorRand():GetNormalized() * math.random( 0, 700 ) * flScale )
+            pPart:SetVelocity( vBaseVelocity + VectorRand():GetNormalized() * math.random( 0, 700 ) * flScale )
             pPart:SetDieTime( math.random( 1, 2 ) * flTimeScale )
             pPart:SetStartAlpha( 255 )
             pPart:SetEndAlpha( 0 )
@@ -98,7 +109,10 @@ function FX_EjectaCloudLand( vPos, flMagnitude, ESurfaceProp, flStrengthOverride
 end
 
 function EFFECT:Init( pData )
-	FX_EjectaCloud( pData:GetPos(), pData:GetMagnitude(), pData:GetRadius() )
+	FX_EjectaCloud {
+		vOrigin = pData:GetPos(),
+		flMagnitude = pData:GetMagnitude()
+	}
 end
 
 function EFFECT:Think() return false end

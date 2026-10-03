@@ -19,14 +19,8 @@ local render_GetLightColor = render.GetLightColor
 
 local Lerp = Lerp
 
-local cMaterialRemainsMaxLifeTime = CreateClientConVar(
-	"flMaterialRemainsMaxLifeTime",
-	"12",
-	true,
-	nil, 
-	"How long can blown off material parts be on the ground?",
-	8, 32
-)
+// TODO: This really needs to be reworked to support the new FX_EjectaCloud
+// And, perhaps, the sounds should be played on the server to alert AI
 
 sound.Add {
 	name = "BulletImpactMetal",
@@ -38,7 +32,12 @@ sound.Add {
 
 sound.Add {
 	name = "BulletImpactConcrete",
-	sound = { "physics/concrete/concrete_break2.wav", "physics/concrete/concrete_break3.wav" },
+	sound = {
+		"physics/concrete/concrete_impact_bullet1.wav",
+		"physics/concrete/concrete_impact_bullet2.wav",
+		"physics/concrete/concrete_impact_bullet3.wav",
+		"physics/concrete/concrete_impact_bullet4.wav",
+	},
 	level = 90,
 	pitch = { 80, 120 },
 	channel = CHAN_STATIC
@@ -60,7 +59,11 @@ local EFFECTS = {
 	[ util.GetSurfaceIndex "metal" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
 
-		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
+		FX_EjectaCloud {
+			vOrigin = vPos,
+			flMagnitude = 300,
+			ESurfaceProp = pData:GetSurfaceProp()
+		}
 
 		EmitSound( "BulletImpactMetal", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
@@ -143,7 +146,11 @@ local EFFECTS = {
 	[ util.GetSurfaceIndex "concrete" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
 
-		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
+		FX_EjectaCloud {
+			vOrigin = vPos,
+			flMagnitude = 300,
+			ESurfaceProp = pData:GetSurfaceProp()
+		}
 
 		EmitSound( "BulletImpactConcrete", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
@@ -258,7 +265,11 @@ local EFFECTS = {
 	[ util.GetSurfaceIndex "brick" ] = function( self, pData )
 		local vPos = pData:GetOrigin()
 
-		FX_EjectaCloud( vPos, 300, pData:GetSurfaceProp() )
+		FX_EjectaCloud {
+			vOrigin = vPos,
+			flMagnitude = 300,
+			ESurfaceProp = pData:GetSurfaceProp()
+		}
 
 		EmitSound( "BulletImpactConcrete", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
 
@@ -385,7 +396,7 @@ local EFFECTS = {
 			if pPart then
 				local v = LerpVector( .5, dNormal, VectorRand() ):GetNormalized()
 				pPart:SetAngles( v:Angle() )
-				pPart:SetDieTime( math_Rand( 0, cMaterialRemainsMaxLifeTime:GetFloat() ) )
+				pPart:SetDieTime( math_Rand( 0, 12 ) )
 				pPart:SetStartAlpha( math_Rand( 190, 255 ) )
 				pPart:SetEndAlpha( 0 )
 				pPart:SetStartSize( math_Rand( 0, 64 ) )
@@ -458,7 +469,7 @@ local EFFECTS = {
 			if pPart then
 				local v = LerpVector( .5, dNormal, VectorRand() ):GetNormalized()
 				pPart:SetAngles( v:Angle() )
-				pPart:SetDieTime( math_Rand( 0, cMaterialRemainsMaxLifeTime:GetFloat() ) )
+				pPart:SetDieTime( math_Rand( 0, 12 ) )
 				pPart:SetStartAlpha( math_Rand( 190, 255 ) )
 				pPart:SetEndAlpha( 0 )
 				pPart:SetStartSize( math_Rand( 0, 32 ) )
@@ -487,7 +498,11 @@ local EFFECTS = {
 	end,
 
 	[ util.GetSurfaceIndex "dirt" ] = function( self, pData )
-		FX_EjectaCloud( pData:GetOrigin(), 300, pData:GetSurfaceProp() )
+		FX_EjectaCloud {
+			vOrigin = pData:GetOrigin(),
+			flMagnitude = 300,
+			ESurfaceProp = pData:GetSurfaceProp()
+		}
 	end,
 
 	[ util.GetSurfaceIndex "flesh" ] = function( self, pData ) end,
@@ -510,7 +525,7 @@ local EFFECTS = {
 			if pPart then
 				local v = LerpVector( .5, dNormal, VectorRand() ):GetNormalized()
 				pPart:SetAngles( v:Angle() )
-				pPart:SetDieTime( math_Rand( 0, cMaterialRemainsMaxLifeTime:GetFloat() ) )
+				pPart:SetDieTime( math_Rand( 0, 12 ) )
 				pPart:SetStartAlpha( math_Rand( 190, 255 ) )
 				pPart:SetEndAlpha( 0 )
 				pPart:SetStartSize( math_Rand( 0, 32 ) )

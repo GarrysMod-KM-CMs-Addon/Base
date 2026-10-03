@@ -158,7 +158,7 @@ HUMAN_SPRINT_SPEED = 300
 HUMAN_JOG_SPEED = 200
 HUMAN_WALK_SPEED = 70
 
-HUMAN_JUMP_HEIGHT = 48
+HUMAN_JUMP_HEIGHT = 56
 
 // Weapon statuses and other complicated bullshit
 
@@ -194,7 +194,7 @@ TRAVERSES_WATER = 1
 TRAVERSES_GROUND = 2
 TRAVERSES_AIR = 4
 
-UNIVERSAL_FOV = 80
+UNIVERSAL_FOV = 90
 
 local RealTime = RealTime
 local FrameTime = FrameTime
@@ -234,6 +234,28 @@ function QuickSlide_Can( ply, t )
 	return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !t.CTRL_bCantSlide && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9  )
 end
 
+function CalculateRecoilDampeningSpecial( pPlayer, PlyTable, pWeapon, WeaponTable )
+	local flMultiplier = 2 / 3
+
+	if pPlayer.GetWalkSpeed then flMultiplier = flMultiplier * ( 1 + math.Clamp( GetVelocity( pPlayer ):Length() / ( pPlayer:GetWalkSpeed() * 4 ), 0, .25 ) ) end
+
+	if pPlayer:IsOnGround() then
+		// This should probably use flAimMultiplier somehow
+		local f = pPlayer.KeyDown
+		if f && f( pPlayer, IN_ZOOM ) then flMultiplier = flMultiplier * .5 end
+	else
+		// Ditto
+		local f = pPlayer.KeyDown
+		if f && f( pPlayer, IN_ZOOM ) then
+			// Nothing
+		else
+			flMultiplier = flMultiplier * 1.5
+		end
+	end
+
+	return flMultiplier
+end
+
 hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local ang = cmd:GetViewAngles()
 
@@ -243,7 +265,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	PlyTable.GAME_flLastStartCommandCall = CurTime()
 
 	local pActiveWeapon = ply:GetActiveWeapon()
-	local flDelay, flRecoil, flMultiplier = .1, 1, 1
+	local flDelay, flRecoil = .1, 1
 	local bAutomatic
 	if IsValid( pActiveWeapon ) then
 		local WeaponTable = CEntity_GetTable( pActiveWeapon )
@@ -264,12 +286,11 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			if flDelay then
 				flDelay = min( flDelay, .2 )
 				flRecoil = WeaponTable.flRecoil
-				flMultiplier = WeaponTable.CalculateRecoilMultiplier( pActiveWeapon, ply, WeaponTable )
 			end
 		end
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * ( 2 / 3 ) ) ^ 2 * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * CalculateRecoilDampeningSpecial( ply, PlyTable, pActiveWeapon, WeaponTable ) ) ^ 2 * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
@@ -277,8 +298,8 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local flRecoilImpulseRight = math_Approach( PlyTable.GAME_flRecoilImpulseRight || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseRight = flRecoilImpulseRight
 
-	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * flMultiplier * 3 * flFrameTime
-	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * flMultiplier * 3 * flFrameTime
+	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * 2 * flFrameTime
+	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * 2 * flFrameTime
 
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 		local flBreathe = RealTime() * .5
@@ -297,13 +318,6 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	end
 
 	cmd:SetViewAngles( ang )
-
-	// No, this is not a mistake. Only automatic weapons get the penalty.
-	// Why? Idunno, it just feels better.
-	if bAutomatic then
-		if CurTime() >= ( PlyTable.GAME_flSpamPenalty || 0 ) && ply:KeyReleased( IN_ATTACK ) then PlyTable.GAME_flSpamPenalty = CurTime() + math.Rand( 0, .085 ) end
-		if CurTime() <= ( PlyTable.GAME_flSpamPenalty || 0 ) then cmd:RemoveKey( IN_ATTACK ) end
-	end
 
 	if CLIENT then
 		if cmd:KeyDown( IN_SPEED ) then
@@ -360,7 +374,7 @@ local cDisableLevelOfDetail = CreateConVar(
 	"bDisableLevelOfDetail",
 	0,
 	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
-	"Disabled LoD. Not the same LoD that changes model vertices.\n\nThe one which optimizes code.\n\nNOT RECOMMENDED!",
+	"Disabled LoD. Not the same LoD that changes model vertices. The one which optimizes code.\n\nNOT RECOMMENDED!",
 	0, 1
 )
 

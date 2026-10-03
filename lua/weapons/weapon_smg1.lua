@@ -13,7 +13,7 @@ SWEP.Primary.Automatic = true
 SWEP.Primary.Ammo = "SMG1"
 SWEP.Primary_flSpreadX = .0083
 SWEP.Primary_flSpreadY = .0083
-SWEP.Primary_flDelay = .06315789473
+SWEP.Primary_flDelay = 60 / 950
 SWEP.Primary_flDamage = 20
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
@@ -32,7 +32,7 @@ SWEP.flSidewaysRecoilMin = -.22
 SWEP.flSidewaysRecoilMax = .22
 SWEP.flUpwardsRecoilMin = .55
 SWEP.flUpwardsRecoilMax = .95
-SWEP.flViewModelX = 2
+SWEP.flViewModelX = 0
 
 if CLIENT then
 	local math_abs = math.abs

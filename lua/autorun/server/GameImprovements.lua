@@ -458,7 +458,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 	local pOwner = GetOwner( pShooter )
 
 	local bMuzzleFlash = true
-	if pShooter.GAME_bNoMuzzleFlash then
+	if pShooter.GAME_bNoMuzzleFlash || pShooter.GAME_bPermanentNoMuzzleFlash then
 		bMuzzleFlash = nil
 		pShooter.GAME_bNoMuzzleFlash = nil
 	end
@@ -1431,6 +1431,9 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 	local bUnableToPinpointLocation = pEntity.SOUND_CONTEXT_bUnableToPinpointLocation
 
+	Data.Pos = pEntity.SOUND_vOrigin || Data.Pos
+	pEntity.SOUND_vOrigin = nil
+
 	pEntity.SOUND_CONTEXT_sContext = nil
 	pEntity.SOUND_CONTEXT_bUnableToPinpointLocation = nil
 
@@ -1490,7 +1493,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 			if NOT_A_VOICELINE[ sRealSound ] then continue end
 
-			if Director_GetThreat( ply, pEntity ) < DIRECTOR_THREAT_HOLD_FIRE && Director_GetThreat( ply, pOwner ) < DIRECTOR_THREAT_HOLD_FIRE then continue end
+			if Director_GetThreat( ply, pEntity ) < DIRECTOR_THREAT_COMBAT && Director_GetThreat( ply, pOwner ) < DIRECTOR_THREAT_COMBAT then continue end
 
 			local PlyTable = CEntity_GetTable( ply )
 
@@ -1512,48 +1515,6 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 				PlyTable.DR_EThreat = DIRECTOR_THREAT_COMBAT
 				continue
 			end
-	
-			if ( RealTime() > ( PlyTable.DR_flIAmAlreadyInCombatForSomeTime || 0 ) ) && ( RealTime() > ( PlyTable.DR_flVoWait || 0 ) && PlyTable.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( PlyTable.DR_flVoDangerousWait || math.huge ) ) then
-				local flVoVait = PlyTable.DR_flVoWait
-				if !flVoVait || RealTime() > ( flVoVait + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ) * 2 ) then
-					PlyTable.DR_EThreat = DIRECTOR_THREAT_COMBAT
-
-					ply:SendLua( "Director_VoiceLineHookToCombat(\"" .. sSoundName .. "\")" )
-
-					local t = RealTime() + min( SoundDuration( sSoundName ), 8 )
-
-					PlyTable.DR_flIAmAlreadyInCombatForSomeTime = t
-					PlyTable.DR_flIAmAlreadyInDangerForSomeTime = t
-
-					if f <= 0 then PlyTable.DR_flVoDangerousWait = RealTime()
-					else PlyTable.DR_flVoDangerousWait = t end
-				end
-
-				f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
-				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
-
-				continue
-			end
-	
-			if ( RealTime() > ( PlyTable.DR_flIAmAlreadyInDangerForSomeTime || 0 ) ) && ( PlyTable.DR_EThreat < DIRECTOR_THREAT_HOLD_FIRE || RealTime() <= ( PlyTable.DR_flVoWait || 0 ) ) then
-				PlyTable.DR_EThreat = DIRECTOR_THREAT_HOLD_FIRE
-
-				ply:SendLua( "Director_VoiceLineHook(\"" .. sSoundName .. "\")" )
-
-				local t = RealTime() + min( SoundDuration( sSoundName ), 8 ) + ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-				PlyTable.DR_flIAmAlreadyInDangerForSomeTime = t
-
-				if f <= 0 then PlyTable.DR_flVoWait = RealTime()
-				else PlyTable.DR_flVoWait = t end
-
-				f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * ( 1 / 60 ), 0, DIRECTOR_MUSIC_VO_WAIT )
-				ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
-
-				continue
-			end
-	
-			f = math_Clamp( f - DIRECTOR_MUSIC_VO_WAIT * .05, 0, DIRECTOR_MUSIC_VO_WAIT )
-			ply:SetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", f )
 		end
 
 		if !table_IsEmpty( tCaptionPlayers ) then

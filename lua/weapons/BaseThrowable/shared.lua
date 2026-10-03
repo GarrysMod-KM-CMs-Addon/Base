@@ -15,7 +15,7 @@ SWEP.WPN_SPRINT = WPN_PISTOL
 SWEP.Slot = 4
 
 SWEP.bNoReloads = true
-SWEP.bSpecial = true
+SWEP.__SPECIAL_WEAPON_TYPE__ = "Throwable"
 
 SWEP.Crosshair = "Special"
 

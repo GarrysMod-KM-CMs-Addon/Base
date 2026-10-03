@@ -42,30 +42,22 @@ local tostring = tostring
 local ents_FindInPVS = ents.FindInPVS
 local math_random = math.random
 
-util.AddNetworkString "DR_ClientWantsToBeInCombat"
-
-net.Receive( "DR_ClientWantsToBeInCombat", function( _, ply )
-	if ply.DR_EThreat == DIRECTOR_THREAT_HOLD_FIRE then
-		ply.DR_EThreat = DIRECTOR_THREAT_COMBAT
-	end
-end )
-
 function Director_GetThreat( pPlayer, pEntity )
 	if pEntity.__ALARM__ then
-		if pEntity.bIsOn then return DIRECTOR_THREAT_HOLD_FIRE end
+		if pEntity.bIsOn then return DIRECTOR_THREAT_COMBAT end
 		return DIRECTOR_THREAT_NULL
 	end
 
-	if IsValid( pEntity.Enemy ) then return DIRECTOR_THREAT_HOLD_FIRE end
+	if IsValid( pEntity.Enemy ) then return DIRECTOR_THREAT_COMBAT end
 
 	local f = pEntity.GetEnemy
-	if f && IsValid( f( pEntity ) ) then return DIRECTOR_THREAT_HOLD_FIRE end
+	if f && IsValid( f( pEntity ) ) then return DIRECTOR_THREAT_COMBAT end
 
 	local f = pEntity.GetNPCState
 	if f then
 		f = f( pEntity )
 		if f == NPC_STATE_COMBAT then
-			return DIRECTOR_THREAT_HOLD_FIRE
+			return DIRECTOR_THREAT_COMBAT
 		elseif f == NPC_STATE_ALERT then
 			return DIRECTOR_THREAT_ALERT
 		else
@@ -211,7 +203,7 @@ hook.Add( "Tick", "Director", function()
 		ply:SetCanZoom( false )
 
 		local flHealthPart = ply:Health() / ply:GetMaxHealth()
-		ply:SetDSP( flHealthPart <= .3 && 16 || flHealthPart <= .4 && 15 || flHealthPart <= .5 && 14 || 1 )
+		ply:SetDSP( flHealthPart <= .3 && 16 || flHealthPart <= .4 && 15 || flHealthPart <= .9 && 14 || 1 )
 
 		PlyTable.GAME_flSuppression = math_Approach( PlyTable.GAME_flSuppression || 0, 0, math_max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
 		local EThreat = DIRECTOR_THREAT_NULL
@@ -271,8 +263,6 @@ hook.Add( "Tick", "Director", function()
 			else tSpotted[ pEntity ] = CurTime() + DIRECTOR_MUSIC_VO_WAIT end
 		end
 
-		if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT && EThreat == DIRECTOR_THREAT_HOLD_FIRE then EThreat = DIRECTOR_THREAT_COMBAT end
-
 		local i = 1
 		while true do
 			local sI = tostring( i )
@@ -298,7 +288,7 @@ hook.Add( "Tick", "Director", function()
 		flIntensity = math.max( 0, flAllSuppression ) / flAllHealth
 		if flIntensity != flIntensity then flIntensity = 0 end // nan
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
-		if EThreat >= DIRECTOR_THREAT_HOLD_FIRE then Achievement_Miscellaneous( ply, "Combat" ) end
+		if EThreat >= DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) end
 		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		local sIntensity = tostring( flIntensity )

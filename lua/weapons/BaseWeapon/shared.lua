@@ -68,15 +68,13 @@ local PISTOL_REVOLVER_ETC = { Pistol = true, Revolver = true, Melee = true, Slam
 
 function SWEP:TranslateAttackActivity( EIntendedActivity, EActivity )
 	if EIntendedActivity >= 1011/*ACT_MP_ATTACK_STAND_PRIMARYFIRE*/ && EIntendedActivity <= 1143/*ACT_MP_ATTACK_AIRWALK_GRENADE_SECONDARY*/ then
-		if EActivity <= ACT_MP_ATTACK_AIRWALK_PRIMARY then
-			local sHoldTypeShoot = self.sHoldTypeShoot
-			if sHoldTypeShoot then
-				local sHoldType = self:GetHoldType()
-				self:SetWeaponHoldType( sHoldTypeShoot )
-				EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
-				self:SetWeaponHoldType( sHoldType )
-				return EActivity
-			end
+		local sHoldTypeShoot = self.sHoldTypeShoot
+		if sHoldTypeShoot then
+			local sHoldType = self:GetHoldType()
+			self:SetWeaponHoldType( sHoldTypeShoot )
+			EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+			self:SetWeaponHoldType( sHoldType )
+			return EActivity
 		end
 
 		return EActivity
@@ -101,7 +99,9 @@ function SWEP:TranslateActivity( EIntendedActivity )
 				end
 			end
 		end
+
 		if self:GetHoldType() == "Normal" || self:GetHoldType() == "Melee" then return EActivity end
+
 		if pOwner:IsPlayer() then
 			if pOwner:KeyDown( IN_ZOOM ) then
 				if self:GetHoldType() == "Shotgun" then
@@ -125,6 +125,13 @@ function SWEP:TranslateActivity( EIntendedActivity )
 				end
 			end
 
+			if self:GetHoldType() == "Shotgun" then
+				self:SetWeaponHoldType "AR2"
+				EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+				self:SetWeaponHoldType "Shotgun"
+				return EActivity
+			end
+
 		elseif pOwner.__ACTOR__ then
 			local WEAPON_STANCE = pOwner:GetNW2Int( "WEAPON_STANCE", WEAPON_STANCE_DEFAULT )
 			if WEAPON_STANCE == WEAPON_STANCE_PASSIVE then
@@ -139,7 +146,6 @@ function SWEP:TranslateActivity( EIntendedActivity )
 				elseif EIntendedActivity == ACT_MP_CROUCHWALK then
 					return ACT_HL2MP_WALK_CROUCH
 				end
-			elseif WEAPON_STANCE == WEAPON_STANCE_DEFAULT then // Nothing lol
 			elseif WEAPON_STANCE == WEAPON_STANCE_AIMING then
 				if self:GetHoldType() == "Shotgun" then
 					self:SetWeaponHoldType "AR2"
@@ -155,7 +161,7 @@ function SWEP:TranslateActivity( EIntendedActivity )
 					self:SetWeaponHoldType( sHoldType )
 					return EActivity
 				end
-			elseif WEAPON_STANCE == WEAPON_STANCE_SHOULDER then
+			elseif WEAPON_STANCE == WEAPON_STANCE_DEFAULT || WEAPON_STANCE == WEAPON_STANCE_SHOULDER then
 				local sHoldType = self:GetHoldType()
 				if !PISTOL_REVOLVER_ETC[ sHoldType ] && sHoldType != "SMG" then
 					self:SetWeaponHoldType "AR2"
@@ -422,26 +428,6 @@ SWEP.flUpwardsRecoilMax = 1
 
 SWEP.flSidewaysRecoilMin = -1
 SWEP.flSidewaysRecoilMax = 1
-
-function SWEP:CalculateRecoilMultiplier( pOwner, MyTable )
-	local flMultiplier = 1
-
-	if pOwner.GetRunSpeed then flMultiplier = flMultiplier * ( 1 + math_Clamp( pOwner:GetVelocity():Length() / ( pOwner:GetRunSpeed() * 1.25 ), 0, .25 ) ) end
-
-	if pOwner:IsOnGround() then
-		local f = pOwner.KeyDown
-		if f && f( pOwner, IN_ZOOM ) then flMultiplier = flMultiplier * .5 end
-	else
-		local f = pOwner.KeyDown
-		if f && f( pOwner, IN_ZOOM ) then
-			flMultiplier = flMultiplier * 1.25
-		else
-			flMultiplier = flMultiplier * 1.5
-		end
-	end
-
-	return flMultiplier
-end
 
 local type = type
 

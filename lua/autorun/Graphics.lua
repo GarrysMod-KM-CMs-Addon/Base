@@ -1,5 +1,3 @@
-require "DirectorClient"
-
 // Gets the human percieved brightness of a color
 function GetBrightness( r, g, b ) return r * .00083372549 + g * .00280470588 + b * .00028313725 end
 // Same as above but uses Colors
@@ -117,7 +115,15 @@ local draw_NoTexture = draw.NoTexture
 local surface_DrawRect = surface.DrawRect
 local draw_DrawText = draw.DrawText
 
-local DIRECTOR_CLIENT_TICK = DIRECTOR_CLIENT_TICK
+// Here are some weapon things that are too small to give them another file
+VIEWMODEL_CAMERA_ANIMATIONS = VIEWMODEL_CAMERA_ANIMATIONS || {}
+
+WPN_PISTOL = 1
+WPN_RIFLE = 2
+WPN_RIFLEUP = 3
+WPN_SHOTGUN = 4
+WPN_SNIPER = 5
+WPN_SUBMACHINEGUN = 6
 
 hook.Add( "DrawDeathNotice", "Graphics", function() return true end )
 hook.Add( "HUDDrawTargetID", "Graphics", function() return true end )
@@ -162,6 +168,7 @@ hook.Add( "PopulateToolMenu", "CascadeShadowMappingClient", function()
 		p.OnValueChanged = function( self, flValue ) RunConsoleCommand( "r_flashlightdepthres", flValue ) end
 	end )
 end )
+
 hook.Add( "PopulateToolMenu", "CascadeShadowMappingServer", function()
 	spawnmenu.AddToolMenuOption( "Utilities", "Admin", "CascadeShadowMappingServer", "#CascadeShadowMapping", "", "", function( pPanel )
 		pPanel:ClearControls()
@@ -263,16 +270,14 @@ local RecalculateWaterBlurAmounts = RecalculateWaterBlurAmounts
 
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
-	DIRECTOR_CLIENT_TICK()
-
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 
 	if RealTime() > flNextSendLuminosity then
 		DynamicHighDynamicRangeCheck() // Do this here for optimization reasons
-
+	
 		flNextSendLuminosity = RealTime() + math_Rand( .1, .5 )
-
+	
 		net_Start( "UpdateLuminosity", true )
 		local iPasses = 0
 		vColor = Vector()
@@ -302,10 +307,10 @@ hook.Add( "Tick", "Graphics", function()
 		net_WriteColor( vColor:ToColor(), false )
 		net_SendToServer()
 	end
-
+	
 	local flFrameTime = RealTime() - flLastTickCall
 	if flFrameTime < .05 then return end // This will be ran 20 FPS MAX
-
+	
 	flLastTickCall = RealTime()
 	DOFModeHack( true )
 	vColor = Vector()
@@ -410,8 +415,9 @@ hook.Add( "Tick", "Graphics", function()
 	end
 end )
 
+local cvBuildingCubemaps = GetConVar "building_cubemaps"
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
-	DIRECTOR_CLIENT_TICK()
+	if cvBuildingCubemaps:GetBool() then return end
 
 	if bWaterBlur then
 		DrawBlur( flWaterBlurDirect )
@@ -425,8 +431,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		4, // Size X
-		4, // Size Y
+		1, // Size X
+		1, // Size Y
 		1, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
@@ -442,12 +448,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 			render_DrawSprite( vEye + vForward * ( flDepthOfField + flSpacing * i ), flSize, flSize, color_white )
 		end
 	cam_End3D()
-
-	DIRECTOR_CLIENT_TICK()
 end )
 
 hook.Add( "SetupWorldFog", "Graphics", function()
-	DIRECTOR_CLIENT_TICK()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	render_FogMode( MATERIAL_FOG_LINEAR )
@@ -459,7 +462,6 @@ hook.Add( "SetupWorldFog", "Graphics", function()
 end )
 
 hook.Add( "SetupSkyboxFog", "Graphics", function( flScale )
-	DIRECTOR_CLIENT_TICK()
 	local self = LocalPlayer()
 	if !IsValid( self ) then return end
 	render_FogMode( MATERIAL_FOG_LINEAR )
@@ -492,7 +494,6 @@ local aLastThirdPersonAngle = Angle()
 local flThirdPersonToAttackLerp = 0
 
 hook.Add( "CreateMove", "Graphics", function( cmd )
-	DIRECTOR_CLIENT_TICK()
 	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
 	if !cThirdPerson:GetBool() then return end
 	local pPlayer = LocalPlayer()
@@ -514,7 +515,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
-	local bSpecial = pPlayer:WaterLevel() > 0
+	local bSpecial = !pPlayer:IsOnGround() && pPlayer:WaterLevel() > 0
 	if RealTime() <= flThirdPersonAttackTime then
 		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 1 )
 
@@ -560,7 +561,6 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 end )
 
 hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
-	DIRECTOR_CLIENT_TICK()
 	x = x * FrameTime()
 	y = y * FrameTime()
 	if WEAPON_SWAY then
@@ -579,7 +579,6 @@ hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 end )
 
 hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
-	DIRECTOR_CLIENT_TICK()
 	local view = {
 		origin = origin,
 		angles = angles,
@@ -625,7 +624,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			vThirdPersonCameraOffset = LerpVector( FRILerpRate( 3, FrameTime() ), vThirdPersonCameraOffset, vTarget )
 			local v = Vector( vThirdPersonCameraOffset )
 			v:Rotate( aThirdPerson )
-			local f = ply:GetFOV() * .33
+			local f = UNIVERSAL_FOV / 3
 			local tr = util_TraceLine( {
 				start = view.origin,
 				endpos = view.origin + v:GetNormalized() * ( v:Length() + f ),
@@ -675,19 +674,19 @@ local MARKER_SIZE_OUTLINE = MARKER_SIZE * 1.01
 local PRECOMPUTED = 360 / ( 2 * math.pi ) * .8
 
 hook.Add( "HUDPaint", "Graphics", function()
-	DIRECTOR_CLIENT_TICK()
-
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
 
 	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
 	local i = 1
 	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
-	while true do
+	while i <= 5 do
 		local sI = tostring( i )
 		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. sI )
 		if v == vector_origin then break end
+
 		i = i + 1
+
 		//	local ToScreen = v:ToScreen()
 		//	local x, y = ToScreen.x, ToScreen.y
 		//	local f = math.deg( math.atan2(
@@ -759,4 +758,19 @@ hook.Add( "HUDPaint", "Graphics", function()
 		surface_SetDrawColor( 255, 255, 255, f <= .33 && math.abs( math.sin( RealTime() * math.Remap( f, 0, .33, .2, .1 ) ) ) * 255 || 255 )
 		surface_DrawRect( flWidth * .5 - flLabelWidth * .5, flHeight * ( .033 + .033 ), flProgress * flLabelWidth, flHeight * .008 )
 	end
+end )
+
+HUD_SHOULD_NOT_DRAW = {
+	CHudHistoryResource = true,
+	CHudGeiger = true,
+	CHudDamageIndicator = true,
+	CHudHealth = true,
+	CHudHistoryResource = true,
+	CHUDQuickInfo = true
+}
+
+local HUD_SHOULD_NOT_DRAW = HUD_SHOULD_NOT_DRAW
+
+hook.Add( "HUDShouldDraw", "Director", function( sName )
+	return !HUD_SHOULD_NOT_DRAW[ sName ]
 end )

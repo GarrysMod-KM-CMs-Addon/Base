@@ -29,7 +29,7 @@ SWEP.vSprint = Vector( -12, 1.358, -4 )
 SWEP.vViewModelAim = Vector( -15, -17 - SWEP.flViewModelY, -3.1 )
 SWEP.Primary_flSpreadX = .05
 SWEP.Primary_flSpreadY = .05
-SWEP.bSpecial = true
+SWEP.__SPECIAL_WEAPON_TYPE__ = "RPG"
 SWEP.bAllowReloadingDuringPrimaryFire = true
 
 if CLIENT then
