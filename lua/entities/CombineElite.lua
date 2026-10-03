@@ -13,16 +13,7 @@ list.Set( "NPC", "CombineElite", {
 	Name = "#CombineElite",
 	Class = "CombineElite",
 	Category = "Combine",
-	Weapons = {
-		"weapon_ar2",
-		"weapon_smg1,weapon_ar2",
-		"weapon_shotgun,weapon_ar2",
-		"weapon_shotgun,weapon_smg1,weapon_ar2",
-		"weapon_pistol,weapon_ar2",
-		"weapon_pistol,weapon_smg1,weapon_ar2",
-		"weapon_pistol,weapon_shotgun,weapon_ar2",
-		"weapon_pistol,weapon_shotgun,weapon_smg1,weapon_ar2"
-	}
+	Weapons = { "weapon_ar2" }
 } )
 
 if CLIENT then

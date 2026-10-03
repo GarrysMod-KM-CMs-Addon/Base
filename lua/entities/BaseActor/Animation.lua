@@ -164,17 +164,22 @@ ENT.tSequences = {}
 ENT.tSequenceEvents = {}
 ENT.tPromoteSequences = {}
 ENT.tInstantlyPromote = {}
+ENT.tLastSequenceData = {}
 
 ENT.m_tSequenceEvents = {}
 
 function ENT:PromoteSequence( sSequence, flSpeed, flWeight )
 	if isnumber( sSequence ) then sSequence = self:GetSequenceName( sSequence ) end
-	CEntity_GetTable( self ).tPromoteSequences[ sSequence ] = { flSpeed || 1, flWeight || 1 }
+	local MyTable = CEntity_GetTable( self )
+	MyTable.tPromoteSequences[ sSequence ] = true
+	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1 }
 end
 
-function ENT:PromoteSequenceInstant( sSequence, flSpeed )
+function ENT:PromoteSequenceInstant( sSequence, flSpeed, flWeight )
 	if isnumber( sSequence ) then sSequence = self:GetSequenceName( sSequence ) end
-	CEntity_GetTable( self ).tInstantlyPromote[ sSequence ] = flSpeed || 1
+	local MyTable = CEntity_GetTable( self )
+	MyTable.tInstantlyPromote[ sSequence ] = true
+	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1 }
 end
 
 local Lerp = Lerp
@@ -215,6 +220,8 @@ function ENT:AnimationSystemTick( MyTable )
 		end
 	end
 
+	local tLastSequenceData = MyTable.tLastSequenceData
+
 	local flFrameTime, tSequenceEvents, tCurrentSequenceEvents, bReached = self.m_flFrameTime, self.tSequenceEvents, self.m_tSequenceEvents
 	for sSequence, iLayer in pairs( tSequences ) do
 		local s = self:LookupSequence( sSequence )
@@ -222,19 +229,22 @@ function ENT:AnimationSystemTick( MyTable )
 
 		local flWeight = self:GetLayerWeight( iLayer )
 
+		local tSequenceData = tLastSequenceData[ sSequence ]
+
 		local f = tInstant[ sSequence ]
 		if f then
 			bReached = true
-			self:SetLayerPlaybackRate( iLayer, f )
-			flWeight = 1
-			self:SetLayerWeight( iLayer, 1 )
+			self:SetLayerPlaybackRate( iLayer, tSequenceData[ 1 ] )
+			local flTarget = tSequenceData[ 2 ]
+			flTargetWeight = 1 / flTarget
+			flWeight = flTarget
+			self:SetLayerWeight( iLayer, flWeight )
 		end
 
 		local flTargetWeight = 1
-		local tData = tPromote[ sSequence ]
-		if tData then
-			self:SetLayerPlaybackRate( iLayer, tData[ 1 ] )
-			local flTarget = tData[ 2 ]
+		if tPromote[ sSequence ] then
+			self:SetLayerPlaybackRate( iLayer, tSequenceData[ 1 ] )
+			local flTarget = tSequenceData[ 2 ]
 			flTargetWeight = 1 / flTarget
 			flWeight = Lerp( FRILerpRate( 5, flFrameTime ), flWeight, flTarget )
 			self:SetLayerWeight( iLayer, flWeight )
@@ -261,22 +271,14 @@ function ENT:AnimationSystemTick( MyTable )
 		for sSequence, iLayer in pairs( tSequences ) do
 			local flWeight = self:GetLayerWeight( iLayer )
 
-			local f = tInstant[ sSequence ]
-			if f then
-				bReached = true
-				self:SetLayerPlaybackRate( iLayer, f )
-				flWeight = 1
-				self:SetLayerWeight( iLayer, 1 )
-			else
-				local f = tPromote[ sSequence ]
-				if !f then
-					if self:GetLayerWeight( iLayer ) <= .05 then
-						self:RemoveLayer( iLayer )
-						tSequences[ sSequence ] = nil
-					end
-					flWeight = Lerp( FRILerpRate( 5, flFrameTime ), flWeight, 0 )
-					self:SetLayerWeight( iLayer, flWeight )
+			if !tInstant[ sSequence ] && !tPromote[ sSequence ] then
+				if self:GetLayerWeight( iLayer ) <= .05 then
+					self:RemoveLayer( iLayer )
+					tSequences[ sSequence ] = nil
+					tLastSequenceData[ sSequence ] = nil
 				end
+				flWeight = Lerp( FRILerpRate( 5, flFrameTime ), flWeight, 0 )
+				self:SetLayerWeight( iLayer, flWeight )
 			end
 
 			local flCycle = self:GetLayerCycle( iLayer )

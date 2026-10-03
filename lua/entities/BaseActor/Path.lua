@@ -16,47 +16,18 @@ local Format = Format
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 
-function ENT:DontRepath( pPath, vPos, vGoal, MyTable )
-	local f = math_max( MyTable.flPathTolerance, vPos:Distance( vGoal ) * 1 / 3 )
+function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase )
+	local f = math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * 1 / 3 ) || ( vPos:Distance( vGoal ) * .1 ) )
 	if pPath:GetEnd():DistToSqr( vGoal ) <= f * f then return true end
 end
 
-function ENT:ComputePath( Path, vGoal, Weighter )
+function ENT:ComputePath( Path, vGoal, fWeighter )
 	local MyTable = CEntity_GetTable( self )
 	local vPos = CEntity_GetPos( self )
 	if MyTable.DontRepath( self, Path, vPos, vGoal, MyTable ) then return true end
-	if Weighter then return Path, Path:Compute( self, vGoal, Weighter ) end
-	local loco = MyTable.loco
-	local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-	local bDisAllowWater = MyTable.bHasOxygen
-	local flDeathDropNeg = -loco:GetDeathDropHeight()
-	local flStepHeight = loco:GetStepHeight()
-	local flJumpHeight
-	if bCantClimb then flJumpHeight = loco:GetMaxJumpHeight() end
-	local IsAreaTraversable = loco.IsAreaTraversable
-	return Path, Path:Compute( self, vGoal, function( area, from, ladder, elevator, length )
-		if !IsValid( from ) then return 0 end
-		if !IsAreaTraversable( loco, area ) || bDisAllowWater && area:IsUnderwater() then return -1 end
-		local dist = 0
-		if IsValid( ladder ) then
-			dist = ladder:GetLength()
-		elseif length > 0 then
-			dist = length
-		else
-			dist = ( area:GetCenter() - from:GetCenter() ):GetLength()
-		end
-		local cost = dist + from:GetCostSoFar()
-		local d = from:ComputeAdjacentConnectionHeightChange( area )
-		if d >= flStepHeight then
-			if bCantClimb && d >= flJumpHeight then return -1 end
-			cost = cost + 1.5 * dist
-		elseif d < flDeathDropNeg then return -1 end
-		return cost
-	end )
+	if fWeighter then return Path, Path:Compute( self, vGoal, fWeighter ) end
+	return Path, Path:Compute( self, vGoal )
 end
-
-__ACTOR_FLANK_PATHS__ = __ACTOR_FLANK_PATHS__ || {}
-local __ACTOR_FLANK_PATHS_LOCAL__ = __ACTOR_FLANK_PATHS__
 
 function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
@@ -75,15 +46,15 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 
 	pData.flThreadTime = CurTime() + 1
 
+	if pData.bStartedThread then return end
+
 	local vPos = CEntity_GetPos( self )
 	local vGoal = CEntity_GetPos( pEnemy )
 
-	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable ) then
+	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then
 		pData.bStartedThread = nil
-		return true
+		return
 	end
-
-	if pData.bStartedThread then return end
 
 	pData.bStartedThread = true
 
@@ -100,56 +71,9 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 			return true
 		end
 
-		local iClass = self:Classify()
-		local iAlliesPathingTotal = 0
-		local pMyFlanks = __ACTOR_FLANK_PATHS_LOCAL__[ iClass ]
+		if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then return end
 
-		if !pMyFlanks then
-			pMyFlanks = {}
-			__ACTOR_FLANK_PATHS_LOCAL__[ iClass ] = pMyFlanks
-		end
-
-		local loco = MyTable.loco
-		local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-		local bDisAllowWater = MyTable.bHasOxygen
-		local flDeathDropNeg = -loco:GetDeathDropHeight()
-		local flStepHeight = loco:GetStepHeight()
-		local flJumpHeight
-		if bCantClimb then flJumpHeight = loco:GetMaxJumpHeight() end
-		local IsAreaTraversable = loco.IsAreaTraversable
-		local bStatus = pPath:Compute( self, vGoal, function( pTo, pFrom, flLadder, _, flLength )
-			if !IsValid( pFrom ) then return 0 end
-			if !IsAreaTraversable( loco, pTo ) || bDisAllowWater && pTo:IsUnderwater() then return -1 end
-
-			local flDistance = 0
-
-			if IsValid( flLadder ) then
-				flDistance = flLadder:GetLength()
-			elseif flLength > 0 then
-				flDistance = flLength
-			else
-				flDistance = ( pTo:GetCenter() - pFrom:GetCenter() ):Length()
-			end
-
-			local flCost = flDistance + pFrom:GetCostSoFar()
-
-			local flChange = pFrom:ComputeAdjacentConnectionHeightChange( pTo )
-			if flChange >= flStepHeight then
-				if bCantClimb && flChange >= flJumpHeight then return -1 end
-				flCost = flCost + 1.5 * flDistance
-			elseif flChange < flDeathDropNeg then return -1 end
-
-			return flCost * ( pMyFlanks[ pTo ] || ( 1 / 3 ) ) * 3
-		end )
-
-		for _, pSegment in ipairs( pPath:GetAllSegments() || {} ) do
-			pMyFlanks[ pSegment.area ] = pMyFlanks[ pSegment.area ] || 0 + 1
-
-			coroutine.yield()
-			if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule then
-				return true
-			end
-		end
+		MyTable.ComputePath( self, pPath, vGoal )
 
 		coroutine.wait( math.min( 2, pPath:GetLength() / 8192 ) )
 
@@ -174,58 +98,9 @@ function ENT:ManageFlankPathLockThisCoroutine( pPath, pEnemy, pSchedule, MyTable
 	local vPos = CEntity_GetPos( self )
 	local vGoal = CEntity_GetPos( pEnemy )
 
-	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable ) then return end
+	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then return end
 
-	local iClass = self:Classify()
-	local iAlliesPathingTotal = 0
-	local pMyFlanks = __ACTOR_FLANK_PATHS_LOCAL__[ iClass ]
-
-	if !pMyFlanks then
-		pMyFlanks = {}
-		__ACTOR_FLANK_PATHS_LOCAL__[ iClass ] = pMyFlanks
-	end
-
-	local loco = MyTable.loco
-	local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-	local bDisAllowWater = MyTable.bHasOxygen
-	local flDeathDropNeg = -loco:GetDeathDropHeight()
-	local flStepHeight = loco:GetStepHeight()
-	local flJumpHeight
-	if bCantClimb then flJumpHeight = loco:GetMaxJumpHeight() end
-	local IsAreaTraversable = loco.IsAreaTraversable
-	local bStatus = pPath:Compute( self, vGoal, function( pTo, pFrom, flLadder, _, flLength )
-		if !IsValid( pFrom ) then return 0 end
-		if !IsAreaTraversable( loco, pTo ) || bDisAllowWater && pTo:IsUnderwater() then return -1 end
-
-		local flDistance = 0
-
-		if IsValid( flLadder ) then
-			flDistance = flLadder:GetLength()
-		elseif flLength > 0 then
-			flDistance = flLength
-		else
-			flDistance = ( pTo:GetCenter() - pFrom:GetCenter() ):Length()
-		end
-
-		local flCost = flDistance + pFrom:GetCostSoFar()
-
-		local flChange = pFrom:ComputeAdjacentConnectionHeightChange( pTo )
-		if flChange >= flStepHeight then
-			if bCantClimb && flChange >= flJumpHeight then return -1 end
-			flCost = flCost + 1.5 * flDistance
-		elseif flChange < flDeathDropNeg then return -1 end
-
-		return flCost * ( pMyFlanks[ pTo ] || ( 1 / 3 ) ) * 3
-	end )
-
-	for _, pSegment in ipairs( pPath:GetAllSegments() || {} ) do
-		pMyFlanks[ pSegment.area ] = pMyFlanks[ pSegment.area ] || 0 + 1
-
-		coroutine.yield()
-		if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != pSchedule then
-			return true
-		end
-	end
+	MyTable.ComputePath( self, pPath, vGoal )
 
 	coroutine.wait( math.min( 3, pPath:GetLength() / 8192 ) )
 end
@@ -287,13 +162,13 @@ ENT.flJumpedTime = 0
 function ENT:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 	local pLocomotion = self.loco
 
-	pLocomotion:SetStepHeight( self.vHullMaxs[ 3 ] * .25 )
-
 	if developer:GetBool() then pPath:Draw() end
 
 	pPath:SetMinLookAheadDistance( self:OBBMaxs()[ 1 ] * 3 )
 
 	pPath:SetGoalTolerance( flToleranceOverride || self:OBBMaxs()[ 1 ] )
+
+	pLocomotion:SetStepHeight( self.vHullMaxs[ 3 ] * .25 )
 
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
@@ -409,7 +284,7 @@ function ENT:HandleStuck() self.loco:ClearStuck() end
 
 // Why is this called Legal and not Can? Simple.
 // Intercept jumps are cinematic, not physically correct,
-// 'cause fuck it the IRVING's ballin'.
+// 'cause fuck it, the IRVING's ballin'.
 // Thus, we are asking if it's KINDA fair to jump there
 function ENT:IsInterceptJumpLegal( pTarget, flJumpHeight )
 	if !self:IsOnGround() then return end
@@ -446,7 +321,7 @@ function ENT:InterceptJump( pTarget, flDesiredJumpHeight, flMaxJumpHeight )
 
 	local flJumpHeight = math_min(
 		flDesiredJumpHeight ||
-		math_max( flMaxJumpHeight * .01, ( vPos:Distance( vTarget + pTarget:OBBCenter() ) * ( math.random( 2 ) == 1 && ( .1 + ( math.random() * math.random() ) * .9 ) || math.Rand( .1, 2 ) ) ) ),
+		math_max( flMaxJumpHeight * .01, ( vPos:Distance( vTarget + pTarget:OBBCenter() ) * ( math.random( 2 ) == 1 && ( 1 / 3 + ( math.random() * math.random() ) * 2 / 3 ) || math.Rand( .1, 2 ) ) ) ),
 		flMaxJumpHeight )
 
 	local flEnemyZ, flMyZ = vTarget[ 3 ], vPos[ 3 ]
@@ -489,53 +364,9 @@ function ENT:ComputeFlankPath( pPath, pEnemy, MyTable )
 	local vPos = CEntity_GetPos( self )
 	local vGoal = CEntity_GetPos( pEnemy )
 
-	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable ) then
+	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then
 		return true
 	end
 
-	local iClass = self:Classify()
-	local iAlliesPathingTotal = 0
-	local pMyFlanks = __ACTOR_FLANK_PATHS_LOCAL__[ iClass ]
-
-	if !pMyFlanks then
-		pMyFlanks = {}
-		__ACTOR_FLANK_PATHS_LOCAL__[ iClass ] = pMyFlanks
-	end
-
-	local loco = MyTable.loco
-	local bCantClimb = !( MyTable.bCanClimb || MyTable.bCanFly )
-	local bDisAllowWater = MyTable.bHasOxygen
-	local flDeathDropNeg = -loco:GetDeathDropHeight()
-	local flStepHeight = loco:GetStepHeight()
-	local flJumpHeight
-	if bCantClimb then flJumpHeight = loco:GetMaxJumpHeight() end
-	local IsAreaTraversable = loco.IsAreaTraversable
-	local bStatus = pPath:Compute( self, vGoal, function( pTo, pFrom, flLadder, _, flLength )
-		if !IsValid( pFrom ) then return 0 end
-		if !IsAreaTraversable( loco, pTo ) || bDisAllowWater && pTo:IsUnderwater() then return -1 end
-
-		local flDistance = 0
-
-		if IsValid( flLadder ) then
-			flDistance = flLadder:GetLength()
-		elseif flLength > 0 then
-			flDistance = flLength
-		else
-			flDistance = ( pTo:GetCenter() - pFrom:GetCenter() ):Length()
-		end
-
-		local flCost = flDistance + pFrom:GetCostSoFar()
-
-		local flChange = pFrom:ComputeAdjacentConnectionHeightChange( pTo )
-		if flChange >= flStepHeight then
-			if bCantClimb && flChange >= flJumpHeight then return -1 end
-			flCost = flCost + 1.5 * flDistance
-		elseif flChange < flDeathDropNeg then return -1 end
-
-		return flCost * ( pMyFlanks[ pTo ] || ( 1 / 3 ) ) * 3
-	end )
-
-	for _, pSegment in ipairs( pPath:GetAllSegments() || {} ) do
-		pMyFlanks[ pSegment.area ] = pMyFlanks[ pSegment.area ] || 0 + 1
-	end
+	MyTable.ComputePath( self, pPath, vGoal )
 end

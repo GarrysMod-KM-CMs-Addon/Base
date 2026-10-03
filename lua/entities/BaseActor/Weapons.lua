@@ -305,6 +305,17 @@ function ENT:CanAttackCustom( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vS
 	if flTargetDot > math_max( math_min( flDot, cos( rad( flStitch || 10 ) ) ) ) then return true end
 end
 
+// TODO: Make both of these actually work
+function ENT:GetLeadTarget( pEntity, pTrueEnemy, MyTable )
+	return pEntity:GetPos() + pEntity:OBBCenter()
+end
+
+function ENT:CanAttackCustomLeadTarget( pEntity, pTrueEnemy, MyTable, vAim, vShoot, flSpreadX, flSpreadY, flSpeed, flStitch )
+	local vTarget = MyTable.GetLeadTarget( self, pEntity, pTrueEnemy, MyTable )
+
+	return MyTable.CanAttackCustom( self, pEntity, pTrueEnemy, MyTable, vTarget, vAim, vShoot, flSpreadX, flSpreadY, flSpeed, flStitch )
+end
+
 function ENT:GatherShootingBounds()
 	local pWeapon = CEntity_GetTable( self ).Weapon
 	if IsValid( pWeapon ) then

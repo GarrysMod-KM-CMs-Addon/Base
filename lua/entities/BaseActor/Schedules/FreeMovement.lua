@@ -94,7 +94,7 @@ RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTabl
 		local flHealth = pEnemy:Health()
 		local ws, w = 0 // Weapon Strength
 		for wep in pairs( MyTable.tWeapons ) do
-			if wep.bSpecial then continue end
+			if wep.__SPECIAL_WEAPON_TYPE__ then continue end
 			local t = wep.Primary_flDelay || 0
 			if t <= 0 then continue end
 			local d = wep.Primary_flDamage || 0

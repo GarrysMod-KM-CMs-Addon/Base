@@ -24,13 +24,7 @@ list.Set( "NPC", "npc_combine_s", {
 	Name = "#CombineSoldier",
 	Class = "CombineSoldier",
 	Category = "Combine",
-	Weapons = {
-		"weapon_smg1", "weapon_ar2", "weapon_shotgun",
-		"weapon_smg1,weapon_ar2",
-		"weapon_shotgun,weapon_smg1",
-		"weapon_shotgun,weapon_ar2",
-		"weapon_shotgun,weapon_smg1,weapon_ar2",
-	}
+	Weapons = { "weapon_smg1", "weapon_ar2", "weapon_shotgun" }
 } )
 
 if CLIENT then

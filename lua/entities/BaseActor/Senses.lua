@@ -118,7 +118,7 @@ local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 local math_min = math.min
 
-ACTOR_FREE_KNOWLEDGE = 2
+ACTOR_FREE_KNOWLEDGE = 1.5
 
 function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable, bSense, bSenseRecursion )
 	MyTable = MyTable || CEntity_GetTable( self )

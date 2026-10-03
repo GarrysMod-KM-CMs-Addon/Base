@@ -8,7 +8,7 @@ function ENT:Stay() end
 function ENT:Turn( vDirection ) end
 function ENT:TurnLeft() end
 function ENT:TurnRight() end
-function ENT:AimWeapon( vAim ) end // Global vector, NOT direction
+function ENT:AimWeapon( vAim ) end // Global vector, NOT direction. Can sometimes be an Angle, because yes.
 function ENT:MachineGunWeaponCanHit( v, pClear ) end
 function ENT:MachineGunWeaponHits( v, pClear ) end
 function ENT:FireMachineGunWeapon() end

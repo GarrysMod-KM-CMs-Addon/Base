@@ -50,14 +50,14 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, pSchedule, MyT
 		if pSchedule.bSearching then return end
 
 		ACTOR_QUEUE( function()
-			if !IsValid( self ) || !IsValid( pVehicle ) || !IsValid( pEnemy ) || !IsValid( pTrueEnemy ) || self.Schedule != pSchedule then return true end
+			if !IsValid( self ) || !IsValid( pVehicle ) || !IsValid( pEnemy ) || !IsValid( pTrueEnemy ) || MyTable.Schedule != pSchedule then return true end
 
 			local vCenter = pVehicle:GetPos() + pVehicle:OBBCenter()
 			local flBoundingRadius = pVehicle:BoundingRadius()
 
 			local flBias = .5 - math.random() * math.random() * .5
 			while flBias <= 1 do
-				if !IsValid( self ) || !IsValid( pVehicle ) || !IsValid( pEnemy ) || !IsValid( pTrueEnemy ) || self.Schedule != pSchedule then return true end
+				if !IsValid( self ) || !IsValid( pVehicle ) || !IsValid( pEnemy ) || !IsValid( pTrueEnemy ) || MyTable.Schedule != pSchedule then return true end
 
 				local f = vCenter:Distance( vEnemy )
 				local flDistance = 0
@@ -69,7 +69,7 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, pSchedule, MyT
 
 					local trJustToBeSafe = util.TraceLine {
 						start = vCenter,
-						endpos = vCenter + d * ( flCurrent + flBoundingRadius * 2 ),
+						endpos = vCenter + d * ( flCurrent + flBoundingRadius ),
 						filter = self,
 						mask = MASK_SOLID
 					}
@@ -96,6 +96,8 @@ RegisterSchedule( "VehicleAirEngage", { Execute = function( self, pSchedule, MyT
 
 				flBias = flBias + math.Rand( 0, .2 )
 			end
+
+			return true
 		end )
 
 		return

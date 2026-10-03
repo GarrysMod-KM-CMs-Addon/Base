@@ -30,6 +30,7 @@ function ENT:SetupDataTables()
 	self:NetworkVar( "Float", 10, "Pitch", { KeyName = "Pitch", Edit = { type = "Float", order = 22, min = -180, max = 180, title = "Pitch" } } )
 	self:NetworkVar( "Float", 11, "Yaw", { KeyName = "Yaw", Edit = { type = "Float", order = 23, min = -180, max = 180, title = "Yaw"  } } )
 	self:NetworkVar( "Float", 12, "Roll", { KeyName = "Roll", Edit = { type = "Float", order = 24, min = -180, max = 180, title = "Roll" } } )
+
 	if SERVER then
 		self:SetLightColor( Vector( 1, 1, 1 ) )
 		self:SetBrightness( -1 )
@@ -55,15 +56,19 @@ function ENT:Think()
 	local aAngle = Angle()
 	aAngle = ( vector_origin - vOffset ):Angle()
 	vOffset = vOffset * self:GetHeight()
+
 	if CLIENT then
 		RunConsoleCommand( "r_shadowrendertotexture", "1" )
 		RunConsoleCommand( "r_shadowdist", "10000" )
 		RunConsoleCommand( "r_shadows_gamecontrol", "0" )
+
 		local tProjectedTextures = self.m_tProjectedTextures
 		tProjectedTextures[ 1 ]:SetOrthographic( true, self:GetSizeNear(), self:GetSizeNear(), self:GetSizeNear(), self:GetSizeNear() )
 		tProjectedTextures[ 2 ]:SetOrthographic( true, self:GetSizeMid(), self:GetSizeMid(), self:GetSizeMid(), self:GetSizeMid() )
 		tProjectedTextures[ 3 ]:SetOrthographic( true, self:GetSizeFar(), self:GetSizeFar(), self:GetSizeFar(), self:GetSizeFar() )
 		tProjectedTextures[ 4 ]:SetOrthographic( true, self:GetSizeFurther(), self:GetSizeFurther(), self:GetSizeFurther(), self:GetSizeFurther() )
+
+		local flShadowFilter = math.Remap( math.Clamp( GetConVarNumber "r_flashlightdepthres", 1024, 4096 ), 1024, 4096, 1, 0 )
 		for i, pTexture in pairs( tProjectedTextures ) do
 			pTexture:SetColor( self:GetLightColor():ToColor() )
 			pTexture:SetBrightness( self:GetBrightness() )
@@ -71,13 +76,12 @@ function ENT:Think()
 			pTexture:SetAngles( aAngle )
 			pTexture:SetShadowDepthBias( 3.5e-05 + 0 * ( i - 1 ) )
 			pTexture:SetShadowSlopeScaleDepthBias( 2 )
-			pTexture:SetShadowFilter( .08 )
 			pTexture:SetNearZ( self:GetSunNearZ() )
 			pTexture:SetFarZ( self:GetSunFarZ() )
 			pTexture:SetQuadraticAttenuation( 0 )
 			pTexture:SetLinearAttenuation( 0 )
 			pTexture:SetConstantAttenuation( 1 )
-			pTexture:SetShadowFilter( math.Remap( math.Clamp( GetConVarNumber "r_flashlightdepthres", 1024, 4096 ), 1024, 4096, 1, 0 ) )
+			pTexture:SetShadowFilter( flShadowFilter )
 			pTexture:Update()
 		end
 	end
@@ -85,6 +89,7 @@ end
 
 if CLIENT then
 	ENT.m_tProjectedTextures = {}
+
 	function ENT:Initialize()
 		local tProjectedTextures = {}
 		self.m_tProjectedTextures = tProjectedTextures
@@ -96,11 +101,13 @@ if CLIENT then
 		end
 		timer.Simple( .1, function() render.RedownloadAllLightmaps( false, true ) end )
 	end
+
 	function ENT:OnRemove()
 		timer.Simple( .1, function() render.RedownloadAllLightmaps( false, true ) end )
 		for _, pTexture in pairs( self.m_tProjectedTextures ) do pTexture:Remove() end
 		self.m_tProjectedTextures = {}
 	end
+
 	return
 end
 

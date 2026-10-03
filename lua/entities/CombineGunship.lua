@@ -49,7 +49,7 @@ if CLIENT then return end
 
 ENT.bNightVision = true
 
-ENT.Primary_flDelay = .1
+ENT.Primary_flDelay = .09
 ENT.Primary_flDamage = 60
 ENT.Primary_flSpreadX = .02
 ENT.Primary_flSpreadY = .02
@@ -201,9 +201,12 @@ function ENT:Think()
 	return BaseClass.Think( self )
 end
 
-// Until we implement proper head turning!!!
 function ENT:GetShootPos() return self:GetPhysicsObject():GetPos() end
 
+// TODO: This REALLY needs to be reworked. I just have no idea how to properly aim the head. Yeah...
+// On second thought, just wanna add that it needs a spring, and that issues may come from the base
+// trying to use m_sPitchPoseParameter/m_sYawPoseParameter. Will prolly need a flag for the base
+// to not set them, only read for aim vector
 ENT.m_sPitchPoseParameter = "flex_vert"
 ENT.m_sYawPoseParameter = "flex_horz"
 ENT.sWeaponPitchPoseParameter = "flex_vert"
@@ -213,7 +216,7 @@ function ENT:AimWeapon( vAim )
 	self.vAimingAt = vAim
 	local at = self:GetAttachment( self:LookupAttachment( self.sWeaponAttachment ) )
 	if !at then return end
-	local a = ( vAim - at.Pos ):Angle()
+	local a = isangle( vAim ) && vAim || ( vAim - at.Pos ):Angle()
 	local flDesiredYaw = a.yaw
 	local flYaw = self:GetPoseParameter( self.sWeaponYawPoseParameter )
 	self:SetPoseParameter( self.sWeaponYawPoseParameter, math.Approach( flYaw + math.AngleDifference( flDesiredYaw, at.Ang.y ) * .9, flYaw, .5 * FrameTime() ) )

@@ -32,10 +32,10 @@ RegisterSchedule( "VehicleAirMoveToLoS", { Execute = function( self, pSchedule, 
 		end
 	else
 		local a = ( vPoint - pSchedule.vStart ):Angle()
-		a[ 1 ] = 0
+		a[ 1 ] = 0 // Should ideally be clamped between something like [ -45, 45 ] but who cares
 		a[ 3 ] = 0
 		pVehicle:Turn( a )
-		pVehicle:AimWeapon( vPoint )
+		pVehicle:AimWeapon( a )
 	end
 
 	local tr = util.TraceLine {

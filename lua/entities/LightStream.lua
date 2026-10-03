@@ -77,8 +77,13 @@ if CLIENT then
 		pt:Update()
 	end
 	function ENT:OnRemove() if IsValid( self.ProjectedTexture ) then self.ProjectedTexture:Remove() end end
+
+	ENT.RenderGroup = RENDERGROUP_BOTH
+	ENT.WantsTranslucency = true
+
 	local mLight = Material "sprites/light_ignorez"
 	local mBeam = Material "effects/lamp_beam"
+
 	function ENT:Draw()
 		local pixelvis_handle_t = self.pixelvis_handle_t
 		if !pixelvis_handle_t || GetViewEntity() == LocalPlayer() then return end
@@ -114,6 +119,8 @@ if CLIENT then
 		c.a = flViewDot ^ 25 * 255
 		render.DrawSprite( v + vForward, flSize, flSize, c )
 	end
+
+	ENT.DrawTranslucent = ENT.Draw
 else
 	function ENT:Initialize()
 		self:Update()
