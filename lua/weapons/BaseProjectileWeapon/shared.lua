@@ -31,22 +31,27 @@ end
 // NOTE: vDirection is not normalized. However, feel free
 // to use Normalize (in place) instead of GetNormalized,
 // as it is not used anywhere after this
-function SWEP:LaunchProjectile( pProjectile/*, vDirection*/ )
+function SWEP:LaunchProjectile( pProjectile/*, dDirection*/ )
 	// For versatility reasons, this is NOT called automatically
 	pProjectile:Spawn()
 end
 
 local ents_Create = ents.Create
 local math_Rand = math.Rand
+
+function SWEP:GetProjectilePositionOwner( pOwner, MyTable ) return pOwner:GetShootPos() end
+
 function SWEP:PrimaryAttack()
 	local MyTable = CEntity_GetTable( self )
+
 	if !MyTable.CanPrimaryAttack( self, MyTable ) then return end
+
 	if SERVER then
 		local pOwner = CEntity_GetOwner( self )
 		local pProjectile = ents_Create( MyTable.Primary_sProjectile )
 		if IsValid( pOwner ) then
 			pProjectile:SetOwner( pOwner )
-			pProjectile:SetPos( pOwner:GetShootPos() )
+			pProjectile:SetPos( MyTable.GetProjectilePositionOwner( self, pOwner, MyTable ) )
 			pOwner:SetAnimation( PLAYER_ATTACK1 )
 		else
 			pProjectile:SetOwner( self )
@@ -58,7 +63,22 @@ function SWEP:PrimaryAttack()
 		local v = aAim:Forward() + flX * MyTable.Primary_flSpreadX * aAim:Right() + flY * MyTable.Primary_flSpreadY * aAim:Up()
 		pProjectile:SetAngles( v:Angle() )
 		MyTable.LaunchProjectile( self, pProjectile, v, MyTable )
+
+		if MyTable.bBulletLight then
+			local flMuzzleFlashTime = math.Clamp( MyTable.Primary_flDelay * math.Rand( .5, 1 ), 0, .2 )
+			net.Start "EphemeralLight"
+				local tColor = MyTable.tBulletLightColor
+				net.WriteFloat( tColor[ 4 ] / 255 * .2 * ViolentAssRandomInternal() ) // Brightness
+				net.WriteFloat( 512 * ViolentAssRandomInternal() ) // Size
+				local f = flMuzzleFlashTime * ViolentAssRandomInternal()
+				net.WriteFloat( f ) // Existence length
+				net.WriteFloat( f ) // Fade time
+				net.WriteVector( pProjectile:GetPos() ) // Position
+				net.WriteUInt( tColor[ 1 ], 8 ) net.WriteUInt( tColor[ 2 ], 8 ) net.WriteUInt( tColor[ 3 ], 8 ) // R, G, B
+			net.Broadcast()
+		end
 	end
+
 	MyTable.ShootEffects( self, MyTable )
 	local s = MyTable.sSound
 	if s then CEntity_EmitSound( self, s ) end

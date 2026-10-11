@@ -251,6 +251,7 @@ surface.CreateFont( "BaseWeapon_AmmoBarText", {
 	additive = false,
 	outline = false
 } )
+
 surface.CreateFont( "BaseWeapon_AmmoBarLargeText", {
 	font = AMMO_FONT,
 	extended = false,
@@ -412,7 +413,7 @@ function SWEP:DoDrawCrosshair()
 	if CurTime() <= MyTable.flReloadTime then
 		MyTable.flCrosshairAlpha = 0
 	else
-		if MyTable.WPN_SHOOT == WPN_SHOTGUN || cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN || cvars.Bool "bAllowThirdPerson" && cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
 			MyTable.flCrosshairAlpha = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flCrosshairAlpha, 255 )
 		else
 			local flAlpha = math_max( 0, 255 - ( 255 * 4 ) * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || .1 ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) )
@@ -434,8 +435,8 @@ function SWEP:DoDrawCrosshair()
 		local flW, flH = ScrW() * .9, ScrH() * .9
 		surface_SetDrawColor( 0, 0, 0, 255 )
 		local flWidth, flHeight, sFont
-		local b = MyTable.bDontDrawAmmoBars
-		if MyTable.WPN_SHOOT == WPN_SHOTGUN || MyTable.WPN_SHOOT == WPN_PISTOL || b || self:GetMaxClip1() <= 15 then
+		local b = MyTable.bDontDrawAmmoBars && ( !cvars.Bool "bAllowThirdPerson" || !cvars.Bool "bThirdPerson" )
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN || MyTable.WPN_SHOOT == WPN_PISTOL || self:GetMaxClip1() <= 15 then
 			flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
 		else
 			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
@@ -489,7 +490,7 @@ function SWEP:DoDrawCrosshair()
 		end
 	end
 
-	if !cThirdPerson:GetBool() then
+	if !cvars.Bool "bAllowThirdPerson" || !cThirdPerson:GetBool() then
 		if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
 		if flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
 	end

@@ -7,29 +7,20 @@ SWEP.Category = "Hands"
 SWEP.PrintName = "#Hands"
 SWEP.Instructions = ""
 SWEP.Purpose = ""
-SWEP.ViewModel = Model "models/weapons/c_swim.mdl"
-SWEP.UseHands = true
-SWEP.WorldModel = Model ""
+SWEP.ViewModel = "models/weapons/c_swim.mdl"
+SWEP.WorldModel = ""
 SWEP.AdminOnly = false
 SWEP.Weight = -1
 SWEP.Slot = 0
 SWEP.DrawAmmo = false
 SWEP.Crosshair = ""
-SWEP.ViewModelFOV = 64
+SWEP.flViewModelFoV = 64
 SWEP.bCoverNotAnimated = true
 SWEP.bJumpingNotAnimated = true
 SWEP.flSwim = 0
 
 sound.Add {
-	name = "Hands_UnderwaterLoop",
-	sound = "ambient/water/underwater.wav",
-	level = 0,
-	volume = 1,
-	channel = CHAN_STATIC
-}
-
-sound.Add {
-	name = "Hands_SwimHit",
+	name = "SwimWade",
 	sound = {
 		"player/footsteps/wade1.wav",
 		"player/footsteps/wade2.wav",
@@ -62,14 +53,8 @@ function SWEP:Initialize()
 		end
 		self.Instructions = "TIP: " .. ( table_Random( tMessages ) || "ERROR" )
 	end
+
 	self:SetHoldType "Normal"
-end
-
-//	function SWEP:Deploy() self:Think() end
-
-function SWEP:OnRemove()
-	local pWaterLoop = self.pWaterLoop
-	if pWaterLoop then pWaterLoop:Stop() end
 end
 
 local CEntity_Remove = FindMetaTable( "Entity" ).Remove
@@ -78,7 +63,7 @@ function SWEP:OnDrop() CEntity_Remove( self ) end
 
 function SWEP:GetCapabilities() return 0 end
 
-if !SERVER then return end
+if CLIENT then return end
 
 local ACT_VM_HITCENTER = ACT_VM_HITCENTER
 local ACT_VM_HITLEFT = ACT_VM_HITLEFT
@@ -97,38 +82,31 @@ local timer_Simple = timer.Simple
 function SWEP:Think()
 	local pOwner = self:GetOwner()
 	if !IsValid( pOwner ) || !pOwner:IsPlayer() then return end
-	local pWaterLoop = self.pWaterLoop
-	if pOwner:WaterLevel() > 2 then
-		if !pWaterLoop then
-			local pFilter = RecipientFilter()
-			pFilter:AddPlayer( pOwner )
-			pWaterLoop = CreateSound( self, "Hands_UnderwaterLoop", pFilter )
-			pWaterLoop:Play()
-			self.pWaterLoop = pWaterLoop
-		end
-	elseif pWaterLoop then pWaterLoop:Stop() self.pWaterLoop = nil end
+
 	if CurTime() > self.flSwim then
 		local pViewModel = pOwner:GetViewModel()
 		local bSprinting = pOwner:KeyDown( IN_FORWARD ) && pOwner:KeyDown( IN_SPEED ) && !pOwner:Crouching()
 		pViewModel:SetPlaybackRate( bSprinting && 2 || 1 )
+
 		if bSprinting then
 			self:SendWeaponAnim( ACT_VM_HITCENTER )
-			timer_Simple( .15, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( -5, 0, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
+			timer_Simple( .15, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
 		elseif pOwner:KeyDown( IN_MOVELEFT ) then
 			self:SendWeaponAnim( ACT_VM_HITLEFT )
-			timer_Simple( .33, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( 0, -5, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
-			timer_Simple( .8, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( 0, -5, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
+			timer_Simple( .33, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
+			timer_Simple( .8, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
 		elseif pOwner:KeyDown( IN_MOVERIGHT ) then
 			self:SendWeaponAnim( ACT_VM_HITRIGHT )
-			timer_Simple( .33, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( 0, 5, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
-			timer_Simple( .8, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( 0, 5, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
+			timer_Simple( .33, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
+			timer_Simple( .8, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
 		elseif pOwner:KeyDown( IN_FORWARD ) then
 			self:SendWeaponAnim( ACT_VM_HITCENTER )
-			timer_Simple( .3, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( -5, 0, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
+			timer_Simple( .3, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
 		elseif pOwner:KeyDown( IN_BACK ) then
 			self:SendWeaponAnim( ACT_VM_HITCENTER2 )
-			timer_Simple( .20, function() if IsValid( pOwner ) then pOwner:ViewPunch( Angle( 5, 0, 0 ) ) pOwner:EmitSound "Hands_SwimHit" end end )
+			timer_Simple( .20, function() if IsValid( self ) && IsValid( pOwner ) then pOwner:EmitSound "SwimWade" end end )
 		end
+
 		if bSprinting then
 			self.flSwim = CurTime() + self:SequenceDuration()
 		else self.flSwim = CurTime() + self:SequenceDuration() + .5 end

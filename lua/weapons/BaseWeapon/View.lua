@@ -159,10 +159,11 @@ function SWEP:CalcView( ply, pos, ang )
 				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * 2 / 3 )
 			end
 
+			// Technically, you're bracing your head for the move, not bobbing in that direction
 			if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - .5 * flVelocity / CPlayer_GetWalkSpeed( ply )
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - 3 // * flVelocity / CPlayer_GetWalkSpeed( ply )
 			elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + .5 * flVelocity / CPlayer_GetWalkSpeed( ply )
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 3 // * flVelocity / CPlayer_GetWalkSpeed( ply )
 			end
 		end
 	end
@@ -431,16 +432,16 @@ local tApplyRecoil = {
 	
 	
 		flHipRecoilBack = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilBack, 0 )
-		flHipRecoilBackLerped = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flHipRecoilBackLerped, flHipRecoilBack )
+		flHipRecoilBackLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilBackLerped, flHipRecoilBack )
 	
 		flHipRecoilPitchTurn = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilPitchTurn, 0 )
-		flHipRecoilPitchTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
+		flHipRecoilPitchTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
 	
 		flHipRecoilYawTurn = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
-		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
 
-		flHipRecoilRollTurn = Lerp( FRILerpRate( .75 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
-		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
+		flHipRecoilRollTurn = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 	
 	
 		flAimingRecoilBack = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilBack, 0 )
@@ -563,10 +564,12 @@ end
 
 local vActualSway = Vector()
 
+SWEP.flHipSwayStabilizer = .3
+
 local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flRollTurn, flFrameTime )
 	local flSway = MyTable.flSway
 	local flSwayNeg = -flSway
-	local flSwayVector = flSway * ( MyTable.flSwayStabilizer * ( 1 - flMultiplier ) + .3 * flMultiplier )
+	local flSwayVector = flSway * ( MyTable.flSwayStabilizer * ( 1 - flMultiplier ) + MyTable.flHipSwayStabilizer * flMultiplier )
 	local flSwayVectorNeg = -flSwayVector
 
 	local flSwayScale = MyTable.flSwayScale
@@ -594,9 +597,9 @@ end
 local function CoverPose( MyTable, ply, vTarget, vTargetAngle )
 	if !MyTable.__VIEWMODEL_FULLY_MODELED__ then
 		vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + 45
-		vTarget[ 1 ] = vTarget[ 1 ] - 10 - MyTable.flViewModelX + ( MyTable.flCoverY || 0 )
-		vTarget[ 2 ] = vTarget[ 2 ] + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 ) - MyTable.flViewModelY * .5
-		vTarget[ 3 ] = vTarget[ 3 ] - 10 - MyTable.flViewModelZ
+		vTarget[ 1 ] = vTarget[ 1 ] - 10 - MyTable.flViewModelX + ( MyTable.flCoverX || 0 )
+		vTarget[ 2 ] = vTarget[ 2 ] + ( MyTable.vViewModelAim && ( MyTable.vViewModelAim[ 1 ] * .5 ) || 2 ) - MyTable.flViewModelY * .5 + ( MyTable.flCoverY || 0 )
+		vTarget[ 3 ] = vTarget[ 3 ] - 10 - MyTable.flViewModelZ + ( MyTable.flCoverZ || 0 )
 		return
 	end
 
@@ -632,6 +635,8 @@ local atan = math.atan
 local tan = math.tan
 local rad = math.rad
 
+SWEP.flViewModelFoV = 41.8
+
 function SWEP:CalcViewModelView( _, pos, ang )
 	SPRING_STIFFNESS_CURRENT = 225
 	SPRING_DAMPING_CURRENT = -20
@@ -644,7 +649,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	local ply = LocalPlayer()
 
 	// Don't ask, I don't know
-	MyTable.ViewModelFOV = deg( atan( tan( math.rad( 41.8 / 2 ) ) * tan( rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / tan( rad( MyTable.flFoV / 2 ) ) ) * 2.22 )
+	MyTable.ViewModelFOV = deg( atan( tan( math.rad( MyTable.flViewModelFoV / 2 ) ) * tan( rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / tan( rad( MyTable.flFoV / 2 ) ) ) * 2.22 )
 
 	local f = math_Clamp( ply:Health() / ply:GetMaxHealth(), 0, 1 )
 	vBezier, vBezierAngle = Vector(), Vector()

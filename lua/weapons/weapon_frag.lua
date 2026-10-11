@@ -3,7 +3,7 @@ DEFINE_BASECLASS "BaseThrowable"
 SWEP.Category = "Throwables"
 SWEP.PrintName = "#weapon_frag"
 
-SWEP.Purpose = "An explosive grenade made by the Combine. Used by their soldiers to “extract” enemies out of cover."
+SWEP.Purpose = "An explosive grenade made by the Combine. Used by their soldiers to \"extract\" enemies out of cover."
 SWEP.ViewModel = Model "models/weapons/c_grenade.mdl"
 SWEP.WorldModel = Model "models/weapons/w_grenade.mdl"
 SWEP.Spawnable = true
@@ -48,17 +48,17 @@ end
 local CurTime = CurTime
 
 sound.Add {
-	name = "Combine_Extractor_Tick",
+	name = "CombineExtractorTick",
 	sound = "weapons/grenade/tick1.wav",
 	pitch = { 99, 101 },
-	level = 100,
+	level = 80,
 	channel = CHAN_STATIC
 }
 
 function SWEP:GAME_Think()
 	local MyTable = CEntity_GetTable( self )
 	if MyTable.bPinPulled && CurTime() > MyTable.flNextTick then
-		CEntity_EmitSound( self, "Combine_Extractor_Tick" )
+		CEntity_EmitSound( self, "CombineExtractorTick" )
 		MyTable.flNextTick = CurTime() + math.Remap( CurTime(), MyTable.flLastPinPull, MyTable.GRENADE_flTime, .5, .1 )
 	end
 	BaseClass.GAME_Think( self )

@@ -12,12 +12,21 @@ local exp = math.exp
 
 local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
 
+local cThirdPerson = CreateClientConVar( "bThirdPerson", "0", true, true, "Enable thirdperson?", 0, 1 )
+
 if SERVER then
 	util.AddNetworkString "UpdateLuminosity"
 	util.AddNetworkString "EphemeralLight"
+	util.AddNetworkString "ThirdPersonCameraDirection"
 
 	local net_ReadColor = net.ReadColor
 	net.Receive( "UpdateLuminosity", function( _, ply ) CEntity_GetTable( ply ).GAME_cLuminosity = net_ReadColor( false ) end )
+
+	// NOTE: This whole third person here is just here to not be wasted.
+	// It should probably have a different GLua supporting API on when to turn on, how to turn on, etc.
+
+	local net_ReadVector = net.ReadVector
+	net.Receive( "ThirdPersonCameraDirection", function( _, ply ) CEntity_GetTable( ply ).GAME_dThirdPersonCamera = net_ReadVector() end )
 
 	CreateConVar(
 		"bAllowThirdPerson",
@@ -26,6 +35,7 @@ if SERVER then
 		"Allow clients to use thirdperson mode (bThirdPerson)?",
 		0, 1
 	)
+
 	return
 end
 
@@ -173,22 +183,24 @@ hook.Add( "PopulateToolMenu", "CascadeShadowMappingServer", function()
 	spawnmenu.AddToolMenuOption( "Utilities", "Admin", "CascadeShadowMappingServer", "#CascadeShadowMapping", "", "", function( pPanel )
 		pPanel:ClearControls()
 		pPanel:ControlHelp "#CascadeShadowMappingInformation"
-		local p = pPanel:CheckBox( "#CascadeShadowMapping", "bCascadeShadowMapping" )
-		p:SetValue( false )
+		pPanel:CheckBox( "#CascadeShadowMapping", "bCascadeShadowMapping" )
 		pPanel:ControlHelp "#CascadeShadowMappingHelp"
 	end )
 end )
 
-local cThirdPerson = CreateClientConVar( "bThirdPerson", "0", true, nil, "Enable thirdperson?", 0, 1 )
 local cThirdPersonShoulder = CreateClientConVar( "bThirdPersonShoulder", "0", true, nil, "Should thirdperson use the left shoulder?", 0, 1 )
 
 // Similar to util.IsSkyboxVisibleFromPoint
 function UTIL_IsUnderSkybox()
+	local pPlayer = LocalPlayer()
 	return util_TraceLine( {
 		start = EyePos(),
 		endpos = EyePos() + vUpHuge,
-		filter = LocalPlayer(),
-		mask = MASK_VISIBLE_AND_NPCS
+		mask = MASK_VISIBLE_AND_NPCS,
+		filter = function( pEntity )
+			if pEntity == pPlayer || pEntity.__PROJECTILE__ then return false end
+			return true
+		end
 	} ).HitSky
 end
 
@@ -200,11 +212,6 @@ local MAX_WATER_BLUR_REFRACT = .02
 // [ 0, 1 ], not [ 0, MAX_WATER_BLUR ]!
 local WATER_BLUR_CHANGE_SPEED_TO = .8
 local WATER_BLUR_CHANGE_SPEED_FROM = .5
-
-include "postprocess/bloom.lua"
-local DrawBloom = DrawBloom
-include "postprocess/color_modify.lua"
-local DrawColorModify = DrawColorModify
 
 local function VectorSum( v ) return math_abs( v[ 1 ] ) + math_abs( v[ 2 ] ) + math_abs( v[ 3 ] ) end
 
@@ -292,7 +299,10 @@ hook.Add( "Tick", "Graphics", function()
 					start = vPos,
 					endpos = vPos + aEye:Forward() * self:BoundingRadius() * 1.5,
 					mask = MASK_VISIBLE_AND_NPCS,
-					filter = self
+					filter = function( pEntity )
+						if pEntity == self || pEntity.__PROJECTILE__ then return false end
+						return true
+					end
 				}
 				local vHitPos = tr.HitPos
 				local v = render_GetLightColor( vHitPos )
@@ -338,25 +348,19 @@ hook.Add( "Tick", "Graphics", function()
 	end
 	vColor:Div( iPasses )
 	flColorSum = VectorSum( vColor )
+
+	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 ) ^ 1.5
+	tDrawColorModify[ "$pp_colour_colour" ] = flDeath
+	tDrawColorModify[ "$pp_colour_contrast" ] = 1
+
 	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .5
 		if flOxygen <= f then
 			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
-		else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
-	else tDrawColorModify[ "$pp_colour_contrast" ] = 1 end
+		end
+	end
 
-	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 ) ^ 1.5
-
-	tDrawColorModify[ "$pp_colour_colour" ] = flDeath
-
-	tDrawColorModify[ "$pp_colour_brightness" ] = math_Clamp( math_Remap( flDeath, 1, 0, 0, -.35 ), -.35, 0 )
-
-	tDrawColorModify[ "$pp_colour_contrast" ] = math_Clamp( math_Remap( flDeath, 1, 0, 1, 1.8 ), 1, 1.8 )
-
-	local flTerror = self:GetNW2Float( "BODY_flTerror", 0 )
-	tDrawColorModify[ "$pp_colour_brightness" ] = tDrawColorModify[ "$pp_colour_brightness" ]
-	- flTerror * .2 - math.abs( math.sin( RealTime() * .1 ) ) * flTerror * .05 - math.abs( math.sin( RealTime() * ( 1 / 3 ) ) ) ^ 3 * flTerror * .25
 	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		bBleedingBlur = true
@@ -369,41 +373,40 @@ hook.Add( "Tick", "Graphics", function()
 	else WATER_BLUR = math_Approach( WATER_BLUR || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * flFrameTime ) end
 	bWaterBlur = WATER_BLUR > 0
 	RecalculateWaterBlurAmounts()
-	local vTargetColor = LerpVector( ( flColorSum * ( 1 / 3 ) ) ^ .5, vColor, BREEZE_VECTOR_COLOR )
-	vTargetColor = LerpVector( flTerror, vColor, TERROR_VECTOR_COLOR )
+	local vTargetColor = LerpVector( ( flColorSum / 3 ) ^ 2, vColor, BREEZE_VECTOR_COLOR )
 	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )
 	flColor = math_Clamp( flColorSum, 0, 1 )
 	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
 	flFogG = math_Approach( flFogG || 255, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
 	flFogB = math_Approach( flFogB || 255, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
-	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, Lerp( flTerror,
-		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 8192 ),
-		UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 1536 ) || math_Remap( flColor, 0, 1, 512, 1024 ) ) )
+	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 8192 ) )
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
 	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, 1 - flColor )
 	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
 	flBloomMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 3 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 2 )
-	local f = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
-	flFogMaxDensity = Lerp( flTerror, f, math_max( f, .99 ) )
+	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
 	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
 	local tr = util_TraceLine {
 		start = vEye,
 		endpos = vEye + dEye * 999999,
 		mask = MASK_OPAQUE_AND_NPCS,
-		filter = IsValid( pVehicle ) && { self, pVehicle } || { self }
+		filter = function( pEntity )
+			if pEntity == self || pEntity == pVehicle || pEntity.__PROJECTILE__ then return false end
+			return true
+		end
 	}
 
-	local flDistance = tr.HitPos:Distance( EyePos() ) * Lerp( self:GetNW2Float( "BODY_flTerror", 0 ), 1.2, .8 )
+	local flDistance = tr.HitPos:Distance( EyePos() ) * 1.2
 
 	flDepthOfField = Lerp(
-		FRILerpRate( 5, flFrameTime ),
+		FRILerpRate( 10, flFrameTime ),
 		flDepthOfField,	
 		flDistance
 	)
 
 	flSpacing = Lerp(
-		FRILerpRate( 5, flFrameTime ),
+		FRILerpRate( 10, flFrameTime ),
 		flSpacing,
 		math_Clamp( flDistance, 0, 1024 )
 	)
@@ -478,9 +481,7 @@ local bAllowThirdPerson = GetConVar "bAllowThirdPerson"
 
 local function fMoreEffects( ply, tView )
 	local f = 1 - ply:GetNW2Float( "GAME_flBlood", 1 )
-	tView.fov = tView.fov * ( 1 - math.abs( math.sin( RealTime() * .5 ) ) *
-	( f + .0016 - ply:GetNW2Float( "GAME_flBleeding", 0 ) ) * FrameTime()
-	* .125 - math.abs( math.sin( RealTime() * ( 2 / 3 ) ) ) * ply:GetNW2Float( "BODY_flTerror", 0 ) * .05 )
+	tView.fov = tView.fov * ( 1 - math.abs( math.sin( RealTime() * .5 ) ) * f * .125 )
 end
 
 local aThirdPerson = Angle( 0, math.Rand( 0, 360 ), 0 )
@@ -493,19 +494,28 @@ local flThirdPersonAttackTime = 0
 local aLastThirdPersonAngle = Angle()
 local flThirdPersonToAttackLerp = 0
 
+local net_WriteVector = net.WriteVector
+
 hook.Add( "CreateMove", "Graphics", function( cmd )
-	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
+	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then return end
 	if !cThirdPerson:GetBool() then return end
 	local pPlayer = LocalPlayer()
 	if !IsValid( pPlayer ) then return end
 	local pWeapon = pPlayer:GetActiveWeapon()
 	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
+
+	net_Start "ThirdPersonCameraDirection"
+		net_WriteVector( aThirdPerson:Forward() )
+	net_SendToServer()
+
 	local aAim = pPlayer:GetAimVector()
 	aAim[ 3 ] = 0
 	aAim = aAim:Angle()
+
 	local aDirection = Angle( aThirdPerson )
 	aDirection[ 1 ] = 0
 	aDirection[ 3 ] = 0
+
 	local vDirection = Vector( cmd:GetForwardMove(), -cmd:GetSideMove(), 0 )
 	vDirection:Rotate( aDirection )
 	vDirection:Normalize()
@@ -561,15 +571,25 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 end )
 
 hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
+	local pPlayer = LocalPlayer()
+	if !IsValid( pPlayer ) then return end
+
+	local pWeapon = pPlayer:GetActiveWeapon()
+	if IsValid( pWeapon ) then
+		local fFreezeMovement = pWeapon.FreezeMovement
+		if fFreezeMovement && fFreezeMovement( pWeapon ) then return end
+	end
+
 	x = x * FrameTime()
 	y = y * FrameTime()
+
 	if WEAPON_SWAY then
 		WEAPON_SWAY[ 1 ] = WEAPON_SWAY[ 1 ] - y
 		WEAPON_SWAY[ 2 ] = WEAPON_SWAY[ 2 ] + x
 	end
-	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool() return end
-	local pPlayer = LocalPlayer()
-	if !IsValid( pPlayer ) then return end
+
+	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then return end
+
 	local pWeapon = pPlayer:GetActiveWeapon()
 	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
 	if !cThirdPerson:GetBool() then return end
@@ -579,7 +599,7 @@ hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 end )
 
 hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
-	local view = {
+	local tView = {
 		origin = origin,
 		angles = angles,
 		fov = fov == ply:GetInfoNum( "fov_desired", 75 ) && UNIVERSAL_FOV || fov,
@@ -587,10 +607,12 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		zfar = zfar,
 		drawviewer = false
 	}
-	if drive.CalcView( ply, view ) then
-		fMoreEffects( ply, view )
-		return view
+
+	if drive.CalcView( ply, tView ) then
+		fMoreEffects( ply, tView )
+		return tView
 	end
+
 	local pVehicle = ply:GetNW2Entity "GAME_pVehicle"
 	if IsValid( pVehicle ) then
 		local vSeat = pVehicle:GetSeatPosition()
@@ -598,19 +620,22 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		vSeat:Rotate( ang )
 		local vView = ply:GetViewOffsetDucked()
 		vView:Rotate( ang )
-		view.origin = pVehicle:GetPos() + vSeat + vView
-		fMoreEffects( ply, view )
-		cThirdPerson:SetBool()
-		return view
-	elseif bAllowThirdPerson && !bAllowThirdPerson:GetBool() then cThirdPerson:SetBool()
+		tView.origin = pVehicle:GetPos() + vSeat + vView
+		fMoreEffects( ply, tView )
+		return tView
+	elseif bAllowThirdPerson && !bAllowThirdPerson:GetBool() then
 	elseif cThirdPerson:GetBool() then
 		local pWeapon = ply:GetActiveWeapon()
 		if !( IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) ) then
 			if IsValid( pWeapon ) && pWeapon.__WEAPON__ then pWeapon:CalcView( ply, Vector( 0, 0, 0 ), Angle( 0, 0, 0 ) ) end
 			local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
-			view.drawviewer = true
+			tView.drawviewer = true
 			local bAiming = ply:KeyDown( IN_ZOOM )
-			local vTarget = Vector( -ply:OBBMaxs()[ 1 ] * ( bAiming && 1 || 4 ), ( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 2 ), ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && .244 || .008 ) )
+			local bCrouchWalking = bAiming && ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
+			local vTarget = Vector(
+				-ply:OBBMaxs()[ 1 ] * ( bAiming && 1 || 4 ),
+				( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 2 ) * ( bCrouchWalking && 1.5 || 1 ),
+				ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && ( bCrouchWalking && .4 || .244 ) || .008 ) )
 			local bInCover = ply:GetNW2Bool "CTRL_bInCover" || ply:GetNW2Bool "CTRL_bGunUsesCoverStance"
 			if bInCover || PEEK != COVER_PEEK_NONE then
 				if VARIANTS == COVER_VARIANTS_LEFT || PEEK == COVER_FIRE_LEFT || PEEK == COVER_BLINDFIRE_LEFT then
@@ -626,28 +651,31 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			v:Rotate( aThirdPerson )
 			local f = UNIVERSAL_FOV / 3
 			local tr = util_TraceLine( {
-				start = view.origin,
-				endpos = view.origin + v:GetNormalized() * ( v:Length() + f ),
+				start = tView.origin,
+				endpos = tView.origin + v:GetNormalized() * ( v:Length() + f ),
 				mask = MASK_VISIBLE_AND_NPCS,
-				filter = ply
+				filter = function( pEntity )
+					if pEntity == ply || pEntity.__PROJECTILE__ then return false end
+					return true
+				end
 			} )
-			view.origin = tr.HitPos - tr.Normal * f
-			view.angles = Angle( aThirdPerson ) + ply:GetViewPunchAngles()
-			fMoreEffects( ply, view )
-			return view
+			tView.origin = tr.HitPos - tr.Normal * f
+			tView.angles = Angle( aThirdPerson ) + ply:GetViewPunchAngles()
+			fMoreEffects( ply, tView )
+			return tView
 		end
 	end
-	player_manager.RunClass( ply, "CalcView", view )
+	player_manager.RunClass( ply, "CalcView", tView )
 	local pWeapon = ply:GetActiveWeapon()
 	if IsValid( pWeapon ) then
 		local f = pWeapon.CalcView
 		if f then
-			local origin, angles, fov = f( pWeapon, ply, Vector( view.origin ), Angle( view.angles ), view.fov )
-			view.origin, view.angles, view.fov = origin || view.origin, angles || view.angles, fov || view.fov
+			local origin, angles, fov = f( pWeapon, ply, Vector( tView.origin ), Angle( tView.angles ), tView.fov )
+			tView.origin, tView.angles, tView.fov = origin || tView.origin, angles || tView.angles, fov || tView.fov
 		end
 	end
-	fMoreEffects( ply, view )
-	return view
+	fMoreEffects( ply, tView )
+	return tView
 end )
 
 surface.CreateFont( "ReinforcementsBar", {

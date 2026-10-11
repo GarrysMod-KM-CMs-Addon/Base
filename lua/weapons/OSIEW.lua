@@ -7,8 +7,6 @@ SWEP.Category = "General-Purpose Machine Guns"
 SWEP.PrintName = "#OSIEW"
 SWEP.Purpose = "Overwatch Standard Issue Emplacement Weapon."
 
-if SERVER then ACHIEVEMENT_ACQUIRE "osiew" ACHIEVEMENT_MISCELLANEOUS "OSIEW_ReloadClick" end
-
 SWEP.Spawnable = true
 
 SWEP.ViewModel = "models/AR3_VM.mdl"
@@ -28,7 +26,6 @@ SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.flRecoil = 2
 
 SWEP.Slot = 2
-SWEP.ViewModelFOV = 62
 SWEP.Crosshair = "Rifle"
 SWEP.sHoldType = "AR2"
 
@@ -57,7 +54,6 @@ SWEP.vViewModelAimAngle = Vector( 0, 0, 14 )
 function SWEP:Reload()
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
-	if f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
 	self:SetClip1( 0 )
 	if self:DefaultReload( ACT_INVALID ) then
 		local pViewModel = pReloadOwner:GetViewModel()
@@ -68,7 +64,6 @@ function SWEP:Reload()
 			if IsValid( self ) then
 				local pOwner = self:GetOwner()
 				if IsValid( pOwner ) && pOwner == pReloadOwner then
-					if SERVER && pOwner:IsPlayer() then Achievement_Miscellaneous( pOwner, "OSIEW_ReloadClick" ) end
 					self:EmitSound "OSIEW_ReloadClick"
 				end
 			end

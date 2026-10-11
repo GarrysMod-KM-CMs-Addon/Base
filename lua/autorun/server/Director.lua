@@ -96,12 +96,9 @@ hook.Add( "Tick", "Director", function()
 		local pFlashlight = PlyTable.GAME_pFlashlight
 		local vEyePos = ply:EyePos()
 		local aAim = ply:EyeAngles()
-		local aViewPunch = ply:GetViewPunchAngles()
-		aAim:Add( aViewPunch )
 		local dAim = aAim:Forward()
 		if IsValid( pFlashlight ) then
 			pFlashlight:SetPos( vEyePos + dAim * 32 )
-			pFlashlight:SetLocalAngles( aViewPunch )
 		end
 		local vShoot = ply:GetShootPos()
 		local trShoot = util_TraceLine {
@@ -174,7 +171,7 @@ hook.Add( "Tick", "Director", function()
 						util_Decal( "Blood", v, v + d * f, ply )
 					end
 					PlyTable.GAME_flBleedTimeLeft = 1
-				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 192 * math_Rand( .9, 1.1 ) * FrameTime() end
+				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 64 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
 
 			ply:SetNW2Float( "GAME_flBleeding", math_Clamp( f - .00005 * FrameTime(), 0, 1 ) )
@@ -288,7 +285,6 @@ hook.Add( "Tick", "Director", function()
 		flIntensity = math.max( 0, flAllSuppression ) / flAllHealth
 		if flIntensity != flIntensity then flIntensity = 0 end // nan
 		PlyTable.DR_tMusicEntities = tNewMusicEntities
-		if EThreat >= DIRECTOR_THREAT_COMBAT then Achievement_Miscellaneous( ply, "Combat" ) end
 		PlyTable.DR_EThreat = EThreat
 		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
 		local sIntensity = tostring( flIntensity )

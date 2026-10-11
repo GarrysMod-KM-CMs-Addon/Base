@@ -37,8 +37,6 @@ function SWEP:Initialize()
 end
 
 if SERVER then
-	ACHIEVEMENT_ACQUIRE "videocamera"
-
 	hook.Add( "PlayerSpawn", "VideoCamera", function( ply ) ply:SendLua "VideoCamera_SetUp()" end )
 else
 	local iFramesWhileDead = 0

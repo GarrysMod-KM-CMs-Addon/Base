@@ -1,3 +1,5 @@
+// TODO: BaseMeleeWeapon should be made for this and the stunstick!
+
 DEFINE_BASECLASS "BaseWeapon"
 
 SWEP.Category = "Melees"

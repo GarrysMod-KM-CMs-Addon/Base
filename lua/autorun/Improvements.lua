@@ -10,6 +10,10 @@ end
 DMG_RAYLEIGH = DMG_CLUB + DMG_SONIC + DMG_BLAST
 
 if CLIENT then
+	hook.Add( "OnEntityCreated", "Improvements", function( pEntity )
+		pEntity.GAME_flCreationDate = CurTime()
+	end )
+
 	hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COMP )
 		if COMP then
 			if COMP.KM_CMs_Addon then return
@@ -237,12 +241,11 @@ end
 function CalculateRecoilDampeningSpecial( pPlayer, PlyTable, pWeapon, WeaponTable )
 	local flMultiplier = 2 / 3
 
-	if pPlayer.GetWalkSpeed then flMultiplier = flMultiplier * ( 1 + math.Clamp( GetVelocity( pPlayer ):Length() / ( pPlayer:GetWalkSpeed() * 4 ), 0, .25 ) ) end
+	if pPlayer.GetWalkSpeed then flMultiplier = flMultiplier * ( 1 + math.Clamp( GetVelocity( pPlayer ):Length() / pPlayer:GetWalkSpeed() * .25, 0, .25 ) ) end
 
 	if pPlayer:IsOnGround() then
-		// This should probably use flAimMultiplier somehow
 		local f = pPlayer.KeyDown
-		if f && f( pPlayer, IN_ZOOM ) then flMultiplier = flMultiplier * .5 end
+		if f && f( pPlayer, IN_ZOOM ) then flMultiplier = flMultiplier * 2 / 3 end
 	else
 		// Ditto
 		local f = pPlayer.KeyDown
@@ -308,15 +311,6 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
 	end
 
-	// TODO: Implement terror when we're near lots of bodies
-	local flTerror = ply:GetNW2Float( "BODY_flTerror", 0 )
-	if flTerror > 0 then
-		local flBreathe = RealTime() * 2 * flTerror
-		local flForce = flFrameTime * 2 * flTerror
-		ang[ 1 ] = ang[ 1 ] + math_cos( flBreathe ) * flForce
-		ang[ 2 ] = ang[ 2 ] + math_cos( flBreathe * .5 ) * flForce
-	end
-
 	cmd:SetViewAngles( ang )
 
 	if CLIENT then
@@ -328,7 +322,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			ply.GAME_bWantsToWalk = !ply.GAME_bWantsToWalk
 			ply.GAME_bWalkPressed = nil 
 		end
-
+	
 		if ply.GAME_bWantsToWalk then cmd:AddKey( IN_WALK ) end
 		if ply:GetNW2Bool "CTRL_bSliding" then
 			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
@@ -338,31 +332,17 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
 			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
 			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
-			local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
-			local bVelocity = GetVelocity( ply ):LengthSqr() > 256
-			local p = ply:GetActiveWeapon()
-			if ( !IsValid( p ) || ( CurTime() <= ( p.flReloadTime || 0 ) || CurTime() > ( p.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() > p:GetNextPrimaryFire() + 1 / 3 && CurTime() > p:GetNextSecondaryFire() + 1 / 3 ) ) && !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b then
-				cmd:RemoveKey( IN_DUCK )
-				ply.GAME_bWantsToDuck = nil
-				ply.GAME_bDuckPressed = nil
-				ply.GAME_bWantsToWalk = nil
-				ply.GAME_bWalkPressed = nil
-			end
+			//	local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
+			//	local bVelocity = GetVelocity( ply ):LengthSqr() > 256
+			//	local p = ply:GetActiveWeapon()
+			//	if ( !IsValid( p ) || ( CurTime() <= ( p.flReloadTime || 0 ) || CurTime() > ( p.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() > p:GetNextPrimaryFire() + 1 / 3 && CurTime() > p:GetNextSecondaryFire() + 1 / 3 ) ) && !QuickSlide_Can( ply ) && bVelocity && cmd:KeyDown( IN_SPEED ) && b && !cmd:KeyDown( IN_ZOOM ) then
+			//		cmd:RemoveKey( IN_DUCK )
+			//		ply.GAME_bWantsToDuck = nil
+			//		ply.GAME_bDuckPressed = nil
+			//		ply.GAME_bWantsToWalk = nil
+			//		ply.GAME_bWalkPressed = nil
+			//	end
 		end
-	end
-
-	// Lovely crouch jumping fix! :D
-	if ply:IsOnGround() && !cmd:KeyDown( IN_JUMP ) then
-		ply.GAME_bDuckLast = cmd:KeyDown( IN_DUCK )
-	else
-		if ply.GAME_bDuckLast then
-			// So, technically, crouch jumping only extends height if you crouch midair.
-			// We're letting people uncrouch midair for logical reasons - air doesn't
-			// just magically paralyze all your muscles. I really do want people to
-			// be able to crouch in air too, but that extends height... you know,
-			// the literal reason this fix exists?
-			if !cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckLast = nil end
-		else cmd:RemoveKey( IN_DUCK ) end
 	end
 
 	if GameImprovements_StartCommand then GameImprovements_StartCommand( ply, cmd ) end
@@ -452,14 +432,15 @@ else
 end
 
 // TODO: Actually properly implement this - right now it's a simple hack for it to roughly work
-function CalculateAngularVelocity( aTarget, aForward, vAngleVelocity, flTurnRate, flTurnAcceleration, flFrameTime )
+function CalculateAngularVelocity( aTarget, aForward, vAngleVelocity, flTurnRate, flTurnAcceleration, flTurnDeceleration, flFrameTime )
 	local function fForAxis( flTarget, flCurrent, flVelocity )
 		return math.AngleDifference( flTarget, flCurrent ) - flVelocity
 	end
 	return Vector( fForAxis( aTarget[ 3 ], aForward[ 3 ], vAngleVelocity[ 1 ] ), fForAxis( aTarget[ 1 ], aForward[ 1 ], vAngleVelocity[ 2 ] ), fForAxis( aTarget[ 2 ], aForward[ 2 ], vAngleVelocity[ 3 ] ) ) * ( flFrameTime || FrameTime() )
 end
 
-function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, flFrameTime )
+// This should probably be reworked
+function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, flDeceleration /* UNUSED */, flFrameTime )
 	local vDelta = vTarget - vPos
 	local flDistance = vDelta:Length()
 	if flDistance == 0 then return Vector() end
@@ -467,7 +448,8 @@ function CalculateVelocity( vTarget, vPos, vCurrent, flSpeed, flAcceleration, fl
 	return vCurrent + vDir * math.Approach( vCurrent:Length(), math_min( flSpeed, ( flAcceleration * flDistance ) ^ .5 ), flAcceleration * ( flFrameTime || FrameTime() ) )
 end
 
-function CalculateAcceleration( vVelocity, vTarget, flAcceleration, flFrameTime )
+// Ditto
+function CalculateAcceleration( vVelocity, vTarget, flAcceleration, flDeceleration /* UNUSED */, flFrameTime )
 	local vDelta = vTarget - vVelocity
 	local flDistance = vDelta:Length()
 	if flDistance == 0 then return Vector() end
@@ -484,7 +466,7 @@ function AddThinkToEntity( self, func )
 	end )
 end
 
-// DO NOT EDIT THIS!
+// Taken from facepunch. Might wanna edit this sometime.
 hook_Add( "HandlePlayerDrivingNew", "Base", function( ply, plyTable, pVehicle )
 	if ( !pVehicle.HandleAnimation && pVehicle.GetVehicleClass ) then
 		local c = pVehicle:GetVehicleClass()
@@ -550,11 +532,13 @@ end
 
 hook_Add( "CalcMainActivity", "Improvements", function( ply, vel )
 	local veh = ply.GAME_pVehicle || ply:GetNW2Entity "GAME_pVehicle"
+
 	if IsValid( veh ) then
 		local t = ply:GetTable()
 		hook_Run( "HandlePlayerDrivingNew", ply, t, veh )
 		return t.CalcIdeal, t.CalcSeqOverride
 	end
+
 	if CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) then
 		local f = ply.GAME_fSlidingActivity
 		if f then return f( ply, vel ) end
@@ -713,8 +697,8 @@ if SERVER then
 	function CPlayer:SetNPCClass( EClass ) self:SetNW2Int( "m_iClass", EClass ) end
 end
 
-function CPlayer:GetNPCClass() return self:GetNW2Int( "m_iClass", -1 ) end
-function CPlayer:Classify() return self:GetNW2Int( "m_iClass", -1 ) end
+function CPlayer:GetNPCClass() return self:GetNW2Int( "m_iClass", CLASS_HUMAN || -1 ) end
+function CPlayer:Classify() return self:GetNW2Int( "m_iClass", CLASS_HUMAN || -1 ) end
 
 /*
 Optimized version, for classes that support it

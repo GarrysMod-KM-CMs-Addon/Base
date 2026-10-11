@@ -163,7 +163,7 @@ sound.Add {
 	channel = CHAN_ITEM,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "SPAS12/Pump.wav"
+	sound = "weapons/shotgun/shotgun_cock.wav"
 }
 
 sound.Add {

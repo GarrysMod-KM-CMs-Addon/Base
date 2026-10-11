@@ -555,6 +555,25 @@ local EFFECTS = {
 }
 
 function EFFECT:Init( pData )
+	local vPos = pData:GetOrigin()
+	
+	local vDir = ( vPos - pData:GetStart() ):GetNormalized()
+	
+	local tr = util_TraceLine {
+		start = vPos - vDir * 6,
+		endpos = vPos + vDir * 6,
+		mask = MASK_SOLID
+	}
+	
+	local pEntity = tr.Entity
+
+	if IsValid( pEntity ) then
+		local flDate = pEntity.GAME_flCreationDate
+		if flDate && ( CurTime() - flDate ) <= .1 then return end
+	elseif !tr.Hit then
+		return
+	end
+
 	//	print( util.GetSurfacePropName( pData:GetSurfaceProp() ) )
 	local f = EFFECTS[ pData:GetSurfaceProp() ]
 	if f then f( self, pData ) else EFFECTS[ -1 ]( self, pData ) end

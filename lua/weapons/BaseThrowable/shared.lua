@@ -122,7 +122,6 @@ function SWEP:OnDrop()
 	local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 	tGrenades[ sClass ] = f
 	pOwner.GAME_tItemCounts = tGrenades
-	local pOwner = self:GetOwner()
 	CWeapon_SetClip1( self, 0 )
 	// Aren't completely out of grenades of this type yet
 	if f > 0 then
@@ -133,6 +132,7 @@ function SWEP:OnDrop()
 			// Compensate for Equip giving one grenade when picked up
 			local f = math_max( ( tGrenades[ sClass ] || 1 ) - 1, 0 )
 			tGrenades[ sClass ] = f
+			CWeapon_SetClip1( p, f )
 			pOwner.GAME_tItemCounts = tGrenades
 		end )
 	end
@@ -231,7 +231,13 @@ function SWEP:Reload()
 	MyTable.GRENADE_flTime = CurTime() + f + math_Rand( MyTable.GRENADE_flMinimumTime, MyTable.GRENADE_flMaximumTime )
 end
 
-if CLIENT then return end
+if CLIENT then
+	function SWEP:Think()
+		CWeapon_SetClip1( self, self:GetNW2Float( "GAME_flAmount", 1 ) )
+	end
+
+	return
+end
 
 SWEP.m_flForceMultiplier = 0
 
@@ -241,6 +247,9 @@ function SWEP:AfterDropWeapon( pOwner, MyTable ) end
 
 function SWEP:Think()
 	BaseClass.Think( self )
+
+	self:SetNW2Float( "GAME_flAmount", self:Clip1() )
+
 	local MyTable = CEntity_GetTable( self )
 	local f = MyTable.flThrowAnimation
 	if f && CurTime() > f then

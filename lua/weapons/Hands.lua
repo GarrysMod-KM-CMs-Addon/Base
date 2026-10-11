@@ -12,16 +12,15 @@ SWEP.Category = "Hands"
 SWEP.PrintName = "#Hands"
 SWEP.Instructions = ""
 SWEP.Purpose = ""
-SWEP.ViewModel = Model "models/weapons/c_realhands.mdl"
-SWEP.UseHands = true
-SWEP.WorldModel = Model ""
+SWEP.ViewModel = "models/weapons/c_realhands.mdl"
+SWEP.WorldModel = ""
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.Weight = -1
 SWEP.Slot = 0
 SWEP.DrawAmmo = false
 SWEP.Crosshair = ""
-SWEP.ViewModelFOV = 64
+SWEP.flViewModelFoV = 64
 SWEP.bSprintNotAnimated = true
 SWEP.bCoverNotAnimated = true
 SWEP.bJumpingNotAnimated = true
@@ -67,6 +66,7 @@ function SWEP:GetCapabilities() return 0 end
 function SWEP:Think()
 	local pOwner = self:GetOwner()
 	if !IsValid( pOwner ) || !pOwner:IsPlayer() then return end
+
 	if pOwner:GetNW2Bool "CTRL_bSliding" then
 		self.bPlayingJump = nil
 		self.bPlayingSprint = nil
@@ -75,6 +75,7 @@ function SWEP:Think()
 		self:SendWeaponAnim( ACT_VM_IDLE )
 		return
 	end
+
 	if pOwner:GetNW2Bool "CTRL_bInCover" && !pOwner:GetNW2Bool "CTRL_bGunUsesCoverStance" then
 		if !self.bPlayingCover then
 			pOwner:GetViewModel():SetPlaybackRate( 1 )
@@ -92,8 +93,12 @@ function SWEP:Think()
 			return
 		end
 	end
+
 	local bGround = pOwner:OnGround()
-	if !bGround then
+	if bGround then
+		self.bPlayingJump = nil
+	else
+		// TODO: Doesn't seem to work? Wtf?
 		if !self.bPlayingJump then
 			pOwner:GetViewModel():SetPlaybackRate( 1 )
 			self:SendWeaponAnim( ACT_VM_DRAW )
@@ -102,7 +107,8 @@ function SWEP:Think()
 			self.bPlayingCover = nil
 		end
 		return
-	else self.bPlayingJump = nil end
+	end
+
 	local flSpeed = pOwner:GetVelocity():Length()
 	if bGround && flSpeed > ( pOwner:GetWalkSpeed() * .9 ) then
 		pOwner:GetViewModel():SetPlaybackRate( math.Clamp( math.Remap( flSpeed, pOwner:GetWalkSpeed(), pOwner:GetRunSpeed(), 1, 1.25 ), 1, 1.25 ) )

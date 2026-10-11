@@ -255,7 +255,6 @@ function SWEP:Reload()
 	if !self.bAllowReloadingDuringPrimaryFire && CurTime() <= self:GetNextPrimaryFire() then return end
 	local pReloadOwner = self:GetOwner()
 	local f = self:Clip1()
-	if SERVER && f >= self:GetMaxClip1() && pReloadOwner:IsPlayer() then Achievement_Miscellaneous( pReloadOwner, "WeaponReloadFull" ) end
 	self:SetClip1( 0 )
 	local bOneInTheChamber = self.m_bAllowOneInTheChamber && f > 0
 	local ACT = self:GetReloadActivity( bOneInTheChamber )
@@ -351,7 +350,15 @@ if CLIENT then
 		local pLocalPlayer = LocalPlayer()
 		if !IsValid( pLocalPlayer ) then return end
 		local pViewModel = pLocalPlayer:GetViewModel()
-		if IsValid( pViewModel ) then pViewModel:SetColor( color_white ) end
+		if IsValid( pViewModel ) then
+			pViewModel:SetColor( color_white )
+
+			for i = 0, pViewModel:GetBoneCount() do
+				pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )
+				pViewModel:ManipulateBoneAngles( i, Angle( 0, 0, 0 ) )
+				pViewModel:ManipulateBonePosition( i, Vector( 0, 0, 0 ) )
+			end
+		end
 	end
 end
 
@@ -367,7 +374,15 @@ function SWEP:HolsterWasRan()
 	local pViewModel = pOwner.GetViewModel
 	if pViewModel then
 		pViewModel = pViewModel( pOwner )
-		if IsValid( pViewModel ) then pViewModel:SetColor( color_white ) end
+		if IsValid( pViewModel ) then
+			pViewModel:SetColor( color_white )
+
+			for i = 0, pViewModel:GetBoneCount() do
+				pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )
+				pViewModel:ManipulateBoneAngles( i, Angle( 0, 0, 0 ) )
+				pViewModel:ManipulateBonePosition( i, Vector( 0, 0, 0 ) )
+			end
+		end
 	end
 end
 
