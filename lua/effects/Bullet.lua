@@ -45,12 +45,17 @@ function EFFECT:Init( pData )
 	local vEnd = pData:GetOrigin()
 	local v = pData:GetStart()
 	if IsValid( pWeapon ) then
-		local vRenderOrigin = pWeapon:GetRenderOrigin()
-		if vRenderOrigin then v = vRenderOrigin + ( vEnd - vRenderOrigin ):GetNormalized() * 32 else
-			if IsValid( pOwner ) then
-				local vNew = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
-				if vNew:DistToSqr( v ) <= 1048576/*1024*/ then
-					v = vNew
+		local fOverrideTracerOrigin = pWeapon.OverrideTracerOrigin
+		if fOverrideTracerOrigin then
+			v = fOverrideTracerOrigin( pWeapon, "Bullet" )
+		else
+			local vRenderOrigin = pWeapon:GetRenderOrigin()
+			if vRenderOrigin then v = vRenderOrigin + ( vEnd - vRenderOrigin ):GetNormalized() * 32 else
+				if IsValid( pOwner ) then
+					local vNew = self:GetTracerShootPos( pData:GetOrigin(), pWeapon, pData:GetAttachment() )
+					if vNew:DistToSqr( v ) <= 1048576/*1024*/ then
+						v = vNew
+					end
 				end
 			end
 		end
