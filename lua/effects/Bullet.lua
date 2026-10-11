@@ -205,13 +205,13 @@ function EFFECT:Render()
 
 	render_SetMaterial( mMaterial )
 
-	for i = 0, 40 do
+	for i = 0, 1, 1 / 40 do
 		vTemp:Set( vPos )
 		vTemp2:Set( dDirection )
-		vTemp2:Mul( -i )
+		vTemp2:Mul( i * -16 )
 		vTemp:Sub( vTemp2 )
 
-		render_DrawSprite( vTemp, 12, 12, COLOR )
+		render_DrawSprite( vTemp, 6 * i ^ 2, 6 * i ^ 2, COLOR )
 	end
 
 	// Tracer lights are messy as shit. Even though we don't have to worry
