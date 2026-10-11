@@ -1,4 +1,4 @@
-ENT.iDefaultClass = CLASS_NONE
+ENT.m_iDefaultClass = CLASS_NONE
 // ENT.iClass = nil
 
 // The reason we don't do ENT.__ACTOR_TABLE_BY_CLASS__ = {} is because
@@ -12,7 +12,7 @@ local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 local CLASS_NONE = CLASS_NONE
 function ENT:GetAlliesByClass()
 	self = self || CEntity_GetTable( self )
-	self = self.iClass || self.iDefaultClass
+	self = self.iClass || self.m_iDefaultClass
 	if self == CLASS_NONE then return end
 	return __ACTOR_TABLE_BY_CLASS_LOCAL__[ self ]
 end
@@ -32,11 +32,11 @@ hook.Add( "Think", "BaseActorDisposition", function()
 end )
 
 // Getters exist for a reason. Use them.
-function ENT:GetNPCClass() return self.m_iClass || self.iDefaultClass end
-function ENT:Classify() return self.m_iClass || self.iDefaultClass end
+function ENT:GetNPCClass() return self.iClass || self.m_iDefaultClass end
+function ENT:Classify() return self.iClass || self.m_iDefaultClass end
 // Setters also exist for a reason. Use them too.
 function ENT:SetNPCClass( iClass )
-	self.m_iClass = iClass
+	self.iClass = iClass
 	local iPreviousClass = self:GetNPCClass()
 	if iPreviousClass != CLASS_NONE then
 		local t = __ACTOR_TABLE_BY_CLASS__[ iPreviousClass ]

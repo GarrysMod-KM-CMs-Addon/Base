@@ -32,10 +32,10 @@ hook.Add( "Think", "Alarm", function()
 	__ALARMS_ACTIVE__ = t
 end )
 
-ENT.iDefaultClass = 0
+ENT.m_iDefaultClass = 0
 ENT.iClass = 0
 function ENT:Classify() return self:GetNPCClass() end
-function ENT:GetNPCClass() return self.iLastCallerClass || self.iClass || self.iDefaultClass end
+function ENT:GetNPCClass() return self.iLastCallerClass || self.iClass || self.m_iDefaultClass end
 function ENT:SetNPCClass( iClass )
 	local iPreviousClass = self:GetNPCClass()
 	local t = __ALARMS__[ iPreviousClass ]
@@ -71,7 +71,7 @@ function ENT:Think()
 				ent.flCoolDown = CurTime() + math.Rand( 90, 180 )
 			end
 		end
-		if ( self.iClass || self.iDefaultClass ) == CLASS_NONE then
+		if ( self.iClass || self.m_iDefaultClass ) == CLASS_NONE then
 			local t = __ALARMS__[ CLASS_NONE ]
 			if t then
 				for ent in pairs( t ) do

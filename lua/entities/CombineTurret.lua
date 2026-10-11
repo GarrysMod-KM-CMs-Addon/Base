@@ -52,7 +52,7 @@ ENT.bCombatForgetLastHostile = true
 
 local CEntity_EmitSound = FindMetaTable( "Entity" ).EmitSound
 
-ENT.iDefaultClass = CLASS_COMBINE
+ENT.m_iDefaultClass = CLASS_COMBINE
 
 function ENT:SelectSchedule() end
 

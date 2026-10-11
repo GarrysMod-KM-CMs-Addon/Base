@@ -12,7 +12,7 @@ ENT.CATEGORIZE = {
 sound.Add {
 	name = "CombineSoldierDeath",
 	channel = CHAN_AUTO,
-	level = 90,
+	level = 80,
 	sound = {
 		"npc/combine_soldier/die1.wav",
 		"npc/combine_soldier/die2.wav",
@@ -59,18 +59,14 @@ end
 
 ENT.bNightVision = true
 
-ENT.iDefaultClass = CLASS_COMBINE
+ENT.m_iDefaultClass = CLASS_COMBINE
 
 function ENT:Initialize()
 	self:SetModel "models/player/combine_soldier.mdl"
-	self:SetHealth( 250 )
-	self:SetMaxHealth( 250 )
+	self:SetHealth( 200 )
+	self:SetMaxHealth( 200 )
 	self:SetPlayerColor( Vector( 0, 1, 1 ) )
 	BaseClass.Initialize( self )
 end
 
-function ENT:OnKilled( ... )
-	self:EmitSentence { sSound = "CombineSoldierDeath" }
-	self:HandleSentences()
-	return BaseClass.OnKilled( self, ... )
-end
+function ENT:OnCreateRagdoll( pRagdoll ) pRagdoll:EmitSound "CombineSoldierDeath" end

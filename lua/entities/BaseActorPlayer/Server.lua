@@ -21,13 +21,6 @@ function ENT:GetShootPos()
 	return vPos
 end
 
-function ENT:OnBulletImpact( dDamage )
-	if self:GetNW2Float( "GAME_flBlood", 1 ) <= 0 then return end
-	local ed = EffectData()
-	ed:SetOrigin( dDamage:GetDamagePosition() )
-	util.Effect( "BloodImpact", ed )
-end
-
 function ENT:GetSlideLength() return QuickSlide_CalcLength( self ) end
 
 ENT.tPreScheduleResetVariables = {}
@@ -49,7 +42,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter, flTolerance )
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:SetAcceleration( 0 )
 		pLocomotion:SetDeceleration( 0 )
-		self:GrountMovement( pPath, self.flTopSpeed, tFilter )
+		self:GroundMovement( pPath, self.flTopSpeed, tFilter )
 		return
 	end
 
@@ -93,7 +86,7 @@ function ENT:Behaviour()
 	if act == -1 then act = ECalcIdeal end
 	if seq == nil || seq == -1 then self.CalcSeqOverride = self:SelectWeightedSequence( act ) end
 	hook.Run( "UpdateAnimation", self, self.loco:GetVelocity(), self:GetSequenceGroundSpeed( self.CalcSeqOverride ) )
-	self:PromoteSequence( self.CalcSeqOverride, self:GetPlaybackRate() )
+	self:PromoteSequence( self:GetSequenceName( self.CalcSeqOverride ), self:GetPlaybackRate() )
 	self:AnimationSystemTick()
 	self.loco:SetJumpHeight( self.flJumpHeight )
 	if self.CalcIdeal == ACT_MP_CROUCH_IDLE || self.CalcIdeal == ACT_MP_CROUCHWALK then
@@ -135,7 +128,6 @@ function ENT:OnKilled( dmg )
 	// Shows [Death] in subtitles, and that gives it out.
 	// I prefer having to check if I killed them myself.
 	//	self:EmitSound( dmg:IsDamageType( DMG_FALL ) && "Player.FallGib" || "Player.Death" )
-	dmg:SetDamage( 0 )
 	self:BecomeRagdoll( dmg )
 end
 
@@ -162,7 +154,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, fl
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
 
-	self:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
+	self:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 end
 
 function ENT:Stand( flHeight )

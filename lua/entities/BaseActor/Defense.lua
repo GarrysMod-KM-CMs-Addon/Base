@@ -25,8 +25,8 @@ local insert = table.insert
 local table_IsEmpty = table.IsEmpty
 local table_Random = table.Random
 
-local function TraverseRadiusDodgeActions( self, MyTable, pEnemy, Defense, flRadius, vRadius, flHit, tValidActions, flRadiusSqr )
-	for sKey, Action in pairs( Defense ) do
+local function TraverseRadiusDodgeActions( self, MyTable, pEnemy, Dodge, flRadius, vRadius, flHit, tValidActions, flRadiusSqr )
+	for sKey, Action in pairs( Dodge ) do
 		if sKey == "BaseClass" then
 			local ESpecial, Param = TraverseRadiusDodgeActions( self, MyTable, pEnemy, Action, flRadius, vRadius, flHit, tValidActions, flRadiusSqr )
 			if ESpecial then return ESpecial, Param end
@@ -54,10 +54,10 @@ local function TraverseRadiusDodgeActions( self, MyTable, pEnemy, Defense, flRad
 	end
 end
 
-local function AttemptRadiusDodge( self, MyTable, pEnemy, Defense, flRadius, vRadius )
+local function AttemptRadiusDodge( self, MyTable, pEnemy, Dodge, flRadius, vRadius )
 	local tValidActions = {}
 
-	local ESpecial, Param = TraverseRadiusDodgeActions( self, MyTable, pEnemy, Defense, flRadius, vRadius, pEnemy.MELEE_flHit, tValidActions, flRadius * flRadius )
+	local ESpecial, Param = TraverseRadiusDodgeActions( self, MyTable, pEnemy, Dodge, flRadius, vRadius, pEnemy.MELEE_flHit, tValidActions, flRadius * flRadius )
 	if ESpecial then return ESpecial, Param end
 
 	if table_IsEmpty( tValidActions ) then return DEF_FUCK end
@@ -72,7 +72,6 @@ local function AttemptRadiusDodge( self, MyTable, pEnemy, Defense, flRadius, vRa
 end
 
 function ENT:HandleDefense( MyTable, Defense )
-	Defense = Defense || MyTable.Defense
 
 	local pEnemy = MyTable.Enemy
 
@@ -82,12 +81,12 @@ function ENT:HandleDefense( MyTable, Defense )
 
 	local flRadius = pEnemy.MELEE_flRadius
 
-	if !flRadius then return DEF_SAFE end // TODO: Learn to dodge other types of hits too
+	if !flRadius then return DEF_SAFE end // TODO: Learn to dodge other types of hits too, obviously!
 
 	local vRadius = pEnemy.MELEE_vRadius || pEnemy:GetPos()
 	if self:GetPos():DistToSqr( vRadius ) > flRadius * flRadius then
 		return DEF_DONT_ADVANCE_TO_RANGE, flRadius
 	end
 
-	return AttemptRadiusDodge( self, MyTable, pEnemy, Defense, flRadius, vRadius )
+	return AttemptRadiusDodge( self, MyTable, pEnemy, Defense || MyTable.Dodge, flRadius, vRadius )
 end

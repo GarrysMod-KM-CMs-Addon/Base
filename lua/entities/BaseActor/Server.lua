@@ -228,35 +228,63 @@ local math_Rand = math.Rand
 local util_Decal = util.Decal
 function ENT:BloodSplatter( dDamage )
 	if self:GetBloodColor() != BLOOD_COLOR_RED then return end
+
 	local flBlood = self:GetNW2Float( "GAME_flBlood", 1 )
 	if flBlood <= 0 then return end
+
 	local MyTable = CEntity_GetTable( self )
+
 	local vForce = dDamage:GetDamageForce()
-	local flForce = math.max( dDamage:GetDamage() * 16, vForce:Length() / 512 )
+	local vDamage = dDamage:GetDamagePosition()
+	local vNearest = self:NearestPoint( vDamage )
+
+	if vForce == vector_origin then
+		if vDamage != vector_origin then
+			vForce = ( vNearest - vDamage ):GetNormalized()
+		end
+	end
+
+	if vDamage != vector_origin then
+		local pEffectData = EffectData()
+		pEffectData:SetOrigin( vNearest )
+		pEffectData:SetNormal( -vForce )
+		pEffectData:SetFlags( 3 )
+		pEffectData:SetColor( 0 )
+		pEffectData:SetScale( 4 )
+		util.Effect( "BloodSpray", pEffectData )
+
+		local pEffectData = EffectData()
+		pEffectData:SetOrigin( vNearest )
+		pEffectData:SetNormal( -vForce )
+		util.Effect( "BloodImpact", pEffectData )
+	end
+
+	local flForce = dDamage:GetDamage() * 16
 	vForce:Normalize()
 	local vPosition = dDamage:GetDamagePosition()
 	local aAim = vForce:Angle()
 	local flMaxHealth = self.GAME_flOldMaxHealth || self:GetMaxHealth()
+
 	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 64 ) * math.Rand( 1, 2 )
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	end
-	local aAim = ( -vForce ):Angle()
-	flForce = flForce * .5
+
+	//	flForce = flForce * .5
 	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 64 ) * math.Rand( .5, 1.5 )
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1.5 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	end
 end

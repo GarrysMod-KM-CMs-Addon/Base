@@ -42,7 +42,7 @@ end
 function ENT:Initialize()
 	BaseClass.Initialize( self )
 	self:SetModel "models/player/combine_super_soldier.mdl"
-	self:SetHealth( 300 )
-	self:SetMaxHealth( 300 )
+	self:SetHealth( 250 )
+	self:SetMaxHealth( 250 )
 	self:SetPlayerColor( Vector( 1, 0, 0 ) )
 end

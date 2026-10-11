@@ -27,7 +27,7 @@ list.Set( "NPC", "HumanSWAT", {
 
 if !SERVER then return end
 
-ENT.iDefaultClass = CLASS_HUMAN
+ENT.m_iDefaultClass = CLASS_HUMAN
 
 function ENT:Initialize()
 	self:SetModel "models/player/swat.mdl"

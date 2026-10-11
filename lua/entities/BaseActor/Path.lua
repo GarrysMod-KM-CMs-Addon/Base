@@ -16,15 +16,15 @@ local Format = Format
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 
-function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase )
-	local f = math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * 1 / 3 ) || ( vPos:Distance( vGoal ) * .1 ) )
+function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase, flToleranceOverride )
+	local f = flToleranceOverride || math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * 1 / 3 ) || ( vPos:Distance( vGoal ) * .1 ) )
 	if pPath:GetEnd():DistToSqr( vGoal ) <= f * f then return true end
 end
 
-function ENT:ComputePath( Path, vGoal, fWeighter )
+function ENT:ComputePath( Path, vGoal, fWeighter, flToleranceOverride )
 	local MyTable = CEntity_GetTable( self )
 	local vPos = CEntity_GetPos( self )
-	if MyTable.DontRepath( self, Path, vPos, vGoal, MyTable ) then return true end
+	if MyTable.DontRepath( self, Path, vPos, vGoal, MyTable, nil, flToleranceOverride ) then return true end
 	if fWeighter then return Path, Path:Compute( self, vGoal, fWeighter ) end
 	return Path, Path:Compute( self, vGoal )
 end
@@ -159,7 +159,7 @@ local developer = GetConVar "developer"
 ENT.flNavigationAvoidTime = 0
 ENT.flJumpedTime = 0
 
-function ENT:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
+function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 	local pLocomotion = self.loco
 
 	if developer:GetBool() then pPath:Draw() end
@@ -182,7 +182,7 @@ function ENT:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 
 	local pGoal = pPath:GetCurrentGoal()
 
-	if !pGoal then pPath:Update( self ) return end
+	if !pGoal then return end
 
 	// Allows us to jump more aggressively instead of bumping
 	// into walls and triggering avoidance, yet prevents
@@ -216,7 +216,7 @@ function ENT:GrountMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 		filter = tFilter
 	}
 
-	if trHull.Hit && GetVelocity( self ):Length() <= self.flWalkSpeed * .8 then
+	if trHull.Hit && GetVelocity( self ):Length() > self.flWalkSpeed * .8 then
 		local b
 		if pNextGoal && ( pGoal.type == 2 || pGoal.type == 3 ) then b = true end
 

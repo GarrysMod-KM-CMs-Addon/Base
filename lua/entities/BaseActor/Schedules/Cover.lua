@@ -8,11 +8,9 @@ local Rand = math.Rand
 local unpack = unpack
 local CurTime = CurTime
 
-ENT.tPreScheduleResetVariables.bSuppressing = false
-ENT.tPreScheduleResetVariables.bWantsCover = false
-
 function ENT:RangeAttack()
 	if self.bHoldFire then return end
+
 	self:WeaponPrimaryVolley()
 
 	self.flWeaponPrimaryVolleyTimeMin = 0
@@ -221,10 +219,14 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 	if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 
 	local vCover = MyTable.vCover
-	local tCover = MyTable.tCover
+	local tCover = MyTable.pCover
 
 	if !tCover || !vCover then
-		MyTable.SetSchedule( self, "TakeCover", MyTable )
+		// TODO: This should ideally not check for MyTable.bPlantToShoot &&
+		// And FreeMovementStand should ideally go to cover when SomeoneIsPeekingMe
+		// But we don't send any peek signals there yet so yeah
+		//	MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, MyTable.bPlantToShoot && MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 
@@ -329,14 +331,14 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 		local f = MyTable.flPathTolerance
 		if self:GetPos():DistToSqr( vCover ) > ( f * f ) then
 			MyTable.vCover = nil
-			MyTable.tCover = nil
+			MyTable.pCover = nil
 			MyTable.SetSchedule( self, "TakeCover", MyTable )
 			return
 		end
 
 		if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) then
 			MyTable.vCover = nil
-			MyTable.tCover = nil
+			MyTable.pCover = nil
 			MyTable.SetSchedule( self, "TakeCover", MyTable )
 			return
 		end

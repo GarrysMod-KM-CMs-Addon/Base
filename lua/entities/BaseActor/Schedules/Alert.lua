@@ -81,7 +81,7 @@ RegisterSchedule( "AlertLookAround", { Execute = function( self, pSchedule, MyTa
 		local fHush = MyTable.GekkoChirpControllerHush
 		if fHush then fHush( self, MyTable, MyTable.m_flFrameTime ) end
 	else
-		local fRaise = MyTable.GekkoChirpControllerRaise
+		local fRaise = MyTable.GekkoChirpControllerRandom
 		if fRaise then fRaise( self, MyTable, MyTable.m_flFrameTime ) end
 	end
 
@@ -114,6 +114,9 @@ local function GoToDestination( self, pSchedule, MyTable )
 		local pGoal = pPath:GetCurrentGoal()
 		if pGoal then
 			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+		else
+			MyTable.vaAimTargetBody = GetVelocity( self ):Angle()
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
 
@@ -164,7 +167,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 		local fHush = MyTable.GekkoChirpControllerHush
 		if fHush then fHush( self, MyTable, MyTable.m_flFrameTime ) end
 	else
-		local fRaise = MyTable.GekkoChirpControllerRaise
+		local fRaise = MyTable.GekkoChirpControllerRandom
 		if fRaise then fRaise( self, MyTable, MyTable.m_flFrameTime ) end
 	end
 
@@ -177,10 +180,9 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
 			local pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
-			local vHidden
 
 			while true do
-				for i = 1, 8 do
+				for i = 1, 16 do
 					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
 					local pArea = pIterator()
@@ -196,49 +198,12 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 	
 					if pArea:IsPartiallyVisible( self:GetPos() + self:OBBCenter(), self ) then
 						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
-						coroutine.yield()
-						continue
-					end
-	
-					vHidden = pArea:GetCenter()
-					break
-				end
-
-				if vHidden then break end
-			end
-
-			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
-
-			local pIterator = MyTable.SearchAreas( self, vHidden, nil, MyTable )
-			vHidden[ 3 ] = vHidden[ 3 ] + MyTable.vHullMaxs[ 3 ] * .5
-
-			while true do
-				for i = 1, 8 do
-					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
-
-					local pArea = pIterator()
-					if pArea == nil then
-						MyTable.SetSchedule( self, "AlertLookAround", MyTable )
-						return true
-					end
-	
-					if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
-						coroutine.yield()
-						continue
-					end
-	
-					if pArea:IsPartiallyVisible( self:GetPos() + self:OBBCenter(), self ) then
-						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
-						coroutine.yield()
-						continue
-					elseif pArea:IsPartiallyVisible( vHidden, self ) then
 						coroutine.yield()
 						continue
 					end
 	
 					TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
 					pSchedule.pDestination = pArea
-	
 					return true
 				end
 			end

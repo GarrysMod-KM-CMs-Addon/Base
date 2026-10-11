@@ -4,8 +4,6 @@ local CurTime = CurTime
 local math_abs = math.abs
 local coroutine_yield = coroutine.yield
 
-local isnumber = isnumber
-
 local function fEmpty() end
 
 local min = math.min
@@ -168,18 +166,16 @@ ENT.tLastSequenceData = {}
 
 ENT.m_tSequenceEvents = {}
 
-function ENT:PromoteSequence( sSequence, flSpeed, flWeight )
-	if isnumber( sSequence ) then sSequence = self:GetSequenceName( sSequence ) end
+function ENT:PromoteSequence( sSequence, flSpeed, flWeight, fFunction )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.tPromoteSequences[ sSequence ] = true
-	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1 }
+	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1, fFunction || fEmpty }
 end
 
-function ENT:PromoteSequenceInstant( sSequence, flSpeed, flWeight )
-	if isnumber( sSequence ) then sSequence = self:GetSequenceName( sSequence ) end
+function ENT:PromoteSequenceInstant( sSequence, flSpeed, flWeight, fFunction )
 	local MyTable = CEntity_GetTable( self )
 	MyTable.tInstantlyPromote[ sSequence ] = true
-	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1 }
+	MyTable.tLastSequenceData[ sSequence ] = { flSpeed || 1, flWeight || 1, fFunction || fEmpty }
 end
 
 local Lerp = Lerp
@@ -250,6 +246,8 @@ function ENT:AnimationSystemTick( MyTable )
 			self:SetLayerWeight( iLayer, flWeight )
 			if flWeight >= ( flTarget - .05 ) then bReached = true end
 		end
+
+		tSequenceData[ 3 ]( self, MyTable, flWeight * flTargetWeight, iLayer )
 
 		local flCycle = self:GetLayerCycle( iLayer )
 		local tData = tSequenceEvents[ sSequence ]
@@ -338,4 +336,18 @@ function ENT:CenterTarget( vTarget, MyTable )
 	end
 	MyTable.vaAimTargetBody = vTarget
 	MyTable.vaAimTargetPose = vTarget
+end
+
+function ENT:PromoteRootMotionSequence( flSpeed, sSequence, flWeight, pPath, bNoInverse )
+	local flMovement = self:GetSequenceGroundSpeed( self:LookupSequence( sSequence ) )
+	local vVelocity = GetVelocity( self )
+
+	MyTable.PromoteSequence(
+		self,
+		MyTable,
+		flMovement / flSpeed * ( bNoInverse && 1 || ( vVelocity:GetNormalized():Dot( self:GetForward() ) > 0 && 1 || -1 ) ),
+		flWeight,
+		function( _ /*self*/, _ /*MyTable*/, flWeight, iLayer )
+		end
+	)
 end

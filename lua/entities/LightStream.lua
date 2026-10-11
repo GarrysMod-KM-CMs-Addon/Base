@@ -96,9 +96,9 @@ if CLIENT then
 		local r, g, b = c.r, c.g, c.b
 		local v = self:GetPos()
 		render.SetMaterial( mBeam )
-		local flTrueDistance = self:GetTrueDistance()
-		local flWidth = flTrueDistance * math.abs( math.sin( ( self:GetVerFOV() + self:GetHorFOV() ) * .5 ) ) * .25
-		local flAlpha = math.Remap( flViewDot, 1, .5, 0, 1 )
+		local flTrueDistance = self:GetTrueDistance() * .5
+		local flWidth = flTrueDistance * math.abs( math.sin( ( self:GetVerFOV() + self:GetHorFOV() ) * .5 ) ) * .125
+		local flAlpha = math.Remap( flViewDot ^ 5, 1, .5, 0, 1 )
 		local flActualAlpha = flAlpha * self:GetBrightness() * .02
 		render.StartBeam( 3 )
 			render.AddBeam( v + vForward * 1, flWidth, 0, Color( r, g, b, 32 * flActualAlpha ) )
@@ -110,12 +110,12 @@ if CLIENT then
 		if !flVisible then return end
 		// Beam flare
 		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
-		local flSize = self:GetBrightness() * self:GetDistance() * .01 * flVisible
+		local flSize = self:GetBrightness() * self:GetDistance() * .002 * flVisible
 		c.a = flAlpha * 255 * self:GetBrightness() * .05
 		render.DrawSprite( v + vForward, flSize, flSize, c )
 		// Directly exposed flare
 		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
-		local flSize = self:GetBrightness() * self:GetDistance() * .066 * flVisible
+		local flSize = self:GetBrightness() * self:GetDistance() * .005 * flVisible
 		c.a = flViewDot ^ 25 * 255
 		render.DrawSprite( v + vForward, flSize, flSize, c )
 	end

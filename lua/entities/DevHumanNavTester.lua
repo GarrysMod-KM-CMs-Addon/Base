@@ -11,7 +11,7 @@ list.Set( "NPC", "DevHumanNavTester", {
 
 if !SERVER then return end
 
-ENT.iDefaultClass = CLASS_COMBINE
+ENT.m_iDefaultClass = CLASS_COMBINE
 
 function ENT:Initialize()
 	self:SetModel "models/player/arctic.mdl"

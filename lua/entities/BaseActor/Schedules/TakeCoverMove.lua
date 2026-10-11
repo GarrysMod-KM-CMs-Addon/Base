@@ -4,7 +4,7 @@ local function fAttemptReturn( self, pSchedule, MyTable )
 	local pPath = pSchedule.pPath
 	if !pPath then
 		MyTable.vCover = pSchedule.vCoverFrom
-		MyTable.tCover = pSchedule.pCoverFrom
+		MyTable.pCover = pSchedule.pCoverFrom
 		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return true
 	end
@@ -17,7 +17,7 @@ local function fAttemptReturn( self, pSchedule, MyTable )
 
 	if pPath:GetCursorPosition() <= pPath:GetLength() * 1 / 3 then
 		MyTable.vCover = pSchedule.vCoverFrom
-		MyTable.tCover = pSchedule.pCoverFrom
+		MyTable.pCover = pSchedule.pCoverFrom
 		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return true
 	end
@@ -43,7 +43,7 @@ RegisterSchedule( "TakeCoverMove", {
 		if iClip != -1 && iClip <= 0 then MyTable.WeaponReload( self, MyTable ) end
 
 		local vCover = MyTable.vCover
-		local tCover = MyTable.tCover
+		local tCover = MyTable.pCover
 
 		if !tCover || !vCover then
 			MyTable.SetSchedule( self, "TakeCover", MyTable )
@@ -77,7 +77,7 @@ RegisterSchedule( "TakeCoverMove", {
 			if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) then
 				// Pray to God that it's closer and we aren't dying for no reason lmao
 				MyTable.vCover = pSchedule.vCoverFrom
-				MyTable.tCover = pSchedule.pCoverFrom
+				MyTable.pCover = pSchedule.pCoverFrom
 				MyTable.SetSchedule( self, "TakeCover", MyTable )
 				return
 			end

@@ -12,7 +12,7 @@ ENT.CATEGORIZE = {
 sound.Add {
 	name = "CombineCivilProtectionDeath",
 	channel = CHAN_AUTO,
-	level = 110,
+	level = 80,
 	sound = {
 		"npc/metropolice/die1.wav",
 		"npc/metropolice/die2.wav",
@@ -31,20 +31,16 @@ list.Set( "NPC", "npc_metropolice", {
 	}
 } )
 
-if !SERVER then return end
+if CLIENT then return end
 
-ENT.iDefaultClass = CLASS_COMBINE
+ENT.m_iDefaultClass = CLASS_COMBINE
 
 function ENT:Initialize()
-	self:SetModel( math.random( 3 ) == 1 && "models/player/police_fem.mdl" || "models/player/police.mdl" )
+	self:SetModel "models/player/police.mdl"
 	self:SetHealth( 150 )
 	self:SetMaxHealth( 150 )
 	self:SetPlayerColor( Vector() )
 	BaseClass.Initialize( self )
 end
 
-function ENT:OnKilled( ... )
-	self:EmitSentence { sSound = "CombineCivilProtectionDeath" }
-	self:HandleSentences()
-	return BaseClass.OnKilled( self, ... )
-end
+function ENT:OnCreateRagdoll( pRagdoll ) pRagdoll:EmitSound "CombineCivilProtectionDeath" end

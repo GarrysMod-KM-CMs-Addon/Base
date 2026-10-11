@@ -6,9 +6,6 @@ scripted_ents.Register( ENT, "rpg_missile" )
 if !SERVER then return end
 
 local SOLID_VPHYSICS = SOLID_VPHYSICS
-local ParticleEffectAttach = ParticleEffectAttach
-local PATTACH_ABSORIGIN_FOLLOW = PATTACH_ABSORIGIN_FOLLOW
-local util_SpriteTrail = util.SpriteTrail
 
 local CEntity = FindMetaTable "Entity"
 local CEntity_SetModel = CEntity.SetModel

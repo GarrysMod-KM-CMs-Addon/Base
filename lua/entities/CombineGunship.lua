@@ -1,3 +1,5 @@
+// TODO: Fix the bug with RPGs flying THROUGH the gunship. It's AWFUL.
+
 AddCSLuaFile()
 DEFINE_BASECLASS "BaseActor"
 
@@ -127,7 +129,7 @@ ENT.bCantTurnBody = true
 
 ENT.bCombatForgetLastHostile = true
 
-ENT.iDefaultClass = CLASS_COMBINE
+ENT.m_iDefaultClass = CLASS_COMBINE
 
 ENT.vHullMins = Vector( -321.456696, -130.342514, -57.648781 )
 ENT.vHullMaxs = Vector( 236.404907, 130.553619, 91.529099 )

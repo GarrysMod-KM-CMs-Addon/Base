@@ -27,7 +27,7 @@ list.Set( "NPC", "HumanTerrorist", {
 if !SERVER then return end
 
 if !CLASS_HUMAN_TERRORIST then Add_NPC_Class "CLASS_HUMAN_TERRORIST" end
-ENT.iDefaultClass = CLASS_HUMAN_TERRORIST
+ENT.m_iDefaultClass = CLASS_HUMAN_TERRORIST
 
 function ENT:Initialize()
 	self:SetModel( math.random( 2 ) == 1 && "models/player/phoenix.mdl" || "models/player/arctic.mdl" )

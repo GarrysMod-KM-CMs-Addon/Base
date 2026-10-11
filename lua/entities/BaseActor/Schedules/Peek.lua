@@ -25,12 +25,11 @@ function ENT:PeekInHorizontal()
 			pSchedule.pPath = pPath
 		end
 
-		MyTable.ComputePath( self, pPath, vPeek )
+		// Extremely small tolerance (1 inch!) for we NEED to go there, and the position will NEVER change
+		MyTable.ComputePath( self, pPath, vPeek, nil, 1 )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .25
+		local f = MyTable.vHullMaxs[ 2 ] * .5
 		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
-
-		pPath:SetGoalTolerance( f )
 
 		if self:GetPos():DistToSqr( vPeek ) <= ( f * f ) then return true end
 	end
@@ -44,9 +43,10 @@ function ENT:PeekOutHorizontal()
 			pSchedule.pPath = pPath
 		end
 
-		MyTable.ComputePath( self, pPath, vCover )
+		// Extremely small tolerance (1 inch!) for we NEED to go there, and the position will NEVER change
+		MyTable.ComputePath( self, pPath, vCover, nil, 1 )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .25
+		local f = MyTable.vHullMaxs[ 2 ] * .5
 		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
 
 		if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
@@ -111,7 +111,7 @@ RegisterSchedule( "PeekIn", {
 
 		MyTable.vActualCover = MyTable.vCover
 
-		local tCover = MyTable.tCover
+		local tCover = MyTable.pCover
 
 		local dBodyTarget = ( tCover.vEnd - tCover.vStart ):Angle():Right()
 		if tCover.bRight then dBodyTarget:Negate() end
@@ -167,7 +167,7 @@ RegisterSchedule( "PeekIn", {
 
 RegisterSchedule( "PeekOut", {
 	Execute = function( self, pSchedule, MyTable )
-		local tCover = MyTable.tCover
+		local tCover = MyTable.pCover
 
 		local dBodyTarget = ( tCover.vEnd - tCover.vStart ):Angle():Right()
 		if tCover.bRight then dBodyTarget:Negate() end
@@ -237,7 +237,7 @@ RegisterSchedule( "Peek", {
 
 		if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
 
-		local tCover = MyTable.tCover
+		local tCover = MyTable.pCover
 
 		local dBodyTarget = ( tCover.vEnd - tCover.vStart ):Angle():Right()
 		if tCover.bRight then dBodyTarget:Negate() end

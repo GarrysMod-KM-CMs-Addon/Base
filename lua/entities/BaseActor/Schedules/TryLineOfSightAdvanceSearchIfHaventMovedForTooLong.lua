@@ -48,7 +48,7 @@ function ENT:TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( pSchedule, MyTa
 		local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 		vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
 
-		local pInitialCover = MyTable.tCover
+		local pInitialCover = MyTable.pCover
 		local tQueue = { { pInitialCover, 0, 0 } }
 		local tVisited = { [ pInitialCover ] = true }
 
@@ -142,12 +142,12 @@ function ENT:TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( pSchedule, MyTa
 
 				local pSchedule = MyTable.SetSchedule( self, "TakeCoverMove", MyTable )
 				pSchedule.vCoverFrom = MyTable.vCover
-				pSchedule.pCoverFrom = MyTable.tCover
+				pSchedule.pCoverFrom = MyTable.pCover
 
 				MyTable.vCover = vCover
 				MyTable.pCover = pCover
 
-				return true
+				return
 			end
 
 			coroutine.yield()

@@ -16,8 +16,6 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 
 	local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
 
-	MyTable.bWantsCover = true
-
 	local pEnemyPath = MyTable.pEnemyPath
 	if !pEnemyPath then
 		pEnemyPath = Path "Follow"
@@ -25,7 +23,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 	end
 
 	local vCover = MyTable.vCover
-	local tCover = MyTable.tCover
+	local tCover = MyTable.pCover
 
 	if !vCover || !tCover then
 		// TODO: This should use new yielded pathing.
@@ -262,7 +260,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 						end
 
 						MyTable.vCover = vCover
-						MyTable.tCover = tCover
+						MyTable.pCover = tCover
 
 						pSchedule.bBeganSearching = nil
 
@@ -287,7 +285,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 
 	if LevelOfDetail( pSchedule, "flNextCheck" ) && ( !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) || !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable ) ) then
 		MyTable.vCover = nil
-		MyTable.tCover = nil
+		MyTable.pCover = nil
 		// Purge the schedule instead of trying to search with this one again
 		MyTable.SetSchedule( self, "TakeCover", MyTable )
 		return

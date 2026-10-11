@@ -118,6 +118,7 @@ local EntityUniqueIdentifier = EntityUniqueIdentifier
 
 local math_min = math.min
 
+// TODO: Decrease this when we get a proper GetVelocity( pTrueEnemy ) implementation!
 ACTOR_FREE_KNOWLEDGE = 1.5
 
 function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable, bSense, bSenseRecursion )
@@ -227,7 +228,7 @@ local pairs = pairs
 
 function ENT:OnOtherKilled( ent ) self:ReportPositionAsClear( ent:GetPos() + ent:OBBCenter() ) end
 
-ENT.flMaxVisionRange = 131072
+ENT.flMaxVisionRange = 12000
 
 local math_Remap = math.Remap
 
@@ -238,11 +239,12 @@ ENT.flLuminosityPower = .1
 function ENT:GetVisionStrengthIncreaseSpeed( VecOrEnt, vEyePos, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	if isentity( VecOrEnt ) then
-		if MyTable.bNightVision then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, MyTable.flMaxVisionRange, 1, 0 ) end
+		local flRealVisionRange = MyTable.flMaxVisionRange + ( math.max( 0, VecOrEnt:BoundingRadius() - 316.832123 ) ^ 1.25 ) * 58.745 * ( MyTable.flMaxVisionRange / 12000 )
+		if MyTable.bNightVision then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, flRealVisionRange, 1, 0 ) end
 		// Players send this via net messages. Sadly, there is no way to measure this on the server,
 		// and as such no way for an Actor to not see another Actor in the darkness :(
 		local c = CEntity_GetTable( VecOrEnt ).GAME_cLuminosity
-		if c then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, MyTable.flMaxVisionRange, 1, 0 ) * MyTable.GetBrightnessColor( self, c, MyTable ) ^ MyTable.flLuminosityPower end
+		if c then return 6 * math_Remap( vEyePos:Distance( VecOrEnt:GetPos() + VecOrEnt:OBBCenter() ), 0, flRealVisionRange, 1, 0 ) * MyTable.GetBrightnessColor( self, c, MyTable ) ^ MyTable.flLuminosityPower end
 		VecOrEnt = VecOrEnt:GetPos() + VecOrEnt:OBBCenter()
 	end
 	return 3 * math_Remap( vEyePos:Distance( VecOrEnt ), 0, MyTable.flMaxVisionRange, 1, 0 )
@@ -411,7 +413,7 @@ function ENT:Look( MyTable )
 						end
 						tEnemies[ ent ] = true
 						tVisibleEnemies[ EntityUniqueIdentifier( ent ) ] = true
-						MyTable.SetupBullseye( self, ent, nil, nil, MyTable )
+						MyTable.SetupBullseye( self, ent, nil, nil, MyTable, true )
 					else tAlertEntities[ ent ] = true end
 				end
 			end

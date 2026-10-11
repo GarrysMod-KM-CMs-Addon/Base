@@ -17,17 +17,21 @@ end
 ENT.flFreeMovementSuppressTimeMin = 0
 ENT.flFreeMovementSuppressTimeMax = 4
 
-// Poor mercs are so ADHD feat. Filian that they can't stand still for like five minutes
-// Better than being autistic
+// Poor mercs are so ADHD (feat. Filian) that they can't stand still for like five minutes
+// Still better than being autistic though
 ENT.flFreeMovementStandTimeMin = 0
 ENT.flFreeMovementStandTimeMax = 4
+
+include "PlantToShoot.lua"
 
 // TODO: If the enemy left, do the following.
 // If we can see them in hold fire, look around confused and tell everyone to search.
 // If we can see them in combat, instantly transition to hold fire.
 RegisterSchedule( "FreeMovementStand", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
-	MyTable.tCover = nil
+	MyTable.pCover = nil
+
+	if MyTable.bPlantToShoot then MyTable.SetSchedule( self, "PlantToShoot", MyTable ) return end
 
 	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
@@ -256,7 +260,7 @@ end } )
 
 RegisterSchedule( "FreeMovementMove", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
-	MyTable.tCover = nil
+	MyTable.pCover = nil
 
 	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
@@ -435,7 +439,7 @@ end } )
 // when not chasing anymore, not just go straight at them, but whatever
 RegisterSchedule( "FreeMovementPursuit", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
-	MyTable.tCover = nil
+	MyTable.pCover = nil
 
 	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
@@ -581,7 +585,7 @@ end } )
 // TODO: If we didn't have a LoS before, don't go for one! Suppress instead!
 RegisterSchedule( "FreeMovementSearch", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
-	MyTable.tCover = nil
+	MyTable.pCover = nil
 
 	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
@@ -745,7 +749,7 @@ end } )
 
 RegisterSchedule( "FreeMovementPressure", { Execute = function( self, sched, MyTable )
 	MyTable.vCover = nil
-	MyTable.tCover = nil
+	MyTable.pCover = nil
 
 	local tEnemies = MyTable.tEnemies
 	if table_IsEmpty( tEnemies ) then return true end
