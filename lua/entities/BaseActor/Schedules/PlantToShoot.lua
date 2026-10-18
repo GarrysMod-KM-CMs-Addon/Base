@@ -1,3 +1,9 @@
+// PlantToShoot is just a fancy name I made when making Strogg Blaster Marine
+// Actually refers to anything that likes to combat people in the open
+// Do not confuse with FreeMovement, which is also in the open, but that's
+// because a soldier went "GOING AFTER HIM!!"
+// Technically, an enemy that can't plant (e.g. Strogg Shotgun Marine) can still use PlantToShoot
+
 RegisterSchedule( "PlantToShoot", {
 	Execute = function( self, pSchedule, MyTable )
 		local pEnemy = MyTable.Enemy
@@ -5,18 +11,27 @@ RegisterSchedule( "PlantToShoot", {
 
 		local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
 
-		local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
-		if !util.TraceLine( {
-			start = MyTable.GetShootPos( self ),
-			endpos = vEnemy,
-			mask = MASK_SHOT_HULL,
-			filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
-		} ).Hit then
-			MyTable.vaAimTargetBody = vEnemy
-			MyTable.vaAimTargetPose = vEnemy
-			if MyTable.IsInPlantDelta( self, vEnemy, MyTable ) then
-				MyTable.SetSchedule( self, "PlantToShootPlant", MyTable )
+		if MyTable.bPlantToShoot then
+			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
+			if !util.TraceLine( {
+				start = MyTable.GetShootPos( self ),
+				endpos = vEnemy,
+				mask = MASK_SHOT_HULL,
+				filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
+			} ).Hit then
+				MyTable.vaAimTargetBody = vEnemy
+				MyTable.vaAimTargetPose = vEnemy
+				if MyTable.IsInPlantDelta( self, vEnemy, MyTable ) then
+					MyTable.SetSchedule( self, "PlantToShootPlant", MyTable )
+				end
 			end
+		end
+
+		local EDefense, flOptional = MyTable.HandleDefense( self, MyTable )
+		if EDefense >= DEF_NO_ACTION_NEEDED then
+			if EDefense == DEF_DONT_ADVANCE_TO_RANGE then
+				// TODO: Handle this, duh xD
+			else return end
 		end
 
 		local pPath = MyTable.pEnemyPath
@@ -56,6 +71,7 @@ RegisterSchedule( "PlantToShootPlant", {
 			pSchedule.flTargetTarget = ( random() * random() * random() ) ^ 1.3 * 30
 		end
 
+		// TODO: Try to get out of shooting if we need to dodge
 		if !pSchedule.bDone then
 			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
 			if !util.TraceLine( {

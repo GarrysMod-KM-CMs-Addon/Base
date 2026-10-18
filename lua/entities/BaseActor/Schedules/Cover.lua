@@ -222,11 +222,11 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 	local tCover = MyTable.pCover
 
 	if !tCover || !vCover then
-		// TODO: This should ideally not check for MyTable.bPlantToShoot &&
+		// TODO: This should ideally not check for ( Plant to shoot ) &&
 		// And FreeMovementStand should ideally go to cover when SomeoneIsPeekingMe
 		// But we don't send any peek signals there yet so yeah
 		//	MyTable.SetSchedule( self, MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
-		MyTable.SetSchedule( self, MyTable.bPlantToShoot && MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
+		MyTable.SetSchedule( self, ( MyTable.bPlantToShoot || MyTable.bPlantToShootLike ) && MyTable.CanExpose( self, MyTable ) && "FreeMovementStand" || "TakeCover", MyTable )
 		return
 	end
 

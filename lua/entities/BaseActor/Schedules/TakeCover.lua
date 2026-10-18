@@ -196,77 +196,79 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 			local tCovers
 
 			while true do
-				if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
-
-				local pArea = pIterator()
-				if pArea == nil then
-					// REPEAT!!! AND TRY HARDER!!!
-					pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
-					continue
-				end
-
-				tCovers = {}
-
-				for _, tCover in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do
-					insert( tCovers, { tCover, DistanceToLine( tCover.vStart, tCover.vEnd, self:GetPos() ) } )
-				end
-
-				SortByMember( tCovers, 2, true )
-
-				for _, tData in ipairs( tCovers ) do
+				for i = 1, 2 do
 					if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
-
-					local tCover = tData[ 1 ]
-
-					if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
-
-					local vStart, vEnd = tCover.vStart, tCover.vEnd
-
-					local vDirection = vEnd - vStart
-
-					local flStep, flStart, flEnd
-					if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
-						flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
-					else
-						flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
+	
+					local pArea = pIterator()
+					if pArea == nil then
+						// REPEAT!!! AND TRY HARDER!!!
+						pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
+						continue
 					end
+	
+					tCovers = {}
+	
+					for _, tCover in ipairs( __COVERS_STATIC__[ pArea:GetID() ] || {} ) do
+						insert( tCovers, { tCover, DistanceToLine( tCover.vStart, tCover.vEnd, self:GetPos() ) } )
+					end
+	
+					SortByMember( tCovers, 2, true )
+	
+					for _, tData in ipairs( tCovers ) do
+						if !IsValid( self ) || MyTable.Schedule != pSchedule || !IsValid( pEnemy ) then return true end
 
-					vDirection:Normalize()
-
-					local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-					vOff = vOff * vMaxs[ 1 ] * 1.2
-
-					for flCurrent = flStart, flEnd, flStep do
-						local vCover = vStart + vDirection * flCurrent + vOff
-
-						if util_TraceHull( {
-							start = vCover,
-							endpos = vCover,
-							mins = vMins,
-							maxs = vMaxs,
-							filter = self
-						} ).Hit then continue end
-
-						// Supply it with vMaxs because we have, in fact, precomputed them
-						if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vHitMaxs ) then continue end
-
-						if tAllies then
-							local b
-							for pAlly in pairs( tAllies ) do
-								if self == pAlly then continue end
-								if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= flTakenDistSqr then b = true break end
-							end
-							if b then continue end
+						local tCover = tData[ 1 ]
+	
+						if !MyTable.IsValidCoverCandidate( self, tCover, pEnemyPath, MyTable ) then continue end
+	
+						local vStart, vEnd = tCover.vStart, tCover.vEnd
+	
+						local vDirection = vEnd - vStart
+	
+						local flStep, flStart, flEnd
+						if vStart:DistToSqr( self:GetPos() ) <= vEnd:DistToSqr( self:GetPos() ) then
+							flStart, flEnd, flStep = 0, vDirection:Length(), vMaxs[ 1 ]
+						else
+							flStart, flEnd, flStep = vDirection:Length(), 0, -vMaxs[ 1 ]
 						end
-
-						MyTable.vCover = vCover
-						MyTable.pCover = tCover
-
-						pSchedule.bBeganSearching = nil
-
-						return true
+	
+						vDirection:Normalize()
+	
+						local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
+						vOff = vOff * vMaxs[ 1 ] * 1.2
+	
+						for flCurrent = flStart, flEnd, flStep do
+							local vCover = vStart + vDirection * flCurrent + vOff
+	
+							if util_TraceHull( {
+								start = vCover,
+								endpos = vCover,
+								mins = vMins,
+								maxs = vMaxs,
+								filter = self
+							} ).Hit then continue end
+	
+							// Supply it with vMaxs because we have, in fact, precomputed them
+							if !MyTable.IsValidCoverPoint( self, vCover, tCover, pEnemy, pEnemyPath, MyTable, vHitMaxs ) then continue end
+	
+							if tAllies then
+								local b
+								for pAlly in pairs( tAllies ) do
+									if self == pAlly then continue end
+									if pAlly.vActualCover && pAlly.vActualCover:DistToSqr( vCover ) <= flTakenDistSqr || pAlly.vActualTarget && pAlly.vActualTarget:DistToSqr( vCover ) <= flTakenDistSqr then b = true break end
+								end
+								if b then continue end
+							end
+	
+							MyTable.vCover = vCover
+							MyTable.pCover = tCover
+	
+							pSchedule.bBeganSearching = nil
+	
+							return true
+						end
+						coroutine.yield()
 					end
-					coroutine.yield()
 				end
 				coroutine.yield()
 			end

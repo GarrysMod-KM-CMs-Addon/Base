@@ -41,9 +41,11 @@ ENT.flLastEnemy = 0
 
 ENT.bCantSeeUnderWater = true
 ENT.bVisNot360 = true
+
 // Must be half of the actual value, since it's calculated as an absolute difference
-ENT.flVisionYaw = 53.13
-ENT.flVisionPitch = 31.72
+ENT.flVisionYaw = 60
+ENT.flVisionPitch = 30
+
 function ENT:CanSee( vec, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 	local veh, ent

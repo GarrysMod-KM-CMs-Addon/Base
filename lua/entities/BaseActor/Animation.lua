@@ -13,7 +13,7 @@ local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRat
 
 // You MUST call AnimationSystemHalt before this!
 
-function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
+function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction, bForce )
 	flSpeed = flSpeed || 1
 
 	local flLength = self:SetSequence( sSequence )
@@ -36,7 +36,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 
 	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
 	while CurTime() <= flEndTime do
-		if MyTable.sCallMeInRunBehaviour != sSequence then break end
+		if !bForce && MyTable.sCallMeInRunBehaviour != sSequence then break end
 
 		self:SetSequence( sSequence )
 		self:SetPlaybackRate( flSpeed )
@@ -70,7 +70,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction )
 	if !bDontReset then self:SetSequence( 0 ) end
 end
 
-function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction )
+function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bForce )
 	flSpeed = flSpeed || 1
 
 	local flLength = self:SetSequence( sSequence )
@@ -93,9 +93,25 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction )
 
 	fFunction = fFunction || fEmpty
 
+	local vMins, vMaxs = self:OBBMins(), self:OBBMaxs()
+
+	vMins[ 3 ] = vMins[ 3 ] + 12
+
+	local pStuck = util.TraceHull( {
+		start = self:GetPos(),
+		endpos = self:GetPos(),
+		mins = vMins,
+		maxs = vMaxs,
+		filter = function( pEntity )
+			if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
+			return true
+		end,
+		mask = MASK_SOLID
+	} ).Entity
+
 	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
 	while CurTime() <= flEndTime do
-		if MyTable.sCallMeInRunBehaviour != sSequence then break end
+		if !bForce && MyTable.sCallMeInRunBehaviour != sSequence then break end
 
 		self:SetSequence( sSequence )
 		self:SetPlaybackRate( flSpeed )
@@ -114,24 +130,19 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction )
 
 		flPrevCycle = flCycle
 
-		local pLocomotion = CEntity_GetTable( self ).loco
-
-		pLocomotion:SetDesiredSpeed( 0 )
-		pLocomotion:Approach( self:GetPos(), 1 )
-
 		local tr = util.TraceHull {
 			start = v,
 			endpos = v,
-			mins = self:OBBMins(),
-			maxs = self:OBBMaxs(),
-			filter = self,
+			mins = vMins,
+			maxs = vMaxs,
+			filter = function( pEntity )
+				if pEntity == self || pEntity == pStuck || IsBullshitNonSolidEntity( pEntity ) then return false end
+				return true
+			end,
 			mask = MASK_SOLID
 		}
 
-		if tr.Hit then
-			self:ResetGravity( pLocomotion )
-		else
-			pLocomotion:SetGravity( 0 )
+		if !tr.Hit then
 			self:SetPos( v )
 			self:SetAngles( a )
 		end

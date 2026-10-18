@@ -17,6 +17,8 @@ local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 
 function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase, flToleranceOverride )
+	if pPath:GetLength() > 4096 then return vPos:DistToSqr( vGoal ) > ( 3072 * 3072 ) end
+
 	local f = flToleranceOverride || math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * 1 / 3 ) || ( vPos:Distance( vGoal ) * .1 ) )
 	if pPath:GetEnd():DistToSqr( vGoal ) <= f * f then return true end
 end
@@ -308,6 +310,10 @@ end
 function ENT:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
 	return self:Visible( pTarget )
 end
+
+// TODO: Maybe add the ability to make the air gravity more/less?
+// Since Gekkos can use air resistance poses to fall slightly faster or slower.
+// TODO because I have no idea how to implement it lmao
 
 function ENT:InterceptJump( pTarget, flDesiredJumpHeight, flMaxJumpHeight )
 	if !self:IsOnGround() then return end

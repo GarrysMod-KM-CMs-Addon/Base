@@ -227,10 +227,11 @@ function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
 local math_Rand = math.Rand
 local util_Decal = util.Decal
 function ENT:BloodSplatter( dDamage )
-	if self:GetBloodColor() != BLOOD_COLOR_RED then return end
+	if ( self.GAME_ERagdollBloodColor || self:GetBloodColor() ) != BLOOD_COLOR_RED then return end
 
 	local flBlood = self:GetNW2Float( "GAME_flBlood", 1 )
-	if flBlood <= 0 then return end
+	// Do not do this. IRL bodies are messy and can almost never be fully drained.
+	//	if flBlood <= 0 then return end
 
 	local MyTable = CEntity_GetTable( self )
 
@@ -259,32 +260,43 @@ function ENT:BloodSplatter( dDamage )
 		util.Effect( "BloodImpact", pEffectData )
 	end
 
-	local flForce = dDamage:GetDamage() * 16
+	local flHolyShitMultiplier, flMaxHealth, flSpread
+
+	if dDamage:IsDamageType( DMG_CRUSH ) then
+		flSpread = .75
+		flHolyShitMultiplier = 2 + flBlood
+		flMaxHealth = ( self.GAME_flOldMaxHealth || self:GetMaxHealth() ) * .5
+	else
+		flSpread = .5
+		flHolyShitMultiplier = .5 + flBlood * .5
+		flMaxHealth = self.GAME_flOldMaxHealth || self:GetMaxHealth()
+	end
+
+	local flForce = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 4 ) * 16
 	vForce:Normalize()
 	local vPosition = dDamage:GetDamagePosition()
 	local aAim = vForce:Angle()
-	local flMaxHealth = self.GAME_flOldMaxHealth || self:GetMaxHealth()
 
-	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 64 ) * math.Rand( 1, 2 )
+	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 4 ) * math.Rand( 1, 2 ) * flHolyShitMultiplier
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	end
 
 	//	flForce = flForce * .5
-	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 64 ) * math.Rand( .5, 1.5 )
+	//	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 4 ) * math.Rand( 1, 2 ) * flHolyShitMultiplier
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
 		end
 	end
 end
@@ -327,15 +339,22 @@ local __ACTOR_LIST__ = __ACTOR_LIST__
 
 local SafeRemoveEntity = SafeRemoveEntity
 
-function ENT:OnRemove()
+function ENT:KilledRemoveFromAllyList( MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+
 	__ACTOR_LIST__[ self ] = nil
-	local MyTable = CEntity_GetTable( self )
-	for _, d in pairs( MyTable.tBullseyes ) do SafeRemoveEntity( d[ 1 ] ) end
+	for _, pData in pairs( MyTable.tBullseyes ) do SafeRemoveEntity( pData[ 1 ] ) end
+
 	local iClass = MyTable.GetNPCClass( self )
 	if iClass != CLASS_NONE then
 		local t = MyTable.GetActorTableByClass()[ iClass ]
-		if t then t[ self ] = true end
+		if t then t[ self ] = nil end
 	end
+end
+
+function ENT:OnRemove()
+	local MyTable = CEntity_GetTable( self )
+	MyTable.KilledRemoveFromAllyList( self, MyTable )
 end
 
 local CEntity_GetAngles = CEntity.GetAngles

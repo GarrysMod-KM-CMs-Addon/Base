@@ -104,3 +104,6 @@ include "Schedules/PickUpGun.lua"
 include "Schedules/FreeMovement.lua"
 include "Schedules/Alert.lua"
 include "Schedules/IntimidationWalk.lua"
+include "Schedules/WeaponsPlatformMelee.lua"
+
+RegisterSchedule( "Death", { Execute = function() end } )

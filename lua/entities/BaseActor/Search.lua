@@ -9,6 +9,25 @@ local unpack = unpack
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
+local floor = math.floor
+
+local function fInsertSorted( tQueue, iSize, pItem )
+    local iCount = iSize
+    local flLow, flHigh = 1, iCount
+    local flValue = pItem[ 2 ]
+    
+    while flLow <= flHigh do
+        local flMedium = floor( ( flLow + flHigh ) * .5 )
+        if tQueue[ flMedium ][ 2 ] > flValue then
+            flLow = flMedium + 1
+        else
+            flHigh = flMedium - 1
+        end
+    end
+
+    insert( tQueue, flLow, pItem )
+end
+
 function ENT:SearchAreas( vPos, fWeighter, MyTable )
 	vPos = vPos || self:GetPos()
 
@@ -21,23 +40,19 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 
 	local bCantClimb, flJumpHeight, flNegDeathDrop = !MyTable.bCanClimb, MyTable.loco:GetJumpHeight(), -MyTable.loco:GetDeathDropHeight()
 
-	local tAllies = MyTable:GetAlliesByClass()
-
-	local flOff = math.max( math.abs( self:OBBMaxs().x ), math.abs( self:OBBMins().x ) ) * 1.5
-
-	local flOffDistSqr = flOff * 3
-	flOffDistSqr = flOffDistSqr * flOffDistSqr
-
-	local vOffStanding, vOffDucking = Vector( 0, 0, MyTable.vHullMaxs.z )
-	if MyTable.vHullDuckMaxs && MyTable.vHullDuckMaxs.z != MyTable.vHullMaxs.z then vOffDucking = Vector( 0, 0, MyTable.vHullDuckMaxs.z ) end
-
 	local bDisAllowWater = MyTable.bHasOxygen
 
 	fWeighter = fWeighter || function( _/*pFrom*/, _/*pTo*/, flCurrentDistance, flAdditionalDistance ) return flCurrentDistance + flAdditionalDistance end
 
+	local iSize = 1
+
 	return function()
-		while !IsEmpty( tQueue ) do
-			local pArea, flDistance = unpack( remove( tQueue ) )
+		while iSize > 0 do
+			local tData = tQueue[ iSize ]
+			tQueue[ iSize ] = nil
+			iSize = iSize - 1
+
+			local pArea, flDistance = tData[ 1 ], tData[ 2 ]
 
 			local iIdentifier = pArea:GetID()
 			if tVisited[ iIdentifier ] then continue end
@@ -54,19 +69,16 @@ function ENT:SearchAreas( vPos, fWeighter, MyTable )
 				local flChange = pArea:ComputeAdjacentConnectionHeightChange( pNew )
 				if bCantClimb && flChange > flJumpHeight || flChange <= flNegDeathDrop then continue end
 
-				insert( tQueue, { pNew, fWeighter( pArea, pNew, flDistance, t.dist ) } )
-
-				bNew = true
+				fInsertSorted( tQueue, iSize, { pNew, fWeighter( pArea, pNew, flDistance, t.dist ) } )
+				iSize = iSize + 1
 			end
-
-			// Sorting is expensive. We need to only sort this if we actually did something.
-			if bNew then SortByMember( tQueue, 2 ) end
 
 			return pArea, flDistance
 		end
 	end
 end
 
+// TODO: This is shit and should be reworked lmao
 function ENT:SearchNodes( vPos, fWeighter )
 	if !vPos then vPos = self:GetPos() end
 

@@ -26,8 +26,12 @@ list.Set( "NPC", "npc_metropolice", {
 	Class = "CombineCivilProtection",
 	Category = "Combine",
 	Weapons = {
-		"weapon_pistol,weapon_smg1",
-		"weapon_pistol"
+		// Uncomment when we get a melee battle system lol
+		//	"weapon_stunstick",
+		//	"weapon_stunstick,weapon_pistol",
+		//	"weapon_stunstick,weapon_pistol,weapon_smg1",
+		"weapon_pistol",
+		"weapon_pistol,weapon_smg1"
 	}
 } )
 
