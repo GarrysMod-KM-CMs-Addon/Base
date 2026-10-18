@@ -616,7 +616,6 @@ ENTITY_BY_CLASS.prop_ragdoll = function( pEntity )
 
 	// We can't regenerate blood if we're dead
 	//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
-	// Drain quarter as fast
 	flBlood = math.Clamp( flBlood - f * .5 * FrameTime(), 0, 1 )
 	pEntity:SetNW2Float( "GAME_flBlood", flBlood )
 end
