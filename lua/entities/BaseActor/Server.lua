@@ -17,6 +17,9 @@ include "Sentence.lua"
 include "Skill.lua"
 include "Defense.lua"
 
+ENT.tActiveBodyTemplates = {}
+ENT.tActiveWeaponTemplates = {}
+
 local min = math.min
 local exp = math.exp
 
