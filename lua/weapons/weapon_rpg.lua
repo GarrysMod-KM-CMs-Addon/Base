@@ -19,10 +19,9 @@ SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Ammo = ""
 SWEP.Spawnable = true
 SWEP.Slot = 4
-SWEP.ViewModelFOV = 54
 SWEP.flCoverX = -4
 SWEP.Crosshair = "Open"
-SWEP.flRecoil = 14
+SWEP.flRecoil = .5
 SWEP.flViewModelX = -9
 SWEP.flViewModelY = -5
 SWEP.vSprint = Vector( -12, 1.358, -4 )
@@ -30,7 +29,7 @@ SWEP.vViewModelAim = Vector( -15, -17 - SWEP.flViewModelY, -3.1 )
 SWEP.Primary_flSpreadX = .05
 SWEP.Primary_flSpreadY = .05
 SWEP.__SPECIAL_WEAPON_TYPE__ = "RPG"
-SWEP.bAllowReloadingDuringPrimaryFire = true
+//	SWEP.bAllowReloadingDuringPrimaryFire = true
 
 if CLIENT then
 	local math_abs = math.abs

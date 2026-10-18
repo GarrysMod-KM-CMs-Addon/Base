@@ -140,7 +140,7 @@ hook.Add( "Tick", "Director", function()
 		if CurTime() > ( PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME || 0 ) then
 			CEntity_SetNW2Float( ply, "DIRECTOR_MUSIC_VO_WAIT", math_Clamp( Lerp( FRILerpRate( .5, FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
 		end
-		CEntity_SetNW2Float( ply, "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 72 )
+		CEntity_SetNW2Float( ply, "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 60 )
 		if ply:Alive() then
 			local o = CEntity_GetNW2Float( ply, "GAME_flOxygen", CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", -1 ) )
 			if o == 0 then
@@ -171,7 +171,7 @@ hook.Add( "Tick", "Director", function()
 						util_Decal( "Blood", v, v + d * f, ply )
 					end
 					PlyTable.GAME_flBleedTimeLeft = 1
-				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 64 * math_Rand( .9, 1.1 ) * FrameTime() end
+				else PlyTable.GAME_flBleedTimeLeft = flTimeLeft - f * 128 * math_Rand( .9, 1.1 ) * FrameTime() end
 			end
 
 			ply:SetNW2Float( "GAME_flBleeding", math_Clamp( f - .00005 * FrameTime(), 0, 1 ) )
@@ -180,12 +180,13 @@ hook.Add( "Tick", "Director", function()
 			ply:SetNW2Float( "GAME_flBlood", flBlood )
 			o = o - FrameTime()
 			ply:SetNW2Float( "GAME_flOxygen", math_Clamp(
-
-			o + ( ply:WaterLevel() >= 3 && 0 || (
-			1 / ( 1 + math_exp( -18 * ( flBlood - .55 ) ) ) * // Blood efficiency formula
-			( 1 + ( PlyTable.GAME_flOxygenRegen || ( CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) * .5 ) ) ) ) )
-
-			* FrameTime(), 0, CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) ) )
+				o + ( ply:WaterLevel() >= 3 && 0 || (
+					( 1 / ( 1 + math_exp( -18 * ( flBlood - .55 ) ) ) ) * // Blood regeneration formula
+					( 1 + CEntity_GetNW2Float( ply, "GAME_flOxygenRegeneration", 2 ) )
+				) * FrameTime() ),
+				0, 
+				CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 )
+			) )
 		else
 			CEntity_SetNW2Float( ply, "GAME_flOxygen", CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", 0 ) )
 			CEntity_SetNW2Float( ply, "GAME_flBlood", 1 )

@@ -376,6 +376,8 @@ hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll 
 	local f = pOwner.BloodSplatter
 	if f then pRagdoll.BloodSplatter = f end
 
+	pRagdoll.GAME_ERagdollBloodColor = pOwner:GetBloodColor()
+
 	local f = pOwner.OnCreateRagdoll
 	if f then f( pOwner, pRagdoll ) end
 
@@ -609,13 +611,13 @@ ENTITY_BY_CLASS.prop_ragdoll = function( pEntity )
 			v:Add( pEntity:OBBCenter() )
 			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * pEntity:BoundingRadius() * 4, pEntity ) end
 			pEntity.GAME_flBleedTimeLeft = 1
-		else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 64 * Rand( .9, 1.1 ) * FrameTime() end
+		else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 128 * Rand( .9, 1.1 ) * FrameTime() end
 	end
 
-	// We cannot regenerate blood if we're dead
+	// We can't regenerate blood if we're dead
 	//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 	// Drain quarter as fast
-	flBlood = math.Clamp( flBlood - f * .25 * FrameTime(), 0, 1 )
+	flBlood = math.Clamp( flBlood - f * .5 * FrameTime(), 0, 1 )
 	pEntity:SetNW2Float( "GAME_flBlood", flBlood )
 end
 
@@ -812,21 +814,74 @@ function GameImprovements_StartCommand( ply, cmd )
 	ply:SetLadderClimbSpeed( ply:IsSprinting() && ply:GetRunSpeed() || ply:IsWalking() && ply:GetSlowWalkSpeed() || ply:GetWalkSpeed() )
 	
 	local bGround = CEntity_IsOnGround( ply )
-	if !bGround && CEntity_WaterLevel( ply ) > 0 then
-		if !PlyTable.GAME_sRestoreGun then
-			local pWeapon = ply:GetActiveWeapon()
-			if IsValid( pWeapon ) then PlyTable.GAME_sRestoreGun = CEntity_GetClass( pWeapon ) end
+	if CEntity_WaterLevel( ply ) >= 1 then
+		if CEntity_WaterLevel( ply ) >= 3 then
+			if !PlyTable.GAME_sRestoreGun then
+				local pWeapon = ply:GetActiveWeapon()
+				if IsValid( pWeapon ) then PlyTable.GAME_sRestoreGun = CEntity_GetClass( pWeapon ) end
+			end
+	
+			if bGround then
+				local pHands = ply:GetWeapon "Swim"
+				if IsValid( pHands ) then pHands:Remove() end
+	
+				local pSwim = ply:GetWeapon "Hands"
+				if !IsValid( pSwim ) then pSwim = ply:Give "Hands" end
+				if IsValid( pSwim ) then cmd:SelectWeapon( pSwim ) end
+			else
+				local pHands = ply:GetWeapon "Hands"
+				if IsValid( pHands ) then pHands:Remove() end
+	
+				local pSwim = ply:GetWeapon "Swim"
+				if !IsValid( pSwim ) then pSwim = ply:Give "Swim" end
+				if IsValid( pSwim ) then cmd:SelectWeapon( pSwim ) end
+			end
+
+			ply:SetNW2Bool( "CTRL_bSliding", false )
+			return
 		end
 
-		local pHands = ply:GetWeapon "Hands"
-		if IsValid( pHands ) then pHands:Remove() end
+		if bGround then
+			local pHands = ply:GetWeapon "Swim"
+			if IsValid( pHands ) then pHands:Remove() end
 
-		local pSwim = ply:GetWeapon "Swim"
-		if !IsValid( pSwim ) then pSwim = ply:Give "Swim" end
-		if IsValid( pSwim ) then cmd:SelectWeapon( pSwim ) end
+			local pSwim = ply:GetWeapon "Hands"
+			if !IsValid( pSwim ) then pSwim = ply:Give "Hands" end
+		else
+			local pHands = ply:GetWeapon "Hands"
+			if IsValid( pHands ) then pHands:Remove() end
 
-		ply:SetNW2Bool( "CTRL_bSliding", false )
-		return
+			local pSwim = ply:GetWeapon "Swim"
+			if !IsValid( pSwim ) then pSwim = ply:Give "Swim" end
+
+			if IsValid( pSwim ) && !IsValid( ply:GetActiveWeapon() ) then cmd:SelectWeapon( pSwim ) end
+
+			if ply:GetActiveWeapon() != ply:GetWeapon "Swim" then
+				if CurTime() > ( ply.GAME_flSwim || 0 ) then
+					local pViewModel = ply:GetViewModel()
+					local bSprinting = ply:KeyDown( IN_FORWARD ) && ply:KeyDown( IN_SPEED ) && !ply:Crouching()
+					pViewModel:SetPlaybackRate( bSprinting && 2 || 1 )
+
+					if bSprinting then
+						timer.Simple( .15, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+					elseif ply:KeyDown( IN_MOVELEFT ) then
+						timer.Simple( .33, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+						timer.Simple( .8, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+					elseif ply:KeyDown( IN_MOVERIGHT ) then
+						timer.Simple( .33, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+						timer.Simple( .8, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+					elseif ply:KeyDown( IN_FORWARD ) then
+						timer.Simple( .3, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+					elseif ply:KeyDown( IN_BACK ) then
+						timer.Simple( .20, function() if IsValid( ply ) then ply:EmitSound "SwimWade" end end )
+					end
+
+					if bSprinting then
+						ply.GAME_flSwim = CurTime() + 1
+					else ply.GAME_flSwim = CurTime() + 1.5 end
+				end
+			end
+		end
 	else
 		local pHands = ply:GetWeapon "Hands"
 		if !IsValid( pHands ) then pHands = ply:Give "Hands" end

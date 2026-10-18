@@ -83,6 +83,7 @@ function ClearMeleeData( pEntity, EntityTable )
 
 	EntityTable.MELEE_flStart = nil
 	EntityTable.MELEE_flHit = nil
+	EntityTable.MELEE_flHitEnd = nil
 	EntityTable.MELEE_flEnd = nil
 
 	EntityTable.MELEE_flDamage = nil
@@ -98,6 +99,7 @@ function CopyMeleeData( EntityTableTo, EntityTableFrom )
 
 	EntityTableTo.MELEE_flStart = EntityTableFrom.MELEE_flStart
 	EntityTableTo.MELEE_flHit = EntityTableFrom.MELEE_flHit
+	EntityTableTo.MELEE_flHitEnd = EntityTableFrom.MELEE_flHitEnd
 	EntityTableTo.MELEE_flEnd = EntityTableFrom.MELEE_flEnd
 
 	EntityTableTo.MELEE_flDamage = EntityTableFrom.MELEE_flDamage

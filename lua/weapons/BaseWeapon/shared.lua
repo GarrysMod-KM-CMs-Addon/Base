@@ -103,6 +103,22 @@ function SWEP:TranslateActivity( EIntendedActivity )
 		if self:GetHoldType() == "Normal" || self:GetHoldType() == "Melee" then return EActivity end
 
 		if pOwner:IsPlayer() then
+			if !pOwner:IsOnGround() && pOwner:WaterLevel() > 0 then
+				if pOwner:KeyDown( IN_ZOOM ) || CurTime() <= self.flLastShot + 1 then
+					local sHoldType = self:GetHoldType()
+					self:SetWeaponHoldType "Pistol"
+					EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+					self:SetWeaponHoldType( sHoldType )
+					return EActivity
+				else
+					local sHoldType = self:GetHoldType()
+					self:SetWeaponHoldType "Normal"
+					EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+					self:SetWeaponHoldType( sHoldType )
+					return EActivity
+				end
+			end
+
 			if pOwner:KeyDown( IN_ZOOM ) then
 				if self:GetHoldType() == "Shotgun" then
 					self:SetWeaponHoldType "AR2"

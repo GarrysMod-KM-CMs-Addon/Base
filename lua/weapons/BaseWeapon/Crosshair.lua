@@ -54,13 +54,14 @@ function SWEP:GatherCrosshairSpread( MyTable, bForceIdentical )
 	return flSpreadX + flInaccuracy, flSpreadY + flInaccuracy
 end
 
+SWEP.flShotgunCrosshairSizeAdd = 0
 function SWEP:GatherCrosshairSpreadIdeal( MyTable, bForceIdentical )
 	local flSpreadX, flSpreadY
 	local v = MyTable.Primary_flSpreadX
 	if v then flSpreadX = v end
 	local v = MyTable.Primary_flSpreadY
 	if v then flSpreadY = v end
-	local flInaccuracy = MyTable.flCrosshairInAccuracyGapPart * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) * ( 1 / 4 )
+	local flInaccuracy = MyTable.flCrosshairInAccuracyGapPart * ( MyTable.vViewModelAim && MyTable.flAimMultiplier || 1 ) * ( 1 / 4 ) + MyTable.flShotgunCrosshairSizeAdd
 	if MyTable.bCrosshairSizeIdentical || bForceIdentical then
 		local v = math_max( flSpreadX || flSpreadY, flSpreadY || flSpreadX ) + flInaccuracy
 		return v, v
