@@ -507,7 +507,8 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 	return true
 end )
 
-local cPersistAll = CreateConVar( "bPersistAll", 1, FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE, "Everything persists", 0, 1 )
+local cvPersistAll = CreateConVar( "bPersistAll", 1, FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE, "Everything persists", 0, 1 )
+local cvPersist = GetConVar "sbox_persist"
 
 hook.Add( "PhysgunPickup", "GameImprovements", function() return true end )
 
@@ -691,26 +692,27 @@ hook.Add( "Think", "GameImprovements", function()
 		end
 	else ACTOR_QUEUE_PATH_CURRENT = nil end
 
-	if IsValid( g_pCascadeShadowMapping ) then
+	local pCascadeShadowMapping = g_pCascadeShadowMapping
+	if IsValid( pCascadeShadowMapping ) then
 		if SUN_ANGLES then
-			g_pCascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )
-			g_pCascadeShadowMapping:SetYaw( SUN_ANGLES[ 2 ] )
-			g_pCascadeShadowMapping:SetRoll( SUN_ANGLES[ 3 ] )
+			pCascadeShadowMapping:SetPitch( SUN_ANGLES[ 1 ] )
+			pCascadeShadowMapping:SetYaw( SUN_ANGLES[ 2 ] )
+			pCascadeShadowMapping:SetRoll( SUN_ANGLES[ 3 ] )
 			SUN_ANGLES = nil
 		end
 
 		if SUN_PITCH_OVERRIDE then
-			g_pCascadeShadowMapping:SetPitch( SUN_PITCH_OVERRIDE )
+			pCascadeShadowMapping:SetPitch( SUN_PITCH_OVERRIDE )
 			SUN_PITCH_OVERRIDE = nil
 		end
 
 		if SUN_BRIGHTNESS then
-			g_pCascadeShadowMapping:SetBrightness( SUN_BRIGHTNESS )
+			pCascadeShadowMapping:SetBrightness( SUN_BRIGHTNESS )
 			SUN_BRIGHTNESS = nil
 		end
 
 		if SUN_COLOR then
-			g_pCascadeShadowMapping:SetLightColor( SUN_COLOR:ToVector() )
+			pCascadeShadowMapping:SetLightColor( SUN_COLOR:ToVector() )
 			SUN_COLOR = nil
 		end
 	end
@@ -724,6 +726,8 @@ hook.Add( "Think", "GameImprovements", function()
 		pTonemapController:Fire( "SetAutoExposureMin", .8 )
 		pTonemapController:Fire( "SetAutoExposureMax", 2 )
 	end
+
+	local bPersist = cvPersistAll:GetBool() && cvPersist:GetString() != ""
 
 	for _, pEntity in ents_Iterator() do
 		local sClass = CEntity_GetClass( pEntity )
@@ -748,8 +752,9 @@ hook.Add( "Think", "GameImprovements", function()
 		end
 	
 		if !DONT_CHANGE_DRAW_SHADOW[ sClass ] then pEntity:DrawShadow( !IsValid( g_pCascadeShadowMapping ) ) end
-	
-		if EntityTable.GAME_Think then EntityTable.GAME_Think( pEntity, EntityTable ) end
+
+		local fThink = EntityTable.GAME_Think
+		if fThink then fThink( pEntity, EntityTable ) end
 	
 		if !EntityTable.GAME_bPhysCollideHook then
 			pEntity:AddCallback( "PhysicsCollide", function( ... ) PhysicsCollide( ... ) end )
@@ -759,7 +764,7 @@ hook.Add( "Think", "GameImprovements", function()
 		// TODO: Custom fire system
 		CEntity_Extinguish( pEntity )
 	
-		if cPersistAll:GetBool() && pEntity:MapCreationID() == -1 && !pEntity:IsPlayer() && ( !pEntity:IsWeapon() || pEntity:IsWeapon() && ( !IsValid( pEntity:GetOwner() ) || IsValid( pEntity:GetOwner() ) && !pEntity:GetOwner():IsPlayer() ) ) then
+		if bPersist && pEntity:MapCreationID() == -1 && !pEntity:IsPlayer() && ( !pEntity:IsWeapon() || pEntity:IsWeapon() && ( !IsValid( pEntity:GetOwner() ) || IsValid( pEntity:GetOwner() ) && !pEntity:GetOwner():IsPlayer() ) ) then
 			pEntity:SetPersistent( true )
 		end
 	end

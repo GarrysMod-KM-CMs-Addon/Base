@@ -535,10 +535,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
 		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
 
-		local a = Angle( aDirection )
-		a[ 1 ] = a[ 1 ] + 30
-		local r = LerpAngle( FRILerpRate( 5, FrameTime() ), cmd:GetViewAngles(), a )
-		r[ 3 ] = 0
+		local r = LerpAngle( FRILerpRate( 5, FrameTime() ), cmd:GetViewAngles(), aDirection )
 		cmd:SetViewAngles( r )
 		aLastThirdPersonAngle = Angle( r )
 
@@ -705,68 +702,75 @@ hook.Add( "HUDPaint", "Graphics", function()
 	local ply = LocalPlayer()
 	if !IsValid( ply ) then return end
 
-	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
-	local i = 1
-	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
-	while i <= 5 do
-		local sI = tostring( i )
-		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. sI )
-		if v == vector_origin then break end
-
-		i = i + 1
-
-		//	local ToScreen = v:ToScreen()
-		//	local x, y = ToScreen.x, ToScreen.y
-		//	local f = math.deg( math.atan2(
-		//		flCenterY - y,
-		//		x - flCenterX
-		//	) )
-		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
-		surface_SetDrawColor( 0, 0, 0, 255 )
-		for i = -1, 1, .5 do
-			local flScale = flOff + i
-			local flSegmentDistance = PRECOMPUTED / flScale
-			for a = f - MARKER_SIZE_OUTLINE, f + MARKER_SIZE_OUTLINE - flSegmentDistance, flSegmentDistance do
-				local flDelta = math_abs( a - f ) / MARKER_SIZE_OUTLINE
-				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .6
-				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
-				s = s + 1
-				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
-				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 3 /* CURL */
-				local flNextRadius = flScale - flCurveInwardNext
-				surface_DrawLine(
-					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
-					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
-					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
-					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
-				)
-			end
-		end
-		local bThreat = ply:GetNW2Bool( "GAME_b3DThreat" .. sI )
-		for i = 0, 1, .5 do
-			local flScale = flOff + i
-			local flSegmentDistance = PRECOMPUTED / flScale
-			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
-				local flDelta = math_abs( a - f ) / MARKER_SIZE
-				local s = MARKER_SIZE * ( 1 - flDelta ) * .6
-				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
-				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
-				local flCurrentRadius = flScale - flCurveInward
-				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 3 /* CURL */
-				local flNextRadius = flScale - flCurveInwardNext
-				local flValue = 1 - flDelta ^ 3 * .5
-				if bThreat then surface_SetDrawColor( flValue * 255, 0, 0, 255 )
-				else surface_SetDrawColor( flValue * 255, flValue * 255, flValue * 255, 255 ) end
-				surface_DrawLine(
-					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
-					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
-					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
-					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
-				)
-			end
-		end
-	end
+	// No. Just no. The game's better without this.
+	// It's a vibe, sure, but keeping it on makes it feel somewhat convoluted, too.
+	// Plus ruins many genres like Serious Sam.
+	// And I don't want to make different "HUD genres", that's stupid and not lore accurate.
+	// So just... get the steel balls required to say no to this feature.
+	//	local flCenterX, flCenterY = ScrW() * .5, ScrH() * .5
+	//	local i = 1
+	//	local flOff, flSize, flThickness = flCenterY * .5, flCenterY * .04, flCenterY * .0002
+	//	while i <= 5 do
+	//		local sI = tostring( i )
+	//		local v = ply:GetNW2Vector( "GAME_v3DThreat" .. sI )
+	//		if v == vector_origin then break end
+	//	
+	//		i = i + 1
+	//	
+	//		//	local ToScreen = v:ToScreen()
+	//		//	local x, y = ToScreen.x, ToScreen.y
+	//		//	local f = math.deg( math.atan2(
+	//		//		flCenterY - y,
+	//		//		x - flCenterX
+	//		//	) )
+	//	
+	//		local f = ( v - EyePos() ):Angle()[ 2 ] - EyeAngles()[ 2 ] + 90
+	//		surface_SetDrawColor( 0, 0, 0, 255 )
+	//		for i = -1, 1, .5 do
+	//			local flScale = flOff + i
+	//			local flSegmentDistance = PRECOMPUTED / flScale
+	//			for a = f - MARKER_SIZE_OUTLINE, f + MARKER_SIZE_OUTLINE - flSegmentDistance, flSegmentDistance do
+	//				local flDelta = math_abs( a - f ) / MARKER_SIZE_OUTLINE
+	//				local s = MARKER_SIZE_OUTLINE * ( 1 - flDelta ) * .6
+	//				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
+	//				s = s + 1
+	//				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
+	//				local flCurrentRadius = flScale - flCurveInward
+	//				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE_OUTLINE ) ^ 2 * 3 /* CURL */
+	//				local flNextRadius = flScale - flCurveInwardNext
+	//				surface_DrawLine(
+	//					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
+	//					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
+	//					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
+	//					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
+	//				)
+	//			end
+	//		end
+	//	
+	//		local bThreat = ply:GetNW2Bool( "GAME_b3DThreat" .. sI )
+	//		for i = 0, 1, .5 do
+	//			local flScale = flOff + i
+	//			local flSegmentDistance = PRECOMPUTED / flScale
+	//			for a = f - MARKER_SIZE, f + MARKER_SIZE - flSegmentDistance, flSegmentDistance do
+	//				local flDelta = math_abs( a - f ) / MARKER_SIZE
+	//				local s = MARKER_SIZE * ( 1 - flDelta ) * .6
+	//				if flDelta <= .18 then s = s + math_abs( flDelta - .18 ) * 58 end
+	//				local flCurveInward = flDelta ^ 2 * 3 /* CURL */
+	//				local flCurrentRadius = flScale - flCurveInward
+	//				local flCurveInwardNext = ( math_abs( ( a + flSegmentDistance ) - f ) / MARKER_SIZE ) ^ 2 * 3 /* CURL */
+	//				local flNextRadius = flScale - flCurveInwardNext
+	//				local flValue = 1 - flDelta ^ 3 * .5
+	//				if bThreat then surface_SetDrawColor( flValue * 255, 0, 0, 255 )
+	//				else surface_SetDrawColor( flValue * 255, flValue * 255, flValue * 255, 255 ) end
+	//				surface_DrawLine(
+	//					flCenterX + math_cos( math_rad( a ) ) * ( flCurrentRadius + s ),
+	//					flCenterY - math_sin( math_rad( a ) ) * ( flCurrentRadius + s ),
+	//					flCenterX + math_cos( math_rad( a + flSegmentDistance ) ) * flNextRadius,
+	//					flCenterY - math_sin( math_rad( a + flSegmentDistance ) ) * flNextRadius
+	//				)
+	//			end
+	//		end
+	//	end
 
 	local f = ply:GetNW2Float( "ALARM_flHostileReinforcements", 0 )
 	if f <= 0 then

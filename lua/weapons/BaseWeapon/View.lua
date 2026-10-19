@@ -151,19 +151,20 @@ function SWEP:CalcView( ply, pos, ang )
 				local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale
 
 				local flBreathe = RealTime() * 12
+				local flBreatheFast = RealTime() * 14
 
-				vTargetAngle:Add( Vector( math_sin( flBreathe ), math_cos( flBreathe * .5 ), math_sin( flBreathe * .5 ) ) * f * MyTable.flAimMultiplier )
+				vTargetAngle:Add( Vector( math_sin( flBreathe ), math_cos( flBreathe * .5 ), math_sin( flBreathe * .5 ) ) * ( f * MyTable.flAimMultiplier * .75 ) )
 
 				f = f * ( 1 - MyTable.flAimMultiplier ) * 1 / 3
-				vTarget:Add( Vector( 0, -math_sin( flBreathe * .5 ) * 2 / 3, ( math_abs( math_cos( flBreathe * .5 ) ) - .5 ) ) * f )
-				vTargetAngle:Add( Vector( math_sin( flBreathe ) * -2, 0, math_cos( flBreathe * .5 ) ) * f * 2 / 3 )
+				vTarget:Add( Vector( 0, -math_sin( flBreatheFast * .5 ) * 2 / 3, ( math_abs( math_cos( flBreatheFast * .5 ) ) - .5 ) ) * f * 2 / 3 )
+				vTargetAngle:Add( Vector( math_sin( flBreatheFast ) * -2, 0, math_cos( flBreatheFast * .5 ) ) * f * 2 / 3 )
 			end
 
 			// Technically, you're bracing your head for the move, not bobbing in that direction
 			if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - 3 // * flVelocity / CPlayer_GetWalkSpeed( ply )
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] - 2 // * flVelocity / CPlayer_GetWalkSpeed( ply )
 			elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
-				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 3 // * flVelocity / CPlayer_GetWalkSpeed( ply )
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 2 // * flVelocity / CPlayer_GetWalkSpeed( ply )
 			end
 		end
 	end
@@ -748,7 +749,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if flVelocity > 10 then
 					local f = flVelocity / CPlayer_GetRunSpeed( ply ) * MyTable.flBobScale * MyTable.flAimMultiplier
-					local flBreathe = RealTime() * 13
+					local flBreathe = RealTime() * 12
 					vTarget:Add( Vector( 0, math_sin( flBreathe * .5 ) * ( 1 / 3 ), ( 2 / 3 ) - math_abs( math_cos( flBreathe * .5 ) ) * ( 1 + 1 / 3 ) ) * f )
 					vTargetAngle:Add( Vector( math_sin( flBreathe ) * 2, 0, math_cos( flBreathe * .5 ) ) * f * ( -1 / 3 ) )
 				end

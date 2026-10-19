@@ -229,8 +229,8 @@ local min = math.min
 physenv.SetGravity( Vector( 0, 0, -514.83 ) )
 
 hook.Add( "PlayerStepSoundTime", "Improvements", function( ply, EType, bWalk )
-	if ply:GetNW2Bool "CTRL_bSprinting" then return 350 end
-	return 500
+	if ply:GetNW2Bool "CTRL_bSprinting" then return ply:GetRunSpeed() / 300 * 260 end
+	return ply:GetWalkSpeed() / 200 * 350
 end )
 
 function QuickSlide_Can( ply, t )
