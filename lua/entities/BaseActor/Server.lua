@@ -63,7 +63,7 @@ function ENT:BehaveStart()
 	local sTimer = EntityUniqueIdentifier( self )
 	timer.Create( sTimer, 0, 0, function()
 		if !IsValid( self ) then timer.Remove( sTimer ) return end
-
+	
 		MyTable.RapidFireCode( self, MyTable )
 	end )
 end
@@ -363,10 +363,15 @@ end
 local CEntity_GetAngles = CEntity.GetAngles
 local CEntity_SetAngles = CEntity.SetAngles
 
-function ENT:Tick( MyTable )
+function ENT:Tick( MyTable, aAngles )
 	if MyTable.bPhysics then return end
-	local ang = CEntity_GetAngles( self )
-	if ang[ 1 ] != 0 || ang[ 3 ] != 0 then ang[ 1 ] = 0 ang[ 3 ] = 0 CEntity_SetAngles( self, ang ) end
+
+	aAngles = aAngles || CEntity_GetAngles( self )
+	if aAngles[ 1 ] != 0 || aAngles[ 3 ] != 0 then 
+		ng[ 1 ] = 0
+		aAngles[ 3 ] = 0
+		CEntity_SetAngles( self, aAngles )
+	end
 end
 
 local CEntity_GetPhysicsObject = CEntity.GetPhysicsObject
@@ -397,36 +402,41 @@ function ENT:ResetGravity( pLocomotion ) ( pLocomotion || self.loco ):SetGravity
 ENT.bPhysics = false
 function ENT:Think()
 	local MyTable = CEntity_GetTable( self )
+
 	MyTable.RapidFireCode( self, MyTable )
-	local phys = CEntity_GetPhysicsObject( self )
-	if IsValid( phys ) then
-		MyTable.DoPhysicsStuff( self, phys, MyTable )
+
+	local pPhys, aAngles = CEntity_GetPhysicsObject( self )
+
+	if IsValid( pPhys ) then
+		MyTable.DoPhysicsStuff( self, pPhys, MyTable )
+	
 		if MyTable.bPhysics then
 			MyTable.loco:SetGravity( 0 )
-			phys:Wake()
+			pPhys:Wake()
 			local loco = MyTable.loco
 			loco:SetStepHeight( 0 )
 			loco:SetJumpHeight( 0 )
 		else
-			if IsValid( CEntity_GetParent( self ) ) then CEntity_PhysicsDestroy( self ) else
+			if IsValid( CEntity_GetParent( self ) ) then
+				CEntity_PhysicsDestroy( self )
+			else
+				aAngles = CEntity_GetAngles( self )
 				if CEntity_WaterLevel( self ) == 0 then
-					phys:SetPos( CEntity_GetPos( self ) )
-					phys:SetAngles( CEntity_GetAngles( self ) )
+					pPhys:SetPos( CEntity_GetPos( self ) )
+					pPhys:SetAngles( aAngles )
 				else
-					phys:UpdateShadow( CEntity_GetPos( self ), CEntity_GetAngles( self ), 0 )
+					pPhys:UpdateShadow( CEntity_GetPos( self ), aAngles, 0 )
 				end
 			end
 		end
 	end
 
-	//	MyTable.BehaveUpdate( self, nil, MyTable )
-
 	if IsValid( MyTable.GAME_pVehicle ) then
 		self:SetActiveWeapon( NULL )
 		if self:GetCollisionGroup() != COLLISION_GROUP_WORLD then self:SetCollisionGroup( COLLISION_GROUP_WORLD ) end
-	else if self:GetCollisionGroup() != COLLISION_GROUP_NPC then self:SetCollisionGroup( COLLISION_GROUP_NPC ) end end
-
-	MyTable.Tick( self, MyTable )
+	elseif self:GetCollisionGroup() != COLLISION_GROUP_NPC then self:SetCollisionGroup( COLLISION_GROUP_NPC ) end
+	
+	MyTable.Tick( self, MyTable, aAngles )
 end
 
 local FL_OBJECT = FL_OBJECT

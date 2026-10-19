@@ -195,7 +195,8 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 						coroutine.yield()
 						continue
 					end
-	
+
+					// TODO: Replace this with an actually adequate traceline lmfao
 					if pArea:IsPartiallyVisible( self:GetPos() + self:OBBCenter(), self ) then
 						TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
 						coroutine.yield()

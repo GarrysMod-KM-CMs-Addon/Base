@@ -16,28 +16,70 @@ local Format = Format
 local IsValid = IsValid
 local util_TraceLine = util.TraceLine
 
-function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase, flToleranceOverride )
-	if pPath:GetLength() > 4096 then return vPos:DistToSqr( vGoal ) > ( 3072 * 3072 ) end
+// TODO: Somehow, clean up MyTable.m_pPathData? Maybe?
+// I wanted to make it global, but that'd be even more leaky. At least entities are removed. Sometimes.
 
-	local f = flToleranceOverride || math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * 1 / 3 ) || ( vPos:Distance( vGoal ) * .1 ) )
-	if pPath:GetEnd():DistToSqr( vGoal ) <= f * f then return true end
+function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase, flToleranceOverride )
+	local pPathData = MyTable.m_pPathData
+	if !pPathData then
+		pPathData = {}
+		MyTable.m_pPathData = pPathData
+	end
+
+	local pData = pPathData[ pPath ]
+	if !pData then
+		pData = {}
+		pPathData[ pPath ] = pData
+	end
+
+	local vIntendedGoal = pData.vIntendedGoal
+
+	local f = flToleranceOverride || math_max( MyTable.flPathTolerance, bChase && ( vPos:Distance( vGoal ) * .5 ) || ( vPos:Distance( vGoal ) * .1 ) )
+	if ( vIntendedGoal || pPath:GetEnd() ):DistToSqr( vGoal ) <= f * f then return true end
 end
 
-function ENT:ComputePath( Path, vGoal, fWeighter, flToleranceOverride )
+function ENT:ComputePath( pPath, vGoal, fWeighter, flToleranceOverride )
 	local MyTable = CEntity_GetTable( self )
 	local vPos = CEntity_GetPos( self )
-	if MyTable.DontRepath( self, Path, vPos, vGoal, MyTable, nil, flToleranceOverride ) then return true end
-	if fWeighter then return Path, Path:Compute( self, vGoal, fWeighter ) end
-	return Path, Path:Compute( self, vGoal )
+
+	local pPathData = MyTable.m_pPathData
+	if !pPathData then
+		pPathData = {}
+		MyTable.m_pPathData = pPathData
+	end
+
+	local pData = pPathData[ pPath ]
+	if !pData then
+		pData = {}
+		pPathData[ pPath ] = pData
+	end
+
+	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, nil, flToleranceOverride ) then return true end
+
+	if fWeighter then
+		local bSuccess = pPath:Compute( self, vGoal, fWeighter )
+
+		pData.vIntendedGoal = vGoal
+
+		return pPath, bSuccess
+	end
+
+	local bSuccess = pPath:Compute( self, vGoal )
+
+	pData.vIntendedGoal = vGoal
+
+	return pPath, bSuccess
 end
 
 function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
-	local pPathData = pSchedule.m_pPathData
+	if !LevelOfDetail( pSchedule, "flNextFlankPath" ) then return end
+
+	local pPathData = MyTable.m_pPathData
 	if !pPathData then
 		pPathData = {}
-		pSchedule.m_pPathData = pPathData
+		MyTable.m_pPathData = pPathData
 	end
 
 	local pData = pPathData[ pPath ]

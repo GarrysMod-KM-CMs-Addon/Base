@@ -4,6 +4,10 @@
 // because a soldier went "GOING AFTER HIM!!"
 // Technically, an enemy that can't plant (e.g. Strogg Shotgun Marine) can still use PlantToShoot
 
+local random = math.random // random is love, random is life
+
+// TODO: Teach 'em to shoot on the move
+
 RegisterSchedule( "PlantToShoot", {
 	Execute = function( self, pSchedule, MyTable )
 		local pEnemy = MyTable.Enemy
@@ -11,14 +15,29 @@ RegisterSchedule( "PlantToShoot", {
 
 		local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
 
-		if MyTable.bPlantToShoot then
+		if !pSchedule.flTimer then
+			pSchedule.flTimer = ( 1 - random() * random() ) * .5
+		end
+
+		pSchedule.flTimer = math.max( 0, pSchedule.flTimer - MyTable.m_flFrameTime * random() )
+
+		if LevelOfDetail( pSchedule, "flNextPlantCheck" ) && MyTable.bPlantToShoot then
 			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
-			if !util.TraceLine( {
+
+			local tr = util.TraceLine {
 				start = MyTable.GetShootPos( self ),
 				endpos = vEnemy,
 				mask = MASK_SHOT_HULL,
 				filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
-			} ).Hit then
+			}
+
+			if tr.Hit then
+				// enemy in the fricking way!!! (sponsored by filian.coom)
+				local pEntity = tr.Entity
+				if IsValid( pEntity ) && MyTable.Disposition( self, pEntity ) == D_LI then
+				else pSchedule.flTimer = random() * random() * .5 end
+
+			elseif pSchedule.flTimer <= 0 then
 				MyTable.vaAimTargetBody = vEnemy
 				MyTable.vaAimTargetPose = vEnemy
 				if MyTable.IsInPlantDelta( self, vEnemy, MyTable ) then
@@ -74,25 +93,32 @@ RegisterSchedule( "PlantToShootPlant", {
 		// TODO: Try to get out of shooting if we need to dodge
 		if !pSchedule.bDone then
 			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
-			if !util.TraceLine( {
+			local tr = util.TraceLine {
 				start = MyTable.GetShootPos( self ),
 				endpos = vEnemy,
 				mask = MASK_SHOT_HULL,
 				filter = SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy )
-			} ).Hit then
+			}
+			if tr.Hit then
+				local pEntity = tr.Entity
+				if IsValid( pEntity ) && MyTable.Disposition( self, pEntity ) == D_LI then
+					pSchedule.bEnemyInTheFrickingWay = true // this variable was sponsored by filian.coom
+					pSchedule.bDone = true
+				end
+
+				pSchedule.pTarget = nil
+
+				if pSchedule.bPlanted then
+					pSchedule.flSuppressTimer = pSchedule.flSuppressTimer + MyTable.m_flFrameTime
+					if pSchedule.flSuppressTimer > pSchedule.flSuppressTarget then pSchedule.bDone = true end
+				end
+			else
 				pSchedule.pTarget = pEnemy
 				pSchedule.vTarget = vEnemy
 	
 				if pSchedule.bPlanted then
 					pSchedule.flTargetTimer = pSchedule.flTargetTimer + MyTable.m_flFrameTime
 					if pSchedule.flTargetTimer > pSchedule.flTargetTarget then pSchedule.bDone = true end
-				end
-			else
-				pSchedule.pTarget = nil
-
-				if pSchedule.bPlanted then
-					pSchedule.flSuppressTimer = pSchedule.flSuppressTimer + MyTable.m_flFrameTime
-					if pSchedule.flSuppressTimer > pSchedule.flSuppressTarget then pSchedule.bDone = true end
 				end
 			end
 		end
@@ -106,7 +132,11 @@ RegisterSchedule( "PlantToShootPlant", {
 			return
 		end
 
-		if coroutine.status( pCoroutine ) == "dead" then MyTable.SetSchedule( self, "PlantToShoot", MyTable ) return end
+		if coroutine.status( pCoroutine ) == "dead" then
+			local pSchedule = MyTable.SetSchedule( self, "PlantToShoot", MyTable )
+			if MyTable.bEnemyInTheFrickingWay then pSchedule.flTimer = ( 1 - random() * random() ) * 1.5 end
+			return
+		end
 
 		assert( coroutine.resume( pCoroutine ) )
 

@@ -62,7 +62,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction, bFo
 			tCurrentSequenceEvents[ sSequence ] = flCycle
 		end
 
-		if fFunction( self, flCycle ) then break end
+		if fFunction( self, flCycle ) then if !bDontReset then self:SetSequence( 0 ) end break end
 
 		coroutine_yield()
 	end
@@ -161,7 +161,7 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 			tCurrentSequenceEvents[ sSequence ] = flCycle
 		end
 
-		if fFunction( self, flCycle ) then break end
+		if fFunction( self, flCycle ) then if !bDontReset then self:SetSequence( 0 ) end break end
 
 		coroutine_yield()
 	end

@@ -1,3 +1,5 @@
+// TODO: Actually read DEATH_bFallingDead and DEATH_bSeemsDead lmfao!
+
 local CEntity = FindMetaTable "Entity"
 local CEntity_GetTable = CEntity.GetTable
 local CEntity_GetPos = CEntity.GetPos
