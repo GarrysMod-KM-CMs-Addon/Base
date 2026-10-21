@@ -361,6 +361,10 @@ function SWEP:Holster()
 	return true
 end
 
+local Vector1 = Vector( 1, 1, 1 )
+local angle_zero = angle_zero
+local vector_origin = vector_origin
+
 if CLIENT then
 	function BASE_WEAPON_ON_DROP()
 		local pLocalPlayer = LocalPlayer()
@@ -373,10 +377,16 @@ if CLIENT then
 			for i = 0, pViewModel:GetNumBodyGroups() do pViewModel:SetBodygroup( i, 0 ) end
 
 			for i = 0, pViewModel:GetBoneCount() do
-				pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )
-				pViewModel:ManipulateBoneAngles( i, Angle( 0, 0, 0 ) )
-				pViewModel:ManipulateBonePosition( i, Vector( 0, 0, 0 ) )
+				pViewModel:ManipulateBoneScale( i, Vector1 )
+				pViewModel:ManipulateBoneAngles( i, angle_zero )
+				pViewModel:ManipulateBonePosition( i, vector_origin )
 			end
+
+			// Yeah, we're just guessing lmao
+			// Made for Quake IV SWEPs, 'cause we can't just get the SWEP
+			// Well, we can, but it'll require a lot of changes to this already duct taped system, so no
+			pViewModel:SetSubMaterial( 3, nil )
+			pViewModel:SetSubMaterial( 5, nil )
 		end
 	end
 end
@@ -401,6 +411,9 @@ function SWEP:HolsterWasRan()
 				pViewModel:ManipulateBoneAngles( i, Angle( 0, 0, 0 ) )
 				pViewModel:ManipulateBonePosition( i, Vector( 0, 0, 0 ) )
 			end
+
+			pViewModel:SetSubMaterial( 3, nil )
+			pViewModel:SetSubMaterial( 5, nil )
 		end
 	end
 end
@@ -482,7 +495,7 @@ function SWEP:DoRecoil( MyTable )
 	local flDivisor = min( MyTable.Primary_flDelay, .2 )
 	local flRecoilTwo = 2 * flRecoil
 
-	// TODO: Use this in Actor code
+	// TODO: Use this in Actor and thirdperson code
 	local flRecoilImpulseUp = ( OwnerTable.GAME_flRecoilImpulseUp || 0 ) + ( flRecoilTwo * flPitch ) / flDivisor
 	OwnerTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
 
@@ -503,6 +516,7 @@ end
 
 // Don't worry, this is automatically validated :)
 function SWEP:GetPrimaryEmptyActivity() return ACT_VM_PRIMARYATTACK_EMPTY end
+function SWEP:PostShootEffects() end
 function SWEP:ShootEffects()
 	self:DoRecoil()
 	local pOwner = self:GetOwner()
@@ -523,6 +537,7 @@ function SWEP:ShootEffects()
 		end
 	end
 	pOwner:SetAnimation( PLAYER_ATTACK1 )
+	self:PostShootEffects()
 end
 
 function SWEP:DrewWorldModelAndUsedRenderOverrides() self.flRemoveWorldModelOverrideIn = CurTime() + .1 end
