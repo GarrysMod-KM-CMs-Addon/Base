@@ -3,7 +3,7 @@
 	"$normalmap" "sprites/heatwave"
 
 	"$refractamount" ".005"
-	"$bluramount" ".05"
+	"$bluramount" ".5"
 
 	"$nofb" "0" // For correct refraction
 
