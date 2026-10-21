@@ -524,7 +524,9 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	local f = min( pPlayer:GetRunSpeed(), flActualBiggerMove )
 	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
+
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
+
 	local bSpecial = !pPlayer:IsOnGround() && pPlayer:WaterLevel() > 0
 	if RealTime() <= flThirdPersonAttackTime then
 		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 1 )
@@ -548,9 +550,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	elseif flActualBiggerMove > 0 then
 		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
 
-		local a = Angle( aDirection )
-		a[ 1 ] = a[ 1 ] + 30
-		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), a )
+		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), aDirection )
 		r[ 3 ] = 0
 		cmd:SetViewAngles( r )
 		aLastThirdPersonAngle = Angle( r )
@@ -628,11 +628,11 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
 			tView.drawviewer = true
 			local bAiming = ply:KeyDown( IN_ZOOM )
-			local bCrouchWalking = bAiming && ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
+			local bCrouchWalking = ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
 			local vTarget = Vector(
-				-ply:OBBMaxs()[ 1 ] * ( bAiming && 1 || 4 ),
-				( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 2 ) * ( bCrouchWalking && 1.5 || 1 ),
-				ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && ( bCrouchWalking && .4 || .244 ) || .008 ) )
+				-ply:OBBMaxs()[ 1 ] * ( bAiming && 1.5 || 2.5 ),
+				( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 1.5 ) * ( ( ply:Crouching() && bAiming && bCrouchWalking ) && 1.3 || 1 ),
+				ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && ( bCrouchWalking && .4 || .1 ) || ( bAiming && -.02 || -.008 ) ) )
 			local bInCover = ply:GetNW2Bool "CTRL_bInCover" || ply:GetNW2Bool "CTRL_bGunUsesCoverStance"
 			if bInCover || PEEK != COVER_PEEK_NONE then
 				if VARIANTS == COVER_VARIANTS_LEFT || PEEK == COVER_FIRE_LEFT || PEEK == COVER_BLINDFIRE_LEFT then
@@ -640,10 +640,10 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 				elseif bInCover && VARIANTS == COVER_VARIANTS_RIGHT || PEEK == COVER_FIRE_RIGHT || PEEK == COVER_BLINDFIRE_RIGHT then
 					vTarget[ 2 ] = -ply:OBBMaxs()[ 2 ] * ( bAiming && 1 || 2 )
 				elseif bInCover && VARIANTS == COVER_VARIANTS_BOTH || PEEK == COVER_BLINDFIRE_UP || PEEK == COVER_FIRE_UP then
-					// Nothing
+					if !bAiming && RealTime() > flThirdPersonAttackTime then vTarget[ 2 ] = 0 end
 				end
 			end
-			vThirdPersonCameraOffset = LerpVector( FRILerpRate( 3, FrameTime() ), vThirdPersonCameraOffset, vTarget )
+			vThirdPersonCameraOffset = LerpVector( FRILerpRate( 4, FrameTime() ), vThirdPersonCameraOffset, vTarget )
 			local v = Vector( vThirdPersonCameraOffset )
 			v:Rotate( aThirdPerson )
 			local f = UNIVERSAL_FOV / 3

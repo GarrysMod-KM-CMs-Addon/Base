@@ -79,7 +79,8 @@ function EFFECT:Init( pData )
 	local flLifeTime = 1 / pData:GetMagnitude()
 	local flScale = 1 - .75 * math_random() * math_random()
 
-	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then flScale = flScale * .5 end
+	local bFirstPerson
+	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then bFirstPerson = true end
 
 	local aAngles = pData:GetAngles()
 	local vForward = aAngles:Forward()
@@ -87,7 +88,7 @@ function EFFECT:Init( pData )
 	local vUp = aAngles:Up()
 
 	for i = 1, 8 do
-		local pPart = pEmitter:Add( "MuzzleFlashSuppressedHeatHaze", fGetPos() )
+		local pPart = pEmitter:Add( bFirstPerson && "MuzzleFlashSuppressedHeatHazeView" || "MuzzleFlashSuppressedHeatHazeWorld", fGetPos() )
 
 		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
 		local flResultingSpreadUp = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )

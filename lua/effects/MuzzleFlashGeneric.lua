@@ -85,10 +85,7 @@ function EFFECT:Init( pData )
 	local flScale = 1 - .75 * math_random() * math_random()
 
 	local bFirstPerson
-	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then
-		flScale = flScale * .5
-		bFirstPerson = true
-	end
+	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then bFirstPerson = true end
 
 	local aAngles = pData:GetAngles()
 	local vForward = Vector( 1, 0, 0 )

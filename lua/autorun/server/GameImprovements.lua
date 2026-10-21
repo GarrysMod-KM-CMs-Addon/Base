@@ -826,12 +826,12 @@ function GameImprovements_StartCommand( ply, cmd )
 			end
 	
 			if bGround then
-				local pHands = ply:GetWeapon "Swim"
-				if IsValid( pHands ) then pHands:Remove() end
+				local pSwim = ply:GetWeapon "Swim"
+				if IsValid( pSwim ) then pSwim:Remove() end
 	
-				local pSwim = ply:GetWeapon "Hands"
-				if !IsValid( pSwim ) then pSwim = ply:Give "Hands" end
-				if IsValid( pSwim ) then cmd:SelectWeapon( pSwim ) end
+				local pHands = ply:GetWeapon "Hands"
+				if !IsValid( pHands ) then pHands = ply:Give "Hands" end
+				if IsValid( pHands ) then cmd:SelectWeapon( pHands ) end
 			else
 				local pHands = ply:GetWeapon "Hands"
 				if IsValid( pHands ) then pHands:Remove() end
@@ -846,11 +846,13 @@ function GameImprovements_StartCommand( ply, cmd )
 		end
 
 		if bGround then
-			local pHands = ply:GetWeapon "Swim"
-			if IsValid( pHands ) then pHands:Remove() end
+			local pSwim = ply:GetWeapon "Swim"
+			if IsValid( pSwim ) then pSwim:Remove() end
 
-			local pSwim = ply:GetWeapon "Hands"
-			if !IsValid( pSwim ) then pSwim = ply:Give "Hands" end
+			local pHands = ply:GetWeapon "Hands"
+			if !IsValid( pHands ) then pHands = ply:Give "Hands" end
+
+			if IsValid( pHands ) && !IsValid( ply:GetActiveWeapon() ) then cmd:SelectWeapon( pHands ) end
 		else
 			local pHands = ply:GetWeapon "Hands"
 			if IsValid( pHands ) then pHands:Remove() end
@@ -1317,8 +1319,17 @@ function GameImprovements_StartCommand( ply, cmd )
 						OVERRIDE_VARIANTS = COVER_VARIANTS_RIGHT
 					end
 				end
+
 				local f = math.NormalizeAngle( math.AngleDifference( ( -trDuck.HitNormal ):Angle()[ 2 ], aEye[ 2 ] ) )
-				if bLeft && f < -2 then
+				if !bLeft && !bRight then
+					if f < -10 then
+						OVERRIDE_VARIANTS = COVER_VARIANTS_LEFT
+					elseif f > 10 then
+						OVERRIDE_VARIANTS = COVER_VARIANTS_RIGHT
+					else
+						OVERRIDE_VARIANTS = COVER_VARIANTS_BOTH
+					end
+				elseif bLeft && f < -2 then
 					VARIANTS = COVER_VARIANTS_LEFT
 				elseif bRight && f > 2 then
 					VARIANTS = COVER_VARIANTS_RIGHT

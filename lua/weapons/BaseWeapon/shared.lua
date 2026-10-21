@@ -365,9 +365,12 @@ if CLIENT then
 	function BASE_WEAPON_ON_DROP()
 		local pLocalPlayer = LocalPlayer()
 		if !IsValid( pLocalPlayer ) then return end
+
 		local pViewModel = pLocalPlayer:GetViewModel()
 		if IsValid( pViewModel ) then
 			pViewModel:SetColor( color_white )
+
+			for i = 0, pViewModel:GetNumBodyGroups() do pViewModel:SetBodygroup( i, 0 ) end
 
 			for i = 0, pViewModel:GetBoneCount() do
 				pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )

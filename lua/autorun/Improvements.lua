@@ -229,8 +229,8 @@ local min = math.min
 physenv.SetGravity( Vector( 0, 0, -514.83 ) )
 
 hook.Add( "PlayerStepSoundTime", "Improvements", function( ply, EType, bWalk )
-	if ply:GetNW2Bool "CTRL_bSprinting" then return ply:GetRunSpeed() / 300 * 260 end
-	return ply:GetWalkSpeed() / 200 * 350
+	if ply:GetNW2Bool "CTRL_bSprinting" then return 300 / ply:GetRunSpeed() * 260 end
+	return 200 / ply:GetWalkSpeed() * 350
 end )
 
 function QuickSlide_Can( ply, t )
@@ -326,14 +326,25 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		end
 	
 		if ply.GAME_bWantsToWalk then cmd:AddKey( IN_WALK ) end
+
 		if ply:GetNW2Bool "CTRL_bSliding" then
 			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
-			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
+			elseif ply.GAME_bDuckPressed then
+				ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck
+				ply.GAME_bDuckPressed = nil
+			end
+
 			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
 		else
-			if cmd:KeyDown( IN_DUCK ) then ply.GAME_bDuckPressed = true
-			elseif ply.GAME_bDuckPressed then ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck ply.GAME_bDuckPressed = nil end
+			if cmd:KeyDown( IN_DUCK ) then
+				ply.GAME_bDuckPressed = true
+			elseif ply.GAME_bDuckPressed then
+				ply.GAME_bWantsToDuck = !ply.GAME_bWantsToDuck
+				ply.GAME_bDuckPressed = nil
+			end
+
 			if ply.GAME_bWantsToDuck then cmd:AddKey( IN_DUCK ) end
+
 			//	local b = cmd:GetSideMove() != 0 && cmd:GetForwardMove() >= 0 || cmd:GetForwardMove() > 0
 			//	local bVelocity = GetVelocity( ply ):LengthSqr() > 256
 			//	local p = ply:GetActiveWeapon()
@@ -554,7 +565,7 @@ end )
 
 hook.Add( "PlayerFootstep", "Improvements", function( ply, vPos )
 	local flSpeed = GetVelocity( ply ):Length()
-	if ply:GetNW2Bool "CTRL_bSliding" then return true end
+	if ply:GetNW2Bool "CTRL_bSliding" || flSpeed <= ply:GetSlowWalkSpeed() * 1.1 then return true end
 
 	local flForce = 1
 

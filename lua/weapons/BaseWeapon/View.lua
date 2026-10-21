@@ -740,9 +740,17 @@ function SWEP:CalcViewModelView( _, pos, ang )
 				local flVelocity = CEntity_GetVelocity( ply ):Length()
 				if !bZoom then
 					if CPlayer_KeyDown( ply, IN_MOVELEFT ) then
-						vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - 4 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						if MyTable.bSprintNotAnimated then
+							vTargetAngle[ 2 ] = vTargetAngle[ 3 ] - 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						else
+							vTargetAngle[ 2 ] = vTargetAngle[ 2 ] - 4 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						end
 					elseif CPlayer_KeyDown( ply, IN_MOVERIGHT ) then
-						vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						if MyTable.bSprintNotAnimated then
+							vTargetAngle[ 2 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						else
+							vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + 7 * flVelocity / CPlayer_GetWalkSpeed( ply )
+						end
 					end
 				end
 

@@ -369,10 +369,12 @@ function SWEP:DoDrawCrosshair()
 		MyTable.flCurrentRecoilForGap = math_max( 0, MyTable.flCurrentRecoilForGap - f * flFrameTime )
 	end
 
-	if CurTime() > MyTable.flLastShot + flDelay * 2 then
-		local f = 2 / flDelay
+	if CurTime() > MyTable.flLastShot + flDelay * ( MyTable.Primary.Automatic && 1 || .5 ) then
+		local f = ( MyTable.Primary.Automatic && 2 || 2.5 ) / flDelay
 		MyTable.flCurrentRecoilForCrosshair = math_max( 0, MyTable.flCurrentRecoilForCrosshair - f * flFrameTime )
-	else MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + 1 * ply:GetNW2Float( "GAME_flRecoil", 1 ) / flDelay * flFrameTime end
+	else
+		MyTable.flCurrentRecoilForCrosshair = MyTable.flCurrentRecoilForCrosshair + ply:GetNW2Float( "GAME_flRecoil", 1 ) / flDelay * flFrameTime * ( MyTable.Primary.Automatic && 1 || 3 )
+	end
 
 	local flAimMultiplier = MyTable.flAimMultiplier
 	local flGapPart = Lerp( FRILerpRate( 20, flFrameTime ), MyTable.flCrosshairInAccuracyGapPart, math.Clamp( ply:GetVelocity():Length() / ply:GetWalkSpeed() * 1 / 30, 0, 1 / 30 ) )
@@ -381,7 +383,7 @@ function SWEP:DoDrawCrosshair()
 	local flRecoilPart = Lerp(
 		FRILerpRate( flDelay * 2000, flFrameTime ),
 		MyTable.flCrosshairInAccuracyRecoilPart,
-		MyTable.flCurrentRecoilForGap * .05 / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * ( MyTable.Primary.Automatic && 1 || .05 )
+		MyTable.flCurrentRecoilForGap * .05 / ( MyTable.Primary_flDelay + ( MyTable.Primary.Automatic && 0 || .1 ) ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) * ( MyTable.Primary.Automatic && 1 || .3 )
 	)
 
 	MyTable.flCrosshairInAccuracyRecoilPart = flRecoilPart
@@ -417,7 +419,7 @@ function SWEP:DoDrawCrosshair()
 		if MyTable.WPN_SHOOT == WPN_SHOTGUN || cvars.Bool "bAllowThirdPerson" && cThirdPerson:GetBool() && flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then
 			MyTable.flCrosshairAlpha = Lerp( FRILerpRate( 5, flFrameTime ), MyTable.flCrosshairAlpha, 255 )
 		else
-			local flAlpha = math_max( 0, 255 - ( 255 * 4 ) * MyTable.flCurrentRecoilForCrosshair * ( MyTable.Primary.Automatic && 1 || .1 ) / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) )
+			local flAlpha = math_max( 0, 255 - ( 255 * 4 ) * MyTable.flCurrentRecoilForCrosshair / min( 20, self:GetMaxClip1() * ( 2 / 3 ) ) )
 			MyTable.flCrosshairAlpha = flAlpha
 		end
 	end
