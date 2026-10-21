@@ -401,7 +401,7 @@ TRACER_SIZE = { Bullet = 2 }
 local TRACER_SIZE = TRACER_SIZE
 
 hook.Add( "ScalePlayerDamage", "GameImprovements", function( ply, EHitGroup, dDamage )
-	if EHitGroup == HITGROUP_HEAD then dDamage:ScaleDamage( ply.GAME_flHeadshotDamageMultiplier || 5 ) return false end
+	if EHitGroup == HITGROUP_HEAD then dDamage:ScaleDamage( ply.GAME_flHeadshotDamageMultiplier || 4 ) return false end
 end )
 
 local cSGT = CreateConVar(
