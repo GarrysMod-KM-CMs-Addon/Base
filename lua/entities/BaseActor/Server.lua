@@ -368,7 +368,7 @@ function ENT:Tick( MyTable, aAngles )
 
 	aAngles = aAngles || CEntity_GetAngles( self )
 	if aAngles[ 1 ] != 0 || aAngles[ 3 ] != 0 then 
-		ng[ 1 ] = 0
+		aAngles[ 1 ] = 0
 		aAngles[ 3 ] = 0
 		CEntity_SetAngles( self, aAngles )
 	end

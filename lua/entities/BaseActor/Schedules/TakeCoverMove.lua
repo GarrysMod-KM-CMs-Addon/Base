@@ -95,7 +95,7 @@ RegisterSchedule( "TakeCoverMove", {
 				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 			end
 
-			MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] / 3 )
+			MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 2 ] * .3 )
 		end
 	end
 } )

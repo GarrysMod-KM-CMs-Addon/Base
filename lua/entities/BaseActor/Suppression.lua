@@ -7,9 +7,7 @@ ENT.flSuppressionHide = .2
 
 function ENT:CanExpose( MyTable ) return self.GAME_flSuppression <= self:Health() * self.flSuppressionHide end
 
-function ENT:GetMySuppressionHealth( MyTable )
-	return ( ( MyTable.bIsFootSoldier || self:Health() <= 1000 ) && 100 || self:Health() )
-end
+function ENT:GetMySuppressionHealth( MyTable ) return ( MyTable.bFootSoldier || self:Health() <= 1000 ) && 100 || self:Health() end
 
 local IteratorFactory = include "SuppressionIterator.lua"
 

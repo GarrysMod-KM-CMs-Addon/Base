@@ -162,9 +162,9 @@ function ENT:DLG_Charge() end
 
 // Fixes a certain bug that I'm too lazy to describe rn
 // Maybe on the docs, sometime?
-function ENT:IsValidCoverCandidate( tCover, pEnemyPath, MyTable )
-	local vStart = tCover.vStart
-	local vEnd = tCover.vEnd
+function ENT:IsValidCoverCandidate( pCover, pEnemyPath, MyTable )
+	local vStart = pCover.vStart
+	local vEnd = pCover.vEnd
 	local vCenter = ( vStart + vEnd ) * .5
 
 	pEnemyPath:MoveCursorToClosestPosition( vCenter )
@@ -175,11 +175,16 @@ function ENT:IsValidCoverCandidate( tCover, pEnemyPath, MyTable )
 	dTowards[ 3 ] = 0
 	dTowards:Normalize()
 
+
 	local flDot = ( vEnd - vStart ):Angle():Right():Dot( dTowards )
-	if tCover.bRight then return flDot < 0 else return flDot > 0 end
+	if pCover.bRight then
+		return flDot < 0
+	else
+		return flDot > 0
+	end
 end
 
-function ENT:IsValidCoverPoint( vCover, tCover, pEnemy, pEnemyPath, MyTable, vMaxs /* Optional as you may have precomputed them */ )
+function ENT:IsValidCoverPoint( vCover, pCover, pEnemy, pEnemyPath, MyTable, vMaxs /* Optional as you may have precomputed them */ )
 	vMaxs = vMaxs || MyTable.vHullDuckHitCheckMaxs || MyTable.vHullDuckMaxs || MyTable.vHullMaxs
 	local vCrouched = Vector( vCover )
 	vCrouched[ 3 ] = vCrouched[ 3 ] + vMaxs[ 3 ] * 1.25
@@ -328,7 +333,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 	MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand )
 
 	if LevelOfDetail( pSchedule, "flNextCheck" ) then
-		local f = MyTable.flPathTolerance
+		local f = self:OBBMaxs()[ 2 ] * .5
 		if self:GetPos():DistToSqr( vCover ) > ( f * f ) then
 			MyTable.vCover = nil
 			MyTable.pCover = nil

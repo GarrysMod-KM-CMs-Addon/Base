@@ -8,7 +8,7 @@ ENT.vHullDuckMaxs = HULL_HUMAN_DUCK_MAXS
 
 ENT.bCanSlide = true
 
-ENT.bIsFootSoldier = true
+ENT.bFootSoldier = true
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
 
@@ -78,19 +78,31 @@ function ENT:TranslateActivity( n ) return hook.Run( "TranslateActivity", self, 
 
 ENT.flJumpHeight = HUMAN_JUMP_HEIGHT
 
-function ENT:Behaviour()
-	local act, seq = hook.Run( "CalcMainActivity", self, self.loco:GetVelocity() )
-	if !self.CalcIdeal then self.CalcIdeal = -1 end
-	local ECalcIdeal = self.CalcIdeal
-	local act = self:TranslateActivity( ECalcIdeal )
-	if act == -1 then act = ECalcIdeal end
-	if seq == nil || seq == -1 then self.CalcSeqOverride = self:SelectWeightedSequence( act ) end
-	hook.Run( "UpdateAnimation", self, self.loco:GetVelocity(), self:GetSequenceGroundSpeed( self.CalcSeqOverride ) )
-	self:PromoteSequence( self:GetSequenceName( self.CalcSeqOverride ), self:GetPlaybackRate() )
-	self:AnimationSystemTick()
-	self.loco:SetJumpHeight( self.flJumpHeight )
-	if self.CalcIdeal == ACT_MP_CROUCH_IDLE || self.CalcIdeal == ACT_MP_CROUCHWALK then
-		local hm, hn, cm, cn = self.vHullDuckMins, self.vHullDuckMaxs, self:GetCollisionBounds()
+function ENT:Behaviour( MyTable )
+	local EActivity, iSequence = hook.Run( "CalcMainActivity", self, self.loco:GetVelocity() )
+
+	local ECalcIdeal = MyTable.CalcIdeal
+	if !ECalcIdeal then
+		ECalcIdeal = -1
+		MyTable.CalcIdeal = ECalcIdeal
+	end
+
+	local EActivity = self:TranslateActivity( ECalcIdeal )
+
+	if EActivity == -1 then EActivity = ECalcIdeal end
+
+	if iSequence == nil || iSequence == -1 then self.CalcSeqOverride = self:SelectWeightedSequence( EActivity ) end
+
+	local pLocomotion = MyTable.loco
+
+	hook.Run( "UpdateAnimation", self, pLocomotion:GetVelocity(), self:GetSequenceGroundSpeed( MyTable.CalcSeqOverride ) )
+
+	MyTable.PromoteSequence( self, self:GetSequenceName( MyTable.CalcSeqOverride ), self:GetPlaybackRate() )
+	MyTable.AnimationSystemTick( self, MyTable )
+	pLocomotion:SetJumpHeight( MyTable.flJumpHeight )
+
+	if ECalcIdeal == ACT_MP_CROUCH_IDLE || ECalcIdeal == ACT_MP_CROUCHWALK then
+		local hm, hn, cm, cn = MyTable.vHullDuckMins, MyTable.vHullDuckMaxs, self:GetCollisionBounds()
 		if hm != cm || hn != cn then
 			self:SetCollisionBounds( hm, hn )
 			if !IsValid( self:GetParent() ) && self:PhysicsInitShadow( false, false ) then
@@ -99,7 +111,7 @@ function ENT:Behaviour()
 			end
 		end
 	else
-		local hm, hn, cm, cn = self.vHullMins, self.vHullMaxs, self:GetCollisionBounds()
+		local hm, hn, cm, cn = MyTable.vHullMins, MyTable.vHullMaxs, self:GetCollisionBounds()
 		if hm != cm || hn != cn then
 			self:SetCollisionBounds( hm, hn )
 			if !IsValid( self:GetParent() ) && self:PhysicsInitShadow( false, false ) then
@@ -108,26 +120,29 @@ function ENT:Behaviour()
 			end
 		end
 	end
-	self:RunMind()
-	local v = QuickSlide_Handle( self )
-	if v then
-		self.loco:Approach( Vector(), 1 )
-		self.loco:SetVelocity( v )
-		self.loco:Approach( Vector(), 1 )
-		self.loco:SetDesiredSpeed( 0 )
-		self.loco:SetAcceleration( 0 )
-		self.loco:SetDeceleration( 0 )
-		self.loco:Approach( Vector(), 1 )
+
+	MyTable.RunMind( self, MyTable )
+
+	local vSlideVelocity = QuickSlide_Handle( self )
+	if vSlideVelocity then
+		pLocomotion:Approach( vector_origin, 1 )
+		pLocomotion:SetVelocity( vSlideVelocity )
+		pLocomotion:SetDesiredSpeed( 0 )
+		pLocomotion:SetAcceleration( 0 )
+		pLocomotion:SetDeceleration( 0 )
 	end
 end
 
 function ENT:OnKilled( dmg )
 	if BaseClass.OnKilled( self, dmg ) then return end
+
 	local v = self.CTRL_pSlideLoop
 	if v then v:Stop() end
+
 	// Shows [Death] in subtitles, and that gives it out.
 	// I prefer having to check if I killed them myself.
 	//	self:EmitSound( dmg:IsDamageType( DMG_FALL ) && "Player.FallGib" || "Player.Death" )
+
 	self:BecomeRagdoll( dmg )
 end
 

@@ -8,6 +8,15 @@ local random = math.random // random is love, random is life
 
 // TODO: Teach 'em to shoot on the move
 
+local TraceLine = util.TraceLine
+local max = math.max
+
+local coroutine_create = coroutine.create
+local coroutine_resume = coroutine.resume
+local coroutine_status = coroutine.status
+
+local assert = assert
+
 RegisterSchedule( "PlantToShoot", {
 	Execute = function( self, pSchedule, MyTable )
 		local pEnemy = MyTable.Enemy
@@ -16,15 +25,15 @@ RegisterSchedule( "PlantToShoot", {
 		local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy )
 
 		if !pSchedule.flTimer then
-			pSchedule.flTimer = ( 1 - random() * random() ) * .5
+			pSchedule.flTimer = random() * random() * 3
 		end
 
-		pSchedule.flTimer = math.max( 0, pSchedule.flTimer - MyTable.m_flFrameTime * random() )
+		pSchedule.flTimer = max( 0, pSchedule.flTimer - MyTable.m_flFrameTime )
 
-		if LevelOfDetail( pSchedule, "flNextPlantCheck" ) && MyTable.bPlantToShoot then
+		if pSchedule.flTimer <= 0 && MyTable.bPlantToShoot then
 			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
 
-			local tr = util.TraceLine {
+			local tr = TraceLine {
 				start = MyTable.GetShootPos( self ),
 				endpos = vEnemy,
 				mask = MASK_SHOT_HULL,
@@ -35,9 +44,10 @@ RegisterSchedule( "PlantToShoot", {
 				// enemy in the fricking way!!! (sponsored by filian.coom)
 				local pEntity = tr.Entity
 				if IsValid( pEntity ) && MyTable.Disposition( self, pEntity ) == D_LI then
-				else pSchedule.flTimer = random() * random() * .5 end
+					pSchedule.flTimer = random() * random() * 2
+				else pSchedule.flTimer = random() * random() * 1.5 end
 
-			elseif pSchedule.flTimer <= 0 then
+			else
 				MyTable.vaAimTargetBody = vEnemy
 				MyTable.vaAimTargetPose = vEnemy
 				if MyTable.IsInPlantDelta( self, vEnemy, MyTable ) then
@@ -72,7 +82,6 @@ RegisterSchedule( "PlantToShoot", {
 } )
 
 // NOTE: Your PlantThread should most likely support pSchedule.bAimOnly!
-local random = math.random
 RegisterSchedule( "PlantToShootPlant", {
 	Execute = function( self, pSchedule, MyTable )
 		local pEnemy = MyTable.Enemy
@@ -93,7 +102,7 @@ RegisterSchedule( "PlantToShootPlant", {
 		// TODO: Try to get out of shooting if we need to dodge
 		if !pSchedule.bDone then
 			local vEnemy = pEnemy:GetPos() + pEnemy:OBBCenter()
-			local tr = util.TraceLine {
+			local tr = TraceLine {
 				start = MyTable.GetShootPos( self ),
 				endpos = vEnemy,
 				mask = MASK_SHOT_HULL,
@@ -126,19 +135,19 @@ RegisterSchedule( "PlantToShootPlant", {
 		local pCoroutine = pSchedule.pCoroutine
 
 		if !pCoroutine then
-			pCoroutine = coroutine.create( MyTable.PlantThread )
+			pCoroutine = coroutine_create( MyTable.PlantThread )
 			pSchedule.pCoroutine = pCoroutine
-			assert( coroutine.resume( pCoroutine, self, pSchedule, MyTable ) )
+			assert( coroutine_resume( pCoroutine, self, pSchedule, MyTable ) )
 			return
 		end
 
-		if coroutine.status( pCoroutine ) == "dead" then
+		if coroutine_status( pCoroutine ) == "dead" then
 			local pSchedule = MyTable.SetSchedule( self, "PlantToShoot", MyTable )
-			if MyTable.bEnemyInTheFrickingWay then pSchedule.flTimer = ( 1 - random() * random() ) * 1.5 end
+			if MyTable.bEnemyInTheFrickingWay then pSchedule.flTimer = ( 1 - random() * random() ) * 2 end
 			return
 		end
 
-		assert( coroutine.resume( pCoroutine ) )
+		assert( coroutine_resume( pCoroutine ) )
 
 		if pSchedule.sReturn == "DELTA" then
 			pSchedule.bDone = true

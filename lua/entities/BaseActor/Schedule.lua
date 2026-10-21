@@ -62,8 +62,8 @@ local function PreScheduleResetVariables( MyTable, t )
 	end
 end
 
-function ENT:RunMind()
-	local MyTable = CEntity_GetTable( self )
+function ENT:RunMind( MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
 	MyTable.PreScheduleResetVariables( self, MyTable )
 	PreScheduleResetVariables( MyTable, MyTable.tPreScheduleResetVariables )
 	local pSchedule = MyTable.Schedule

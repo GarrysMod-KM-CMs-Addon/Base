@@ -2,7 +2,6 @@ ENT.tPreScheduleResetVariables.vActualCover = false
 ENT.tPreScheduleResetVariables.vActualTarget = false
 
 local util_TraceLine = util.TraceLine
-local util_TraceHull = util.TraceHull
 
 local insert = table.insert
 local DistanceToLine = util.DistanceToLine
@@ -193,6 +192,14 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 			local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 			vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
 
+			local vForHullMins = Vector( vMins )
+			vForHullMins[ 1 ] = vForHullMins[ 1 ] * .75
+			vForHullMins[ 2 ] = vForHullMins[ 2 ] * .75
+
+			local vForHullMaxs = Vector( vMaxs )
+			vForHullMaxs[ 1 ] = vForHullMaxs[ 1 ] * .75
+			vForHullMaxs[ 2 ] = vForHullMaxs[ 2 ] * .75
+
 			local tCovers
 
 			while true do
@@ -235,16 +242,16 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 						vDirection:Normalize()
 	
 						local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-						vOff = vOff * vMaxs[ 1 ] * 1.2
-	
+						vOff = vOff * vMaxs[ 1 ] * 1.4
+
 						for flCurrent = flStart, flEnd, flStep do
 							local vCover = vStart + vDirection * flCurrent + vOff
-	
-							if util_TraceHull( {
+
+							if util.TraceHull( {
 								start = vCover,
-								endpos = vCover,
-								mins = vMins,
-								maxs = vMaxs,
+								endpos = vCover + vMaxs,
+								mins = vForHullMins,
+								maxs = vForHullMaxs,
 								filter = self
 							} ).Hit then continue end
 	
@@ -311,6 +318,6 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
 
-		MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] / 3 )
+		MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 2 ] * .3 )
 	end
 end } )

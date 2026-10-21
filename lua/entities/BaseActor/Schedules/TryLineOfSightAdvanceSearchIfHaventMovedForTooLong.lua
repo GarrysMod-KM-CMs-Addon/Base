@@ -48,6 +48,14 @@ function ENT:TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( pSchedule, MyTa
 		local vMins = Vector( MyTable.vHullDuckMins || MyTable.vHullMins )
 		vMins[ 3 ] = vMins[ 3 ] + vMaxs[ 3 ] * .2
 
+		local vForHullMins = Vector( vMins )
+		vForHullMins[ 1 ] = vForHullMins[ 1 ] * .75
+		vForHullMins[ 2 ] = vForHullMins[ 2 ] * .75
+
+		local vForHullMaxs = Vector( vMaxs )
+		vForHullMaxs[ 1 ] = vForHullMaxs[ 1 ] * .75
+		vForHullMaxs[ 2 ] = vForHullMaxs[ 2 ] * .75
+
 		local pInitialCover = MyTable.pCover
 		local tQueue = { { pInitialCover, 0, 0 } }
 		local tVisited = { [ pInitialCover ] = true }
@@ -116,16 +124,16 @@ function ENT:TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( pSchedule, MyTa
 			vDirection:Normalize()
 
 			local vOff = pCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-			vOff = vOff * vMaxs[ 1 ] * 1.2
+			vOff = vOff * vMaxs[ 1 ] * 1.4
 
 			for flCurrent = flStart, flEnd, flStep do
 				local vCover = vStart + vDirection * flCurrent + vOff
 
 				if util.TraceHull( {
 					start = vCover,
-					endpos = vCover,
-					mins = vMins,
-					maxs = vMaxs,
+					endpos = vCover + vMaxs,
+					mins = vForHullMins,
+					maxs = vForHullMaxs,
 					filter = self
 				} ).Hit then continue end
 

@@ -28,7 +28,7 @@ function ENT:PeekInHorizontal()
 		// Extremely small tolerance (1 inch!) for we NEED to go there, and the position will NEVER change
 		MyTable.ComputePath( self, pPath, vPeek, nil, 1 )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .5
+		local f = MyTable.vHullMaxs[ 2 ] * .25
 		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
 
 		if self:GetPos():DistToSqr( vPeek ) <= ( f * f ) then return true end
@@ -46,7 +46,7 @@ function ENT:PeekOutHorizontal()
 		// Extremely small tolerance (1 inch!) for we NEED to go there, and the position will NEVER change
 		MyTable.ComputePath( self, pPath, vCover, nil, 1 )
 
-		local f = MyTable.vHullMaxs[ 2 ] * .5
+		local f = MyTable.vHullMaxs[ 2 ] * .25
 		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
 
 		if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
