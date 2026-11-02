@@ -23,7 +23,7 @@ sound.Add {
 	}
 }
 
-if !SERVER then return end
+if CLIENT then return end
 
 function ENT:Initialize()
 	self:SetModel "models/magnusson_device.mdl"
@@ -60,7 +60,7 @@ end
 
 ENT.__PROJECTILE_EXPLOSION__ = true
 ENT.EXPLOSION_flRadius = 384
-ENT.EXPLOSION_flDamage = 24576
+ENT.EXPLOSION_flDamage = 12000
 
 function ENT:Detonate()
 	local v, a = self:GetPos() + self:OBBCenter(), self:GetAngles()

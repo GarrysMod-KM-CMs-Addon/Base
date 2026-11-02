@@ -1,3 +1,5 @@
+// TODO: All of this, lol
+
 RegisterInteraction( "BoundingOverwatch", {
 	ShouldStayInCover = function() return true end,
 

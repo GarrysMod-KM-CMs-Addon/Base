@@ -11,7 +11,7 @@ local exp = math.exp
 
 local function FRILerpRate( flRate, flFrameTime ) return min( 1, 1 - exp( -flRate * flFrameTime ) ) end
 
-// You MUST call AnimationSystemHalt before this!
+// You might want to call AnimationSystemHalt before these in 99% of cases
 
 function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction, bForce )
 	flSpeed = flSpeed || 1
@@ -70,7 +70,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction, bFo
 	if !bDontReset then self:SetSequence( 0 ) end
 end
 
-function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bForce )
+function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bForce, bNoPos, bNoAng )
 	flSpeed = flSpeed || 1
 
 	local flLength = self:SetSequence( sSequence )
@@ -97,18 +97,6 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 
 	vMins[ 3 ] = vMins[ 3 ] + 12
 
-	local pStuck = util.TraceHull( {
-		start = self:GetPos(),
-		endpos = self:GetPos(),
-		mins = vMins,
-		maxs = vMaxs,
-		filter = function( pEntity )
-			if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
-			return true
-		end,
-		mask = MASK_SOLID
-	} ).Entity
-
 	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
 	while CurTime() <= flEndTime do
 		if !bForce && MyTable.sCallMeInRunBehaviour != sSequence then break end
@@ -120,6 +108,9 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 		self:SetCycle( flSpeed > 0 && flCycle || ( 1 - flCycle ) )
 
 		local _, v, a = self:GetSequenceMovement( self:GetSequence(), flPrevCycle, flCycle )
+
+		if bNoPos then v = Vector() end
+		if bNoAng then a = Angle() end
 
 		local aAngles = self:GetAngles()
 
@@ -136,7 +127,7 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 			mins = vMins,
 			maxs = vMaxs,
 			filter = function( pEntity )
-				if pEntity == self || pEntity == pStuck || IsBullshitNonSolidEntity( pEntity ) then return false end
+				if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
 				return true
 			end,
 			mask = MASK_SOLID
@@ -324,41 +315,34 @@ local math_AngleDifference = math.AngleDifference
 
 function ENT:CenterTarget( vTarget, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
+
 	local iYawPoseParameter = self:LookupPoseParameter( MyTable.m_sYawPoseParameter )
 	if iYawPoseParameter == -1 then return end
+
 	local vVelocity = GetVelocity( self )
 	local aAlongPath = vVelocity:Angle()
 	local vPos = self:GetPos() + self:OBBCenter()
+
 	local flYawComfortableMin, flYawComfortableMax = self:GetPoseParameterRange( iYawPoseParameter )
-	flYawComfortableMin = math_max( flYawComfortableMin, -45 )
-	flYawComfortableMax = min( flYawComfortableMax, 45 )
+	flYawComfortableMin = math_max( flYawComfortableMin, -22.5 )
+	flYawComfortableMax = min( flYawComfortableMax, 22.5 )
+
 	local flDelta = math_AngleDifference( aAlongPath[ 2 ], ( vTarget - vPos ):Angle()[ 2 ] )
 	if flDelta > flYawComfortableMin && flDelta < flYawComfortableMax then
 		MyTable.vaAimTargetBody = aAlongPath
 		MyTable.vaAimTargetPose = vTarget
 		return
 	end
+
 	local aAlongPathNeg = ( -vVelocity ):Angle()
+
 	local flDelta = math_AngleDifference( aAlongPathNeg[ 2 ], ( vTarget - vPos ):Angle()[ 2 ] )
 	if flDelta > flYawComfortableMin && flDelta < flYawComfortableMax then
 		MyTable.vaAimTargetBody = aAlongPathNeg
 		MyTable.vaAimTargetPose = vTarget
 		return
 	end
+
 	MyTable.vaAimTargetBody = vTarget
 	MyTable.vaAimTargetPose = vTarget
-end
-
-function ENT:PromoteRootMotionSequence( flSpeed, sSequence, flWeight, pPath, bNoInverse )
-	local flMovement = self:GetSequenceGroundSpeed( self:LookupSequence( sSequence ) )
-	local vVelocity = GetVelocity( self )
-
-	MyTable.PromoteSequence(
-		self,
-		MyTable,
-		flMovement / flSpeed * ( bNoInverse && 1 || ( vVelocity:GetNormalized():Dot( self:GetForward() ) > 0 && 1 || -1 ) ),
-		flWeight,
-		function( _ /*self*/, _ /*MyTable*/, flWeight, iLayer )
-		end
-	)
 end

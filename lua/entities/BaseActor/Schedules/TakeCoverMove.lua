@@ -70,7 +70,7 @@ RegisterSchedule( "TakeCoverMove", {
 			MyTable.ComputeFlankPath( self, pEnemyPath, pEnemy )
 		end
 
-		local flTolerance = self:OBBMaxs()[ 1 ] * ( 1 / 3 )
+		local flTolerance = self:OBBMaxs()[ 1 ] * .5
 		if self:GetPos():DistToSqr( vCover ) <= flTolerance * flTolerance then return true end
 
 		if LevelOfDetail( pSchedule, "flNextCheck" ) then
@@ -95,7 +95,7 @@ RegisterSchedule( "TakeCoverMove", {
 				MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 			end
 
-			MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 2 ] * .3 )
+			MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] * .5 )
 		end
 	end
 } )

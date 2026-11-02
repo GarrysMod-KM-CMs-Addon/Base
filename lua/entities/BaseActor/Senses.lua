@@ -128,6 +128,11 @@ ACTOR_FREE_KNOWLEDGE = 1.5
 function ENT:SetupBullseye( pEnemy, vPos, aAngles, MyTable, bSense, bSenseRecursion )
 	MyTable = MyTable || CEntity_GetTable( self )
 
+	local fAlive = pEnemy.Alive
+	if fAlive && !fAlive( pEnemy ) then return end
+
+	if pEnemy:Health() <= 0 then return end
+
 	if !vPos then
 		vPos = pEnemy:GetPos()
 		vPos:Add( pEnemy:OBBCenter() )
@@ -230,7 +235,45 @@ end
 
 local pairs = pairs
 
-function ENT:OnOtherKilled( ent ) self:ReportPositionAsClear( ent:GetPos() + ent:OBBCenter() ) end
+function ENT:OnOtherKilled( pKilled )
+	local MyTable = CEntity_GetTable( self )
+
+	local sIdentifier = EntityUniqueIdentifier( pKilled )
+
+	local tBullseyes = MyTable.tBullseyes
+
+	local tData = tBullseyes[ sIdentifier ]
+	if tData then
+		local pBullseye, pTrueEnemy = tData[ 1 ], tData[ 3 ]
+	
+		if IsValid( pBullseye ) then CEntity_Remove( pBullseye ) end
+
+		tBullseyes[ sIdentifier ] = nil
+	end
+
+	local tAllies = MyTable:GetAlliesByClass()
+	if tAllies then
+		for pAlly in pairs( tAllies ) do
+			local tBullseyes = CEntity_GetTable( pAlly ).tBullseyes
+			local tData = tBullseyes[ sIdentifier ]
+			if tData then
+				local pBullseye, pTrueEnemy = tData[ 1 ], tData[ 3 ]
+
+				if IsValid( pBullseye ) then CEntity_Remove( pBullseye ) end
+
+				tBullseyes[ sIdentifier ] = nil
+			end
+		end
+	end
+
+	if table.IsEmpty( tBullseyes ) then
+		MyTable.PrepareAlert( self, MyTable )
+
+		MyTable.tAlertContext = { flEnemySeen = CurTime(), bEnemyKilled = true }
+
+		MyTable.SetSchedule( self, "Alert", MyTable ).ALERT_PREPARED = true
+	end
+end
 
 ENT.flMaxVisionRange = 12000
 
@@ -280,7 +323,10 @@ function ENT:OnSeeWeapon( pWeapon, vEyePos, tAllies, MyTable )
 	//		end
 	//	end
 
-	for pAlly in pairs( tAllies ) do if pAlly.pTargetWeapon == pWeapon then return end end
+	for pAlly in pairs( tAllies ) do
+		local pSchedule = pAlly.Schedule
+		if pSchedule && pSchedule.pWeapon == pWeapon then return end
+	end
 
 	pSchedule = MyTable.SetSchedule( self, "PickUpGun", MyTable )
 	pSchedule.pWeapon = pWeapon

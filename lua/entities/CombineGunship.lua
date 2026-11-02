@@ -51,7 +51,7 @@ if CLIENT then return end
 
 ENT.bNightVision = true
 
-ENT.Primary_flDelay = .09
+ENT.Primary_flDelay = .08
 ENT.Primary_flDamage = 60
 ENT.Primary_flSpreadX = .02
 ENT.Primary_flSpreadY = .02

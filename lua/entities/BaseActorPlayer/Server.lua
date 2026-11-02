@@ -146,7 +146,7 @@ function ENT:OnKilled( dmg )
 	self:BecomeRagdoll( dmg )
 end
 
-function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, flToleranceOverride )
+function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, flToleranceOverride, bNoAvoid )
 	if flHeight == nil then flHeight = 1 end
 
 	if !bAllowSliding then
@@ -169,7 +169,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, fl
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
 
-	self:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
+	self:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid )
 end
 
 function ENT:Stand( flHeight )

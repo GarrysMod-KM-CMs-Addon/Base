@@ -29,12 +29,23 @@ end
 
 local __SCHEDULE__ = __SCHEDULE__
 
+/*
+DO NOT!!! use this often. It should only be used as a last resort,
+for things that are WAY too complicated to manage with schedules.
+Sometimes, you can just do:
+	local pTheirSchedule = pActor.Schedule
+	local pAlarm = pSchedule && pSchedule.pAlarm
+
+Also a good practice:
+	for pAlly in pairs( tAllies ) do
+		local pSchedule = pAlly.Schedule
+		if pSchedule && pSchedule.pWeapon == pWeapon then return end
+	end
+*/
+
 ENT.tPreScheduleResetVariables = {}
 ENT.tPreScheduleResetVariables.m_bFiringIsAllowed = false
 ENT.tPreScheduleResetVariables.EDumbNPCState = NPC_STATE_IDLE
-ENT.tPreScheduleResetVariables.bCharging = false
-ENT.tPreScheduleResetVariables.bTaunting = false
-ENT.tPreScheduleResetVariables.bAttacking = false
 ENT.tPreScheduleResetVariables.EScheduleState = ACTOR_STATE_IDLE
 
 function ENT:SelectScheduleInternal( MyTable, ... )
@@ -105,5 +116,7 @@ include "Schedules/FreeMovement.lua"
 include "Schedules/Alert.lua"
 include "Schedules/IntimidationWalk.lua"
 include "Schedules/WeaponsPlatformMelee.lua"
+include "Schedules/WeaponsPlatformSkate.lua"
+include "Schedules/WeaponsPlatformSkateMelee.lua"
 
 RegisterSchedule( "Death", { Execute = function() end } )

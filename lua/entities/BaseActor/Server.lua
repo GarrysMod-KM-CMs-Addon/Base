@@ -175,12 +175,6 @@ function ENT:Stand() self.loco:SetDesiredSpeed( 0 ) self.loco:Approach( self:Get
 function ENT:OnKilled( dmg )
 	if self.bDead then return true end
 	self.bDead = true
-	local v = dmg:GetDamageForce()
-	local l = v:Length()
-	v:Normalize()
-	// To prevent crazy physics... when in reality a ragdoll flying with an impulse of 4096 * 85 is perfectly fine
-	v:Mul( min( l, 2048 * 32 ) )
-	dmg:SetDamageForce( v )
 	for wep in pairs( self.tWeapons ) do self:DropWeapon( wep ) end
 	local pAttacker = dmg:GetAttacker()
 	if IsValid( pAttacker ) then
@@ -227,10 +221,32 @@ ENT.ELastHitGroup = HITGROUP_GENERIC
 function ENT:LastHitGroup() return self.ELastHitGroup end
 function ENT:SetLastHitGroup( i ) self.ELastHitGroup = i || HITGROUP_GENERIC end
 
+ENT.bBoneCrunchSounds = true
+
+function ENT:OnCreateRagdoll( pRagdoll )
+	pRagdoll.bBoneCrunchSounds = self.bBoneCrunchSounds
+end
+
 local math_Rand = math.Rand
 local util_Decal = util.Decal
 function ENT:BloodSplatter( dDamage )
 	if ( self.GAME_ERagdollBloodColor || self:GetBloodColor() ) != BLOOD_COLOR_RED then return end
+
+	local bFallDamage = dDamage:IsDamageType( DMG_CRUSH )
+
+	if bFallDamage && self.bBoneCrunchSounds then
+		if dDamage:GetDamage() > 30 then
+			if dDamage:GetDamage() > 50 then
+				self:EmitSound "BoneFleshyBreakQ"
+				self:EmitSound "BoneFleshyCrackQ"
+			else self:EmitSound "BoneFleshyBreak" end
+		elseif dDamage:GetDamage() > 5 then
+			if dDamage:GetDamageForce():Length() > 800 then
+				self:EmitSound "BoneFleshyCrackQ"
+				self:EmitSound "BoneFleshyCrackQ"
+			else self:EmitSound "BoneFleshyCrack" end
+		end
+	end
 
 	local flBlood = self:GetNW2Float( "GAME_flBlood", 1 )
 	// Do not do this. IRL bodies are messy and can almost never be fully drained.
@@ -265,7 +281,7 @@ function ENT:BloodSplatter( dDamage )
 
 	local flHolyShitMultiplier, flMaxHealth, flSpread
 
-	if dDamage:IsDamageType( DMG_CRUSH ) then
+	if bFallDamage then
 		flSpread = .75
 		flHolyShitMultiplier = 2 + flBlood
 		flMaxHealth = ( self.GAME_flOldMaxHealth || self:GetMaxHealth() ) * .5
@@ -280,26 +296,26 @@ function ENT:BloodSplatter( dDamage )
 	local vPosition = dDamage:GetDamagePosition()
 	local aAim = vForce:Angle()
 
-	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 4 ) * math.Rand( 1, 2 ) * flHolyShitMultiplier
+	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 1, 4 ) * math_Rand( 1, 2 ) * flHolyShitMultiplier
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math_Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition + ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math_Rand( .5, 1 ), self )
 		end
 	end
 
 	//	flForce = flForce * .5
-	//	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 4 ) * math.Rand( 1, 2 ) * flHolyShitMultiplier
+	//	local f = math.Clamp( dDamage:GetDamage() / flMaxHealth, 0, 4 ) * math_Rand( 1, 2 ) * flHolyShitMultiplier
 	if f < 1 then
 		if math_Rand( 0, 1 / f ) <= 1 then
-			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math_Rand( .5, 1 ), self )
 		end
 	else
 		for i = 0, f do
-			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math.Rand( .5, 1 ), self )
+			util_Decal( "Blood", vPosition, vPosition - ( aAim:Forward() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * flSpread * aAim:Right() + ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2 * aAim:Up() ):GetNormalized() * flForce * math_Rand( .5, 1 ), self )
 		end
 	end
 end
@@ -308,14 +324,25 @@ local math_max = math.max
 
 function ENT:OnTakeDamage( dDamage )
 	local MyTable = CEntity_GetTable( self )
+
+	// To prevent crazy physics
+	local v = dDamage:GetDamageForce()
+	local l = v:Length()
+	v:Normalize()
+	v:Mul( min( l, 2048 * 32 ) )
+	dDamage:SetDamageForce( v )
+
 	hook.Run( "ScalePlayerDamage", self, MyTable.ELastHitGroup, dDamage )
 	self:SetNW2Float( "GAME_flBleeding", self:GetNW2Float( "GAME_flBleeding", 0 ) +
 	dDamage:GetDamage() / ( math_max( self:Health(), self:GetMaxHealth() ) * 112 ) )
+
 	local pPhys = self:GetPhysicsObject()
 	if IsValid( pPhys ) then AddVelocity( self, dDamage:GetDamageForce() / pPhys:GetMass() ) end
+
 	MyTable.ELastHitGroup = HITGROUP_GENERIC
 	MyTable.BloodSplatter( self, dDamage )
 	MyTable.bHoldFire = nil
+
 	self:SetNW2Float( "GAME_flBleeding", math.min( self.GAME_flMaxBleedingPerHit || MAX_BLEEDING_PER_HIT, self:GetNW2Float( "GAME_flBleeding", 0 ) + dDamage:GetDamage() / ( self:GetMaxHealth() * 112 ) ) )
 end
 
@@ -442,8 +469,13 @@ end
 local FL_OBJECT = FL_OBJECT
 function ENT:Initialize()
 	self:AddFlags( FL_OBJECT )
+
 	__ACTOR_LIST__[ self ] = true
+
 	self:SetNPCClass( self:GetNPCClass() ) // Required for ally searches to work
+
+	self.m_vLastPos = self:GetPos()
+
 	self:AddCallback( "PhysicsCollide", function( self, Data )
 		local ent = Data.HitEntity
 		if !IsValid( ent ) then return end
@@ -505,7 +537,7 @@ ENT.flAimStiffness = 64
 ENT.flAimDamping = -8
 
 ENT.flBodyStiffness = 14
-ENT.flBodyDamping = -12
+ENT.flBodyDamping = -8
 
 ENT.m_flLastHandleTurningCall = 0
 
@@ -579,8 +611,10 @@ function ENT:HandleTurning( MyTable )
 
 	v = CEntity_GetPos( self ) + Angle( 0, Angles[ 2 ] + MyTable.flYawVelocity, 0 ):Forward() * 128
 
-	local fFaceTowards = pLocomotion.FaceTowards
-	for _ = 1, 8 do fFaceTowards( pLocomotion, v ) end
+	pLocomotion.FaceTowards( pLocomotion, v )
+
+	// Prevent ANYTHING (yes, anything, including path follows) else from telling us where to face like a nosy lil bitch lol
+	pLocomotion:SetMaxYawRate( 0 )
 
 	return flFrameTime
 end
@@ -588,7 +622,13 @@ end
 ENT.flSuppressionRecoverTime = 0
 ENT.flCombatStateSuppressionRecoverTime = 0
 
+ENT.m_vManualVelocity = Vector()
+
 local Lerp = Lerp
+
+local CVector = FindMetaTable "Vector"
+local CVector_Sub = CVector.Sub
+local CVector_Div = CVector.Div
 
 ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
@@ -600,8 +640,43 @@ function ENT:RunBehaviour( MyTable )
 
 			MyTable.ResetGravity( self )
 
+			local vMyPos = CEntity_GetPos( self )
+			local vVelocity = Vector( vMyPos )
+			local vLast = MyTable.m_vLastPos
+			if vLast then
+				CVector_Sub( vVelocity, vLast )
+				CVector_Div( vVelocity, flFrameTime )
+			end
+			MyTable.m_vLastPos = vMyPos
+			MyTable.m_vManualVelocity = vVelocity
+
 			MyTable.m_flLastRunBehaviourCall = flNow
 			MyTable.m_flFrameTime = flFrameTime
+
+			local pController = MyTable.GAME_pController
+			if IsValid( pController ) then
+				local fCallMeInRunBehaviour = MyTable.fCallMeInRunBehaviour
+				if fCallMeInRunBehaviour && fCallMeInRunBehaviour( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
+
+				MyTable.CalcCombatState( self, MyTable )
+
+				if CurTime() > MyTable.flSuppressionRecoverTime then
+					MyTable.GAME_flSuppression = Lerp( FRILerpRate( 2, flFrameTime ), MyTable.GAME_flSuppression, 0 )
+				end
+
+				if CurTime() > MyTable.flCombatStateSuppressionRecoverTime then
+					MyTable.flCombatStateSuppression = Lerp( FRILerpRate( .1, flFrameTime ), MyTable.flCombatStateSuppression, 0 )
+				end
+
+				MyTable.HandleTurning( self, MyTable )
+
+				MyTable.HandleControl( self, MyTable, pController )
+
+				MyTable.AnimationSystemTick( self, MyTable )
+
+				coroutine_yield()
+				continue
+			end
 
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
 

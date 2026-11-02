@@ -108,7 +108,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 			return true
 		end
 
-		coroutine.wait( math.min( 2, self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) )
+		coroutine.wait( math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) ^ 2 ) )
 
 		if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
 			pData.bStartedThread = nil
@@ -119,7 +119,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 
 		MyTable.ComputePath( self, pPath, vGoal )
 
-		coroutine.wait( math.min( 2, pPath:GetLength() / 8192 ) )
+		coroutine.wait( math.min( 1, ( pPath:GetLength() / 8192 ) ^ 2 ) )
 
 		pData.bStartedThread = nil
 		return true
@@ -133,7 +133,7 @@ function ENT:ManageFlankPathLockThisCoroutine( pPath, pEnemy, pSchedule, MyTable
 		return true
 	end
 
-	coroutine.wait( math.min( 3, self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) )
+	coroutine.wait( math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) ^ 2 ) )
 
 	if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != pSchedule then
 		return true
@@ -146,7 +146,7 @@ function ENT:ManageFlankPathLockThisCoroutine( pPath, pEnemy, pSchedule, MyTable
 
 	MyTable.ComputePath( self, pPath, vGoal )
 
-	coroutine.wait( math.min( 3, pPath:GetLength() / 8192 ) )
+	coroutine.wait( math.min( 1, ( pPath:GetLength() / 8192 ) ^ 2 ) )
 end
 
 // This is for your custom functions. Why is it called Internal, then?
@@ -203,7 +203,7 @@ local developer = GetConVar "developer"
 ENT.flNavigationAvoidTime = 0
 ENT.flJumpedTime = 0
 
-function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
+function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid )
 	local pLocomotion = self.loco
 
 	if developer:GetBool() then pPath:Draw() end
@@ -244,6 +244,8 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 		end
 	end
 
+	if bNoAvoid then pPath:Update( self ) return end
+
 	local aVelocity = pGoal.forward:Angle()
 
 	tFilter = tFilter || { self }
@@ -260,7 +262,10 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride )
 		filter = tFilter
 	}
 
-	if trHull.Hit && GetVelocity( self ):Length() > self.flWalkSpeed * .8 then
+	// TODO: Perhaps add a better in-base version of measuring velocity
+	// using current pos, last pos and m_flFrameTime
+	local f = self.flWalkSpeed * .5
+	if trHull.Hit && GetVelocity( self ):LengthSqr() <= f * f then
 		local b
 		if pNextGoal && ( pGoal.type == 2 || pGoal.type == 3 ) then b = true end
 
@@ -322,6 +327,8 @@ end
 
 function ENT:HandleStuck() self.loco:ClearStuck() end
 
+ENT.flMyJumpiness = 3
+
 // TODO: The funcs below should clamp the velocity so we can't move farther than flMaxJumpHeight * 3,
 // plus the IsInterceptJumpLegal functions should calculate the real intercept position instead of
 // just measuring the distance to the target itself.
@@ -335,7 +342,7 @@ function ENT:IsInterceptJumpLegal( pTarget, flJumpHeight )
 
 	flJumpHeight = flJumpHeight || self.flJumpHeight
 
-	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * 3
+	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * self.flMyJumpiness
 	return self:GetPos():DistToSqr( pTarget:GetPos() + pTarget:OBBCenter() ) <= f * f && self:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
 end
 
@@ -345,7 +352,7 @@ function ENT:IsInterceptJumpLegalShort( pTarget, flJumpHeight )
 
 	flJumpHeight = flJumpHeight || self.flJumpHeight
 
-	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * .5
+	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * self.flMyJumpiness
 	return self:GetPos():DistToSqr( pTarget:GetPos() + pTarget:OBBCenter() ) <= f * f && self:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
 end
 

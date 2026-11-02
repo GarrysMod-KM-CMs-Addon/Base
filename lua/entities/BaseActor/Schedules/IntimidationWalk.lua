@@ -11,7 +11,12 @@ RegisterSchedule( "IntimidationWalk", { Execute = function( self, pSchedule, MyT
 
 	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
 
-	local f = self:BoundingRadius()
+	local f
+	local fGetStompDamageRadius = MyTable.GetStompDamageRadius
+	if fGetStompDamageRadius then
+		f = fGetStompDamageRadius( self, MyTable ) * 1.25
+	end
+	f = f || self:BoundingRadius()
 	f = f * f
 	local v = self:GetPos()
 	if pEnemy.__ACTOR_BULLSEYE__ && v:DistToSqr( pEnemy:NearestPoint( v ) ) <= f && ( pEnemy == pTrueEnemy || pTrueEnemy:NearestPoint( pEnemy:GetPos() ):DistToSqr( pEnemy:GetPos() ) > f ) then
@@ -35,7 +40,12 @@ RegisterSchedule( "IntimidationWalkDramaticTurn", { Execute = function( self, pS
 
 	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
 
-	local f = self:BoundingRadius()
+	local f
+	local fGetStompDamageRadius = MyTable.GetStompDamageRadius
+	if fGetStompDamageRadius then
+		f = fGetStompDamageRadius( self, MyTable ) * 1.25
+	end
+	f = f || self:BoundingRadius()
 	f = f * f
 	local v = self:GetPos()
 	if pEnemy.__ACTOR_BULLSEYE__ && v:DistToSqr( pEnemy:NearestPoint( v ) ) <= f && ( pEnemy == pTrueEnemy || pTrueEnemy:NearestPoint( pEnemy:GetPos() ):DistToSqr( pEnemy:GetPos() ) > f ) then
@@ -101,14 +111,18 @@ RegisterSchedule( "IntimidationWalkInternal", { Execute = function( self, pSched
 
 	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
 
-	local f = self:BoundingRadius()
+	local f
+	local fGetStompDamageRadius = MyTable.GetStompDamageRadius
+	if fGetStompDamageRadius then
+		f = fGetStompDamageRadius( self, MyTable ) * 1.25
+	end
+	f = f || self:BoundingRadius()
 	f = f * f
 	local v = self:GetPos()
 	if pEnemy.__ACTOR_BULLSEYE__ && v:DistToSqr( pEnemy:NearestPoint( v ) ) <= f && ( pEnemy == pTrueEnemy || pTrueEnemy:NearestPoint( pEnemy:GetPos() ):DistToSqr( pEnemy:GetPos() ) > f ) then
 		self:ReportPositionAsClear( pEnemy:GetPos() )
 		return
 	end
-
 	if !pSchedule.m_bInitialized then
 		pSchedule.flLeaveTime = CurTime() + math.random() * 12
 

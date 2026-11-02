@@ -29,7 +29,7 @@ function ENT:PeekInHorizontal()
 		MyTable.ComputePath( self, pPath, vPeek, nil, 1 )
 
 		local f = MyTable.vHullMaxs[ 2 ] * .25
-		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f, true )
 
 		if self:GetPos():DistToSqr( vPeek ) <= ( f * f ) then return true end
 	end
@@ -47,7 +47,7 @@ function ENT:PeekOutHorizontal()
 		MyTable.ComputePath( self, pPath, vCover, nil, 1 )
 
 		local f = MyTable.vHullMaxs[ 2 ] * .25
-		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand, nil, nil, f, true )
 
 		if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
 	end
@@ -77,7 +77,7 @@ function ENT:PeekPose( MyTable, vCover, vPeek, flStand ) MyTable.Stand( self, fl
 function ENT:PeekVerticalPose( MyTable ) MyTable.Stand( self, 1 ) end
 
 function ENT:GetMaxLateralPeekDistSqr( MyTable )
-	local f = self:OBBMaxs()[ 2 ] * 5
+	local f = self:OBBMaxs()[ 2 ] / HULL_HUMAN_MAXS[ 2 ] * 80
 	return f * f
 end
 
@@ -100,8 +100,14 @@ RegisterSchedule( "PeekIn", {
 		if !IsValid( pEnemy ) then return true end
 		local pEnemy, pTrueEnemy = MyTable.SetupEnemy( self, pEnemy, MyTable )
 
-		if !pSchedule.bHasWarned then
-			pSchedule.bHasWarned = true
+		if !pSchedule.m_bInitialized then
+			pSchedule.m_bInitialized = true
+
+			if math.random( 2 ) == 1 then
+				pSchedule.bTaunted = true
+				local fAttackingBulletTaunt = MyTable.DLG_AttackingBulletTaunt
+				if fAttackingBulletTaunt then fAttackingBulletTaunt( self, MyTable, pEnemy, pTrueEnemy ) end
+			end
 
 			if pEnemy != pTrueEnemy then
 				local fSomeoneIsPeekingMe = pTrueEnemy.GAME_SomeoneIsPeekingMe
@@ -161,6 +167,7 @@ RegisterSchedule( "PeekIn", {
 			pPeek.vSuppress = pSchedule.vSuppress
 			pPeek.vPeek = vPeek
 			pPeek.bDuck = pSchedule.bDuck
+			pPeek.bTaunted = pSchedule.bTaunted
 		end
 	end
 } )
@@ -236,6 +243,14 @@ RegisterSchedule( "Peek", {
 		MyTable.vActualCover = MyTable.vCover
 
 		if !MyTable.bHoldFire && CurTime() > ( MyTable.flLastEnemy + MyTable.flHoldFireTime ) then MyTable.DLG_HoldFire( self, MyTable ) end
+
+		if !pSchedule.bTaunted then
+			if math.random( 2 ) == 1 then
+				local fAttackingBulletTaunt = MyTable.DLG_AttackingBulletTaunt
+				if fAttackingBulletTaunt then fAttackingBulletTaunt( self, MyTable, pEnemy, pTrueEnemy ) end
+			end
+			pSchedule.bTaunted = true
+		end
 
 		local tCover = MyTable.pCover
 

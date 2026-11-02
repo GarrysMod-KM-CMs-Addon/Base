@@ -124,7 +124,7 @@ function ENT:TryLineOfSightAdvanceSearchIfHaventMovedForTooLong( pSchedule, MyTa
 			vDirection:Normalize()
 
 			local vOff = pCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-			vOff = vOff * vMaxs[ 1 ] * 1.4
+			vOff = vOff * vMaxs[ 1 ] * 1.5
 
 			for flCurrent = flStart, flEnd, flStep do
 				local vCover = vStart + vDirection * flCurrent + vOff

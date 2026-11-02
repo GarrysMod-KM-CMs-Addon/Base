@@ -69,4 +69,7 @@ function ENT:Initialize()
 	BaseClass.Initialize( self )
 end
 
-function ENT:OnCreateRagdoll( pRagdoll ) pRagdoll:EmitSound "CombineSoldierDeath" end
+function ENT:OnCreateRagdoll( pRagdoll )
+	pRagdoll:EmitSound "CombineSoldierDeath"
+	BaseClass.OnCreateRagdoll( self, pRagdoll )
+end

@@ -1,4 +1,9 @@
 RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule, MyTable )
+	if MyTable.bSkater then
+		MyTable.SetSchedule( self, "WeaponsPlatformSkateMelee", MyTable )
+		return
+	end
+
 	MyTable.GekkoChirpControllerCombat( self, MyTable )
 
 	if table.IsEmpty( MyTable.tEnemies ) then return true end
@@ -8,7 +13,12 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
 
-	local f = self:BoundingRadius()
+	local f
+	local fGetStompDamageRadius = MyTable.GetStompDamageRadius
+	if fGetStompDamageRadius then
+		f = fGetStompDamageRadius( self, MyTable ) * 1.25
+	end
+	f = f || self:BoundingRadius()
 	f = f * f
 	local v = self:GetPos()
 	if pEnemy.__ACTOR_BULLSEYE__ && v:DistToSqr( pEnemy:NearestPoint( v ) ) <= f && ( pEnemy == pTrueEnemy || pTrueEnemy:NearestPoint( pEnemy:GetPos() ):DistToSqr( pEnemy:GetPos() ) > f ) then
@@ -24,13 +34,18 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	MyTable.ManageFlankPath( self, pEnemyPath, pEnemy, pSchedule, MyTable )
 
-	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flTopSpeed * ( CurTime() <= MyTable.flSpeedUpAnimationsTime && .75 || 1 ), _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ) )
+	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flTopSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ) )
 
 	local pGoal = pEnemyPath:GetCurrentGoal()
 	if pGoal then MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle() end
 
 	if !pSchedule.m_bInitialized then
 		pSchedule.bGunningTurn = math.random( 2 ) == 1
+
+		// Try to (Idk if this fixes it) avoid the bug where we land
+		// and immediately try to taunt/kick/etc, causing us to
+		// interrupt our landing animation
+		pSchedule.flWaitTime = CurTime() + .1
 
 		pSchedule.m_bInitialized = true
 	end
@@ -56,7 +71,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		end
 	end
 
-	if !self:IsOnGround() || CurTime() <= ( pSchedule.flPerformingJump || 0 ) then return end
+	if !self:IsOnGround() || CurTime() <= ( pSchedule.flPerformingJump || 0 ) || CurTime() <= pSchedule.flWaitTime then return end
 
 	local EDefense, flOptional = MyTable.HandleDefense( self, MyTable )
 	if EDefense >= DEF_NO_ACTION_NEEDED then

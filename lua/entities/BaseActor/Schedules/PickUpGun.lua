@@ -1,5 +1,3 @@
-ENT.tPreScheduleResetVariables.pTargetWeapon = false
-
 RegisterSchedule( "PickUpGun", { Execute = function( self, pSchedule, MyTable )
 	if !table.IsEmpty( MyTable.tEnemies ) then return false end
 
@@ -17,8 +15,6 @@ RegisterSchedule( "PickUpGun", { Execute = function( self, pSchedule, MyTable )
 	if !IsValid( pWeapon ) then return false end
 
 	if IsValid( pWeapon:GetOwner() ) || IsValid( pWeapon:GetParent() ) then return false end
-
-	MyTable.pTargetWeapon = pWeapon
 
 	local v = self:GetShootPos()
 	local f = MyTable.GAME_flReach

@@ -116,7 +116,13 @@ function ENT:FindAlarm( MyTable )
 			local f = ent.flCoolDown
 			if CurTime() <= f then continue end
 			local b
-			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if tAllies then
+				for pAlly in pairs( tAllies ) do
+					if !IsValid( pAlly ) || pAlly == self then continue end
+					local pSchedule = pAlly.Schedule
+					if pSchedule && pSchedule.pAlarm == pAlarm then b = true break end
+				end
+			end
 			if b then continue end
 			pAlarm, flAlarm = ent, d
 		end
@@ -131,7 +137,13 @@ function ENT:FindAlarm( MyTable )
 			local f = ent.flCoolDown
 			if f && CurTime() <= f then continue end
 			local b
-			if tAllies then for ent in pairs( tAllies ) do if ent != self && IsValid( ent ) && ent.pAlarm == pAlarm then b = true break end end end
+			if tAllies then
+				for pAlly in pairs( tAllies ) do
+					if !IsValid( pAlly ) || pAlly == self then continue end
+					local pSchedule = pAlly.Schedule
+					if pSchedule && pSchedule.pAlarm == pAlarm then b = true break end
+				end
+			end
 			if b then continue end
 			pAlarm, flAlarm = ent, d
 		end
@@ -333,7 +345,7 @@ RegisterSchedule( "Cover", { Execute = function( self, pSchedule, MyTable )
 	MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed, flStand )
 
 	if LevelOfDetail( pSchedule, "flNextCheck" ) then
-		local f = self:OBBMaxs()[ 2 ] * .5
+		local f = self:OBBMaxs()[ 1 ] * .75
 		if self:GetPos():DistToSqr( vCover ) > ( f * f ) then
 			MyTable.vCover = nil
 			MyTable.pCover = nil

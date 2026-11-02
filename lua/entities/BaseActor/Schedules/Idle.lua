@@ -43,7 +43,13 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 					local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
 					if d >= flAlarm then continue end
 					local b
-					if tAllies then for ent in pairs( tAllies ) do if ent != self && ent.pAlarm == pAlarm then b = true break end end end
+					if tAllies then
+						for pAlly in pairs( tAllies ) do
+							if !IsValid( pAlly ) || pAlly == self then continue end
+							local pSchedule = pAlly.Schedule
+							if pSchedule && pSchedule.pAlarm == pAlarm then b = true break end
+						end
+					end
 					if b then continue end
 					pAlarm, flAlarm = ent, d
 				end
@@ -63,7 +69,13 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 					local d = ent:NearestPoint( vPos ):DistToSqr( vPos )
 					if d >= flAlarm || Either( ent.flAudibleDistSqr == 0, self:Visible( ent ), d >= ent.flAudibleDistSqr ) then continue end
 					local b
-					if tAllies then for ent in pairs( tAllies ) do if ent != self && ent.pAlarm == pAlarm then b = true break end end end
+					if tAllies then
+						for pAlly in pairs( tAllies ) do
+							if !IsValid( pAlly ) || pAlly == self then continue end
+							local pSchedule = pAlly.Schedule
+							if pSchedule && pSchedule.pAlarm == pAlarm then b = true break end
+						end
+					end
 					if b then continue end
 					pAlarm, flAlarm = ent, d
 				end

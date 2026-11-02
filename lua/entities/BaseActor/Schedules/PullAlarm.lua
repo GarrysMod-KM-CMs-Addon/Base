@@ -1,8 +1,5 @@
 // PULL DAT GAH DAM THING!!!
 
-// The alarm we are trying to pull
-ENT.tPreScheduleResetVariables.pAlarm = false
-
 RegisterSchedule( "PullAlarm", { Execute = function( self, sched, MyTable )
 	local pEnemy = MyTable.Enemy
 	local bEnemyValid = IsValid( pEnemy )
@@ -38,13 +35,12 @@ RegisterSchedule( "PullAlarm", { Execute = function( self, sched, MyTable )
 		else pAlarm:TurnOn( self ) end
 		return true
 	else
-		MyTable.pAlarm = sched.pAlarm
-
 		// TODO: This is a gross oversimplification.
 		// Actors should be able to suppress too.
 		// Original old suppression code is bullshit.
 		// But I am too lazy to rewrite it.
 		// So yeah. Shit.
+		// Also, I'm stupid and this should probably get lightweight suppression target update lol.
 		local bShoot
 
 		local v = pEnemy:GetPos() + pEnemy:OBBCenter()

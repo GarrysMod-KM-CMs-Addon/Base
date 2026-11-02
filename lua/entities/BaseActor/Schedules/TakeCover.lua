@@ -242,7 +242,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 						vDirection:Normalize()
 	
 						local vOff = tCover.bRight && vDirection:Angle():Right() || -vDirection:Angle():Right()
-						vOff = vOff * vMaxs[ 1 ] * 1.4
+						vOff = vOff * vMaxs[ 1 ] * 1.5
 
 						for flCurrent = flStart, flEnd, flStep do
 							local vCover = vStart + vDirection * flCurrent + vOff
@@ -300,7 +300,7 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 		return
 	end
 
-	local f = self:OBBMaxs()[ 1 ] * ( 1 / 3 )
+	local f = self:OBBMaxs()[ 1 ] * .5
 	if self:GetPos():DistToSqr( vCover ) <= ( f * f ) then return true end
 
 	local iClip = MyTable.GetWeaponClipPrimary( self, MyTable )
@@ -318,6 +318,6 @@ RegisterSchedule( "TakeCover", { Execute = function( self, pSchedule, MyTable )
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
 
-		MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 2 ] * .3 )
+		MyTable.MoveAlongPathToCover( self, pPath, nil, self:OBBMaxs()[ 1 ] * .5 )
 	end
 end } )

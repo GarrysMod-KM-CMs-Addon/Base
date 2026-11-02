@@ -23,7 +23,7 @@ local pairs = pairs
 local CurTime = CurTime
 local insert = table.insert
 local table_IsEmpty = table.IsEmpty
-local table_Random = table.Random
+local random = math.random
 
 function IsActiveDefenseAction( EAction )
 	return EAction == DEF_DODGING
@@ -38,6 +38,8 @@ local function TraverseRadiusDodgeActions( self, MyTable, pEnemy, Dodge, flRadiu
 		end
 
 		if !( Action.HasDodgePart && Action.HasDodgePart( self ) ) then continue end
+
+		// TODO: Validate if we can perform it lol
 
 		// TODO: If we can dodge at a slower speed, randomly do it faster/slower,
 		// as long as it's still available and won't get us fucked
@@ -68,7 +70,7 @@ local function AttemptRadiusDodge( self, MyTable, pEnemy, Dodge, flRadius, vRadi
 
 	if table_IsEmpty( tValidActions ) then return DEF_FUCK end
 
-	local tAction = table_Random( tValidActions )
+	local tAction = tValidActions[ random( 1, #tValidActions ) ]
 	if tAction then
 		tAction[ 1 ].Perform( self, MyTable, tAction[ 2 ] )
 		return DEF_DODGING
