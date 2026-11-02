@@ -68,13 +68,15 @@ local PISTOL_REVOLVER_ETC = { Pistol = true, Revolver = true, Melee = true, Slam
 
 function SWEP:TranslateAttackActivity( EIntendedActivity, EActivity )
 	if EIntendedActivity >= 1011/*ACT_MP_ATTACK_STAND_PRIMARYFIRE*/ && EIntendedActivity <= 1143/*ACT_MP_ATTACK_AIRWALK_GRENADE_SECONDARY*/ then
-		local sHoldTypeShoot = self.sHoldTypeShoot
-		if sHoldTypeShoot then
-			local sHoldType = self:GetHoldType()
-			self:SetWeaponHoldType( sHoldTypeShoot )
-			EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
-			self:SetWeaponHoldType( sHoldType )
-			return EActivity
+		if !( EIntendedActivity >= ACT_MP_RELOAD_STAND && EIntendedActivity <= ACT_MP_RELOAD_AIRWALK_END ) then
+			local sHoldTypeShoot = self.sHoldTypeShoot
+			if sHoldTypeShoot then
+				local sHoldType = self:GetHoldType()
+				self:SetWeaponHoldType( sHoldTypeShoot )
+				EActivity = BaseClass.TranslateActivity( self, EIntendedActivity )
+				self:SetWeaponHoldType( sHoldType )
+				return EActivity
+			end
 		end
 
 		return EActivity
@@ -478,7 +480,6 @@ SWEP.flSidewaysRecoilMax = 1
 
 local type = type
 
-//	SWEP.m_flFlipMyKick = 0
 function SWEP:DoRecoil( MyTable )
 	if CLIENT then return end
 	local pOwner = self:GetOwner()

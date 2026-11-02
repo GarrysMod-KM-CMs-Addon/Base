@@ -2,8 +2,6 @@
 // Why? Simple. I don't see a reason too. No one really needs what is defined here,
 // as nothing major actually IS defined here. If you think otherwise, feel free to tell me.
 
-require "DirectorShared"
-
 local min = math.min
 local exp = math.exp
 
@@ -17,7 +15,6 @@ local Vector = Vector
 local util_Decal = util.Decal
 local math_Rand = math.Rand
 local LerpVector = LerpVector
-local VECTOR_DOWN = Vector( 0, 0, -1 )
 local math_abs = math.abs
 local math_AngleDifference = math.AngleDifference
 local math_Approach = math.Approach
@@ -161,7 +158,7 @@ hook.Add( "Tick", "Director", function()
 					ply:EmitSound "Bleed"
 					local v = ply:GetPos()
 					local f = ply:BoundingRadius()
-					util_Decal( "Blood", v, v + LerpVector( math_Rand( 0, .25 ), VECTOR_DOWN, VectorRand():GetNormalized() ):GetNormalized() * f * 12, ply )
+					util_Decal( "Blood", v, v + VectorRand():GetNormalized() * f * 12, ply )
 					v:Add( ply:OBBCenter() )
 					f = f * 4
 					for i = 1, math_random( 3 ) do
@@ -180,7 +177,7 @@ hook.Add( "Tick", "Director", function()
 			ply:SetNW2Float( "GAME_flBlood", flBlood )
 			o = o - FrameTime()
 			ply:SetNW2Float( "GAME_flOxygen", math_Clamp(
-				o + ( ply:WaterLevel() >= 3 && 0 || (
+				o + ( ( !ply:GetNW2Bool "GAME_bControlling" && ply:WaterLevel() >= 3 ) && 0 || (
 					( 1 / ( 1 + math_exp( -18 * ( flBlood - .55 ) ) ) ) * // Blood regeneration formula
 					( 1 + CEntity_GetNW2Float( ply, "GAME_flOxygenRegeneration", 2 ) )
 				) * FrameTime() ),
@@ -193,10 +190,12 @@ hook.Add( "Tick", "Director", function()
 			CEntity_SetNW2Float( ply, "GAME_flBleeding", 0 )
 		end
 
-		// TODO: Allow others to change the view offsets
+		// TODO: Allow others to change these?
 		local f = ply:GetModelScale()
-		ply:SetViewOffset( Vector( 0, 0, 60 ) * f )
-		ply:SetViewOffsetDucked( Vector( 0, 0, 38 ) * f )
+		ply:SetViewOffset( Vector( 0, 0, 56 * f ) )
+		ply:SetViewOffsetDucked( Vector( 0, 0, 38 * f ) )
+		ply:SetHull( HULL_HUMAN_MINS, HULL_HUMAN_MAXS )
+		ply:SetHullDuck( HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS )
 
 		ply:SetCanZoom( false )
 

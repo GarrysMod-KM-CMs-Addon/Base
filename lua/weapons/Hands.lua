@@ -33,6 +33,7 @@ local table_Random = table.Random
 local table_insert = table.insert
 
 function SWEP:Initialize()
+	// TODO: Remake this! We can just wait until last phrase, save that count, and get random( 1, last )
 	if CLIENT then
 		local tMessages = {}
 		local iCurrent = 0

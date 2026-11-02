@@ -61,7 +61,7 @@ SWEP.WPN_COVER = WPN_RIFLE
 local WEAPON_SPRINT_RIFLE_DEFAULT = Vector( -2, 4, -2 )
 local WEAPON_SPRINT_RIFLE_DEFAULT_ANGLE = Vector( -10, 30, -30 )
 
-local WEAPON_SPRINT_RIFLEUP_DEFAULT = Vector( 0, 4, -3 )
+local WEAPON_SPRINT_RIFLEUP_DEFAULT = Vector( -3, 4, -3 )
 local WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE = Vector( 2, 35, -10 )
 
 local WEAPON_SPRINT_SNIPER_DEFAULT = Vector( -2, 4, -2 )
@@ -302,8 +302,8 @@ local SPRINT_ANIMATION_VIEWMODEL = {
 
 	[ WPN_RIFLEUP ] = function( MyTable, f, flViewModelSprint )
 		local flBreathe = RealTime() * 18
-		vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT ) + Vector( 0, ( ( math_cos( flBreathe * .5 ) + 1 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
-		vTargetAngle = vTargetAngle + ( ( MyTable.vSprintAngle || WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( ( math_cos( flBreathe * .5 ) + 1 ) * 7.5 ) * f ) ) * flViewModelSprint
+		vTarget = vTarget + ( ( MyTable.vSprint || WEAPON_SPRINT_RIFLEUP_DEFAULT ) + Vector( 0, ( math_cos( flBreathe * .5 ) * 1.25 ) * f, -math_cos( flBreathe ) * f ) ) * flViewModelSprint
+		vTargetAngle = vTargetAngle + ( ( MyTable.vSprintAngle || WEAPON_SPRINT_RIFLEUP_DEFAULT_ANGLE ) + Vector( ( ( math_cos( flBreathe * .5 ) + 1 ) * -2.5 ) * f, ( math_cos( flBreathe * .5 ) * 7.5 ) * f ) ) * flViewModelSprint
 	end,
 
 	[ WPN_SNIPER ] = function( MyTable, f, flViewModelSprint )
@@ -363,7 +363,7 @@ local tApplyRecoil = {
 			flHipRecoilBack = 1.5 * flAimMultiplier
 			flHipRecoilPitchTurn = tAnimation[ 2 ] * .75 * flAimMultiplier
 			flHipRecoilYawTurn = tAnimation[ 3 ] * .75 * flAimMultiplier
-			flHipRecoilRollTurn = Rand( -1, 1 ) * 3 * flAimMultiplier
+			flHipRecoilRollTurn = Rand( -1, 1 ) * .75 * flAimMultiplier
 	
 			flAimingRecoilBack = 2.5 * flAimingFireMul
 			flAimingRecoilPitchTurn = tAnimation[ 2 ] * .05 * flAimingFireMul
@@ -377,23 +377,23 @@ local tApplyRecoil = {
 		flHipRecoilBackLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilBackLerped, flHipRecoilBack )
 	
 		flHipRecoilPitchTurn = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilPitchTurn, 0 )
-		flHipRecoilPitchTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
+		flHipRecoilPitchTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilPitchTurnLerped, flHipRecoilPitchTurn )
 	
 		flHipRecoilYawTurn = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilYawTurn, 0 )
-		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
+		flHipRecoilYawTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilYawTurnLerped, flHipRecoilYawTurn )
 
 		flHipRecoilRollTurn = Lerp( FRILerpRate( .75 / flDelay, flFrameTime ), flHipRecoilRollTurn, 0 )
-		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
+		flHipRecoilRollTurnLerped = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flHipRecoilRollTurnLerped, flHipRecoilRollTurn )
 	
 	
 		flAimingRecoilBack = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilBack, 0 )
-		flAimingRecoilBackLerped = Lerp( FRILerpRate( 2 / flDelay, flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
+		flAimingRecoilBackLerped = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilBackLerped, flAimingRecoilBack )
 	
-		flAimingRecoilPitchTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilPitchTurn, 0 )
-		flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 2 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
+		flAimingRecoilPitchTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilPitchTurn, 0 )
+		flAimingRecoilPitchTurnLerped = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilPitchTurnLerped, flAimingRecoilPitchTurn )
 	
-		flAimingRecoilYawTurn = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
-		flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 2 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
+		flAimingRecoilYawTurn = Lerp( FRILerpRate( 1 / flDelay, flFrameTime ), flAimingRecoilYawTurn, 0 )
+		flAimingRecoilYawTurnLerped = Lerp( FRILerpRate( 1.5 / flDelay, flFrameTime ), flAimingRecoilYawTurnLerped, flAimingRecoilYawTurn )
 
 	
 		pos:Sub( ang:Forward() * ( flAimingRecoilBackLerped + flHipRecoilBackLerped ) )
@@ -575,7 +575,7 @@ local function ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTur
 
 	local flSwayScale = MyTable.flSwayScale
 
-	local flLerpSpeed = FRILerpRate( 3, flFrameTime )
+	local flLerpSpeed = FRILerpRate( 3 * ( CurTime() <= ( ( MyTable.flLastShot + MyTable.Primary_flDelay * 2 ) ) && ( 12 + ( MyTable.flIronsightCloseness || 0 ) ) || 1 ), flFrameTime )
 
 	WEAPON_SWAY[ 1 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 1 ], -flSwayScale, flSwayScale ), 0 )
 	WEAPON_SWAY[ 2 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY[ 2 ], -flSwayScale, flSwayScale ), 0 )

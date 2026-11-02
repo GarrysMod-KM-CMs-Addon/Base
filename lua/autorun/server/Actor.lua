@@ -97,3 +97,37 @@ ACTOR_STATE_PATROL = 0
 ACTOR_STATE_SOFTALERT = 1
 ACTOR_STATE_ALERT = 2
 ACTOR_STATE_COMBAT = 3
+
+function ACTOR_TAKE_CONTROL( pActor, pPlayer )
+	pPlayer:SetNW2Bool( "GAME_bControlling", true )
+	pPlayer:SetNW2Entity( "GAME_pControlling", pActor )
+	pPlayer:SetNoTarget( true )
+	pPlayer:GodEnable()
+	pPlayer:SetMoveType( MOVETYPE_NOCLIP )
+	pPlayer:SetCollisionGroup( COLLISION_GROUP_WORLD )
+	pPlayer:SetNoDraw( true )
+	pActor.GAME_pController = pPlayer
+end
+
+function ACTOR_STOP_CONTROL( pActor, pPlayer )
+	pPlayer:SetNW2Bool "GAME_bControlling"
+	pPlayer:SetNW2Entity "GAME_pControlling"
+	pPlayer:SetNW2Float( "GAME_flBlood", 0 )
+	pPlayer:SetNW2Float( "GAME_flBleeding", 0 )
+	pPlayer:SetNoTarget()
+	pPlayer:GodDisable()
+	pPlayer:SetMoveType( MOVETYPE_WALK )
+	pPlayer:SetCollisionGroup( COLLISION_GROUP_PLAYER )
+	pPlayer:SetNoDraw()
+	pActor.GAME_pController = nil
+end
+
+function ACTOR_STOP_CONTROL_INVALID( pPlayer )
+	pPlayer:SetNW2Bool "GAME_bControlling"
+	pPlayer:SetNW2Entity "GAME_pControlling"
+	pPlayer:SetNoTarget()
+	pPlayer:GodDisable()
+	pPlayer:SetMoveType( MOVETYPE_WALK )
+	pPlayer:SetCollisionGroup( COLLISION_GROUP_PLAYER )
+	pPlayer:SetNoDraw()
+end

@@ -1,11 +1,6 @@
-if SERVER then
-	local player_Iterator = player.Iterator
-	function LocalPlayer()
-		local t, f, i = player_Iterator()
-		local _, p = t( f, i )
-		return p
-	end
-end
+HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 66 )
+HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 40 )
+HULL_HUMAN_DUCK_HIT_MINS, HULL_HUMAN_DUCK_HIT_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 48 )
 
 DMG_RAYLEIGH = DMG_CLUB + DMG_SONIC + DMG_BLAST
 
@@ -57,11 +52,19 @@ if CLIENT then
 	
 		return true
 	end )
+else
+	local player_Iterator = player.Iterator
+	function LocalPlayer()
+		local t, f, i = player_Iterator()
+		local _, p = t( f, i )
+		return p
+	end
 end
 
 // Adding this here so I won't have to write a huge table every time I need this
 function IsBullshitNonSolidEntity( pEntity )
 	if pEntity:GetClass() == "func_lod" then return true end
+	if pEntity:GetCollisionGroup() == COLLISION_GROUP_WORLD then return true end
 end
 
 local ents_Create = ents.Create
@@ -240,21 +243,21 @@ function QuickSlide_Can( ply, t )
 	return !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && !t.CTRL_bCantSlide && CEntity_IsOnGround( ply ) && GetVelocity( ply ):Length() >= ( ply:GetRunSpeed() * .9  )
 end
 
-function CalculateRecoilDampeningSpecial( pPlayer, PlyTable, pWeapon, WeaponTable )
-	local flMultiplier = 2 / 3
+function CalculateRecoilDampeningSpecial( pPlayer, PlyTable, pWeapon )
+	local flMultiplier = 1
 
-	if pPlayer.GetWalkSpeed then flMultiplier = flMultiplier * ( 1 + math.Clamp( GetVelocity( pPlayer ):Length() / pPlayer:GetWalkSpeed() * .25, 0, .25 ) ) end
+	if pPlayer.GetWalkSpeed then flMultiplier = flMultiplier * ( 1 + math.Clamp( ( GetVelocity( pPlayer ):Length() / pPlayer:GetWalkSpeed() ) ^ 2 * 1.25, 0, 1.25 ) ) end
 
 	if pPlayer:IsOnGround() then
 		local f = pPlayer.KeyDown
-		if f && f( pPlayer, IN_ZOOM ) then flMultiplier = flMultiplier * 2 / 3 end
+		if f && f( pPlayer, IN_ZOOM ) then flMultiplier = flMultiplier / 2 end
 	else
 		// Ditto
 		local f = pPlayer.KeyDown
 		if f && f( pPlayer, IN_ZOOM ) then
-			// Nothing
-		else
 			flMultiplier = flMultiplier * 1.5
+		else
+			flMultiplier = flMultiplier * 2
 		end
 	end
 
@@ -295,7 +298,7 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 		end
 	end
 
-	local flDecaySpeedFrameTimed = flRecoil / ( flDelay * CalculateRecoilDampeningSpecial( ply, PlyTable, pActiveWeapon, WeaponTable ) ) ^ 2 * flFrameTime
+	local flDecaySpeedFrameTimed = flRecoil / flDelay ^ 2 * 3 * flFrameTime
 
 	local flRecoilImpulseUp = math_Approach( PlyTable.GAME_flRecoilImpulseUp || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseUp = flRecoilImpulseUp
@@ -303,8 +306,9 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	local flRecoilImpulseRight = math_Approach( PlyTable.GAME_flRecoilImpulseRight || 0, 0, flDecaySpeedFrameTimed )
 	PlyTable.GAME_flRecoilImpulseRight = flRecoilImpulseRight
 
-	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * 2 * flFrameTime
-	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * 2 * flFrameTime
+	local f = CalculateRecoilDampeningSpecial( ply, PlyTable, pActiveWeapon )
+	ang[ 1 ] = ang[ 1 ] - flRecoilImpulseUp * 2.5 * f * flFrameTime
+	ang[ 2 ] = ang[ 2 ] - flRecoilImpulseRight * 2.5 * f * flFrameTime
 
 	if cmd:KeyDown( IN_ZOOM ) || cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then
 		local flBreathe = RealTime() * .5
@@ -314,6 +318,43 @@ hook.Add( "StartCommand", "Improvements", function( ply, cmd )
 	end
 
 	cmd:SetViewAngles( ang )
+
+	if ply:GetNW2Bool "GAME_bControlling" then
+		local pControlling = ply:GetNW2Entity "GAME_pControlling"
+		if IsValid( pControlling ) then
+			local pHands = ply:GetWeapon "Hands"
+			if !IsValid( pHands ) then pHands = ply:GetWeapon "Swim" end
+			if IsValid( pHands ) then cmd:SelectWeapon( pHands ) end
+
+			if SERVER then
+				local fControlOverridePlayerPosition = pControlling.ControlOverridePlayerPosition
+				if fControlOverridePlayerPosition then
+					ply:SetPos( fControlOverridePlayerPosition( pControlling, ply ) )
+				else ply:SetPos( pControlling:GetPos() + pControlling:OBBCenter() ) end
+
+				if cmd:KeyDown( IN_SPEED ) && cmd:KeyDown( IN_WALK ) && cmd:KeyDown( IN_JUMP ) then
+					ACTOR_STOP_CONTROL( pControlling, ply )
+
+					cmd:SetForwardMove( 0 )
+					cmd:SetSideMove( 0 )
+					cmd:ClearButtons()
+
+					return
+				end
+
+				ply.CONTROL_flForwardMove = cmd:GetForwardMove()
+				ply.CONTROL_flSideMove = cmd:GetSideMove()
+				ply.CONTROL_iButtons = cmd:GetButtons()
+
+				cmd:SetForwardMove( 0 )
+				cmd:SetSideMove( 0 )
+				cmd:ClearButtons()
+			end
+		else
+			ACTOR_STOP_CONTROL_INVALID( ply )
+		end
+		return
+	end
 
 	if CLIENT then
 		if cmd:KeyDown( IN_SPEED ) then
@@ -637,11 +678,11 @@ function GetVelocity( ent )
 	if ent:IsPlayer() || ent:IsNPC() then return CEntity_GetVelocity( ent ) else
 		if SERVER && ent:IsNextBot() then
 			local v = EntTable.loco:GetVelocity()
-			if v == vector_origin && EntTable.GAME_vVelocity then
+			if v == vector_origin && EntTable.GAME_vVelocity && CurTime() <= ( EntTable.GAME_flVelocityFixupTime || 0 ) then
 				return Vector( EntTable.GAME_vVelocity )
 			else
 				EntTable.GAME_vVelocity = v
-				EntTable.GAME_flVelocityFixUpTime = CurTime() + .1
+				EntTable.GAME_flVelocityFixupTime = CurTime() + .1
 				return v
 			end
 		end
@@ -745,30 +786,33 @@ function CallHook( pPlayer, pClass, sHook, ... )
 	if fHook then return fHook( pPlayer, ... ) end
 end
 
-local sMap = game.GetMap()
-
-local sFile = "MapShared/" .. sMap .. ".lua"
-if file.Exists( sFile, "LUA" ) then
-	AddCSLuaFile( sFile )
-	include( sFile )
-end
-
-if SERVER then
-	sFile = "MapServer/" .. sMap .. ".lua"
-	if file.Exists( sFile, "LUA" ) then
-		include( sFile )
-	end
-end
-
 // "In Multiplayer this does not return the current map in the CLIENT realm before GM:Initialize."
 if CLIENT then
 	hook.Add( "Initialize", "Improvements", function()
 		hook.Remove( "Initialize", "Improvements" )
 
+		local sMap = game.GetMap()
+
 		sFile = "MapClient/" .. sMap .. ".lua"
+		if file.Exists( sFile, "LUA" ) then include( sFile ) end
+
+		sFile = "MapShared/" .. sMap .. ".lua"
 		if file.Exists( sFile, "LUA" ) then include( sFile ) end
 	end )
 else
+	local sMap = game.GetMap()
+
+	sFile = "MapServer/" .. sMap .. ".lua"
+	if file.Exists( sFile, "LUA" ) then
+		include( sFile )
+	end
+
+	local sFile = "MapShared/" .. sMap .. ".lua"
+	if file.Exists( sFile, "LUA" ) then
+		AddCSLuaFile( sFile )
+		include( sFile )
+	end
+
 	sFile = "MapClient/" .. sMap .. ".lua"
 	if file.Exists( sFile, "LUA" ) then AddCSLuaFile( sFile ) end
 end

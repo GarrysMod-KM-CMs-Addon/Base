@@ -49,7 +49,16 @@ end
 
 local render_GetHDREnabled = render.GetHDREnabled
 local mat_hdr_level = GetConVar "mat_hdr_level"
+
+local bHaltCheck = true
+hook.Add( "Initialize", "Graphics", function()
+	if game.GetMap() != "lobby" then bHaltCheck = nil end
+	hook.Remove( "Initialize", "Graphics" )
+end )
+
 local function DynamicHighDynamicRangeCheck()
+	if bHaltCheck then return end
+
 	if !render_GetHDREnabled() then
 		if mat_hdr_level:GetInt() == 2 then // Fuck
 			if SUPPORTS_HDR then
@@ -62,8 +71,6 @@ local function DynamicHighDynamicRangeCheck()
 	end
 end
 
-DynamicHighDynamicRangeCheck()
-
 /*
 net.Start "EphemeralLight"
 	net.WriteFloat( 1 ) // Brightness
@@ -74,6 +81,8 @@ net.Start "EphemeralLight"
 	net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) net.WriteUInt( 255, 8 ) // R, G, B
 net.Broadcast()
 */
+
+RunConsoleCommand( "mp_show_voice_icons", "0" )
 
 local DynamicLight = DynamicLight
 local net_ReadFloat = net.ReadFloat
@@ -87,7 +96,6 @@ local MASK_VISIBLE_AND_NPCS = MASK_VISIBLE_AND_NPCS
 local LocalPlayer = LocalPlayer
 local EyePos = EyePos
 local EyeVector = EyeVector
-local EyeAngles = EyeAngles
 local IsValid = IsValid
 local math_Clamp = math.Clamp
 local math_Remap = math.Remap
@@ -190,20 +198,6 @@ end )
 
 local cThirdPersonShoulder = CreateClientConVar( "bThirdPersonShoulder", "0", true, nil, "Should thirdperson use the left shoulder?", 0, 1 )
 
-// Similar to util.IsSkyboxVisibleFromPoint
-function UTIL_IsUnderSkybox()
-	local pPlayer = LocalPlayer()
-	return util_TraceLine( {
-		start = EyePos(),
-		endpos = EyePos() + vUpHuge,
-		mask = MASK_VISIBLE_AND_NPCS,
-		filter = function( pEntity )
-			if pEntity == pPlayer || pEntity.__PROJECTILE__ then return false end
-			return true
-		end
-	} ).HitSky
-end
-
 function DrawBlur( flIntensity ) DrawBokehDOF( flIntensity, 0, 0 ) end
 
 local MAX_WATER_BLUR = 6
@@ -218,7 +212,7 @@ local function VectorSum( v ) return math_abs( v[ 1 ] ) + math_abs( v[ 2 ] ) + m
 BREEZE_COLOR = Color( 80, 180, 240 )
 BREEZE_VECTOR_COLOR = BREEZE_COLOR:ToVector()
 
-local ANALYZATION_STEP = 22.5 / 4
+local ANALYZATION_STEP = 30
 
 local mDepthOfField = Material "pp/dof"
 
@@ -264,8 +258,6 @@ local flActualDoFBegin = 0
 
 local flNextSendLuminosity = 0
 
-local TERROR_VECTOR_COLOR = Vector( 1 / 3, 0, 0 )
-
 function RecalculateWaterBlurAmounts()
 	if WATER_BLUR > 1 then WATER_BLUR = 1 end
 
@@ -275,10 +267,33 @@ end
 
 local RecalculateWaterBlurAmounts = RecalculateWaterBlurAmounts
 
+local vTemp = Vector()
+
+local CVector = FindMetaTable "Vector"
+
+local CVector_Set = CVector.Set
+
+local CVector_Mul = CVector.Mul
+local CVector_Add = CVector.Add
+local CVector_Div = CVector.Div
+
+local CAngle_Forward = FindMetaTable( "Angle" ).Forward
+
+local pLocalPlayer
+
+local trRequestAnalyze = {
+	endpos = vTemp,
+	mask = MASK_VISIBLE_AND_NPCS,
+	filter = function( pEntity )
+		if pEntity == pLocalPlayer || pEntity.__PROJECTILE__ then return false end
+		return true
+	end
+}
+
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
-	local self = LocalPlayer()
-	if !IsValid( self ) then return end
+	pLocalPlayer = LocalPlayer()
+	if !IsValid( pLocalPlayer ) then return end
 
 	if RealTime() > flNextSendLuminosity then
 		DynamicHighDynamicRangeCheck() // Do this here for optimization reasons
@@ -286,74 +301,110 @@ hook.Add( "Tick", "Graphics", function()
 		flNextSendLuminosity = RealTime() + math_Rand( .1, .5 )
 	
 		net_Start( "UpdateLuminosity", true )
+
 		local iPasses = 0
-		vColor = Vector()
-		local vPos, aEye, dEye = self:GetPos(), EyeAngles(), EyeVector()
-		vPos:Add( self:OBBCenter() )
+
+		CVector_Set( vColor, vector_origin )
+
+		local vPos, aEye = pLocalPlayer:GetPos(), pLocalPlayer:EyeAngles()
+
+		vPos:Add( pLocalPlayer:OBBCenter() )
+
+		trRequestAnalyze.start = vPos
+
+		local flLen = pLocalPlayer:BoundingRadius() * 1.5
 		for flPitch = 0, 360, 33.75 do
 			for flYaw = 0, 360, 33.75 do
 				iPasses = iPasses + 1
+
 				aEye[ 1 ] = aEye[ 1 ] + flPitch
 				aEye[ 2 ] = aEye[ 2 ] + flYaw
-				local tr = util_TraceLine {
-					start = vPos,
-					endpos = vPos + aEye:Forward() * self:BoundingRadius() * 1.5,
-					mask = MASK_VISIBLE_AND_NPCS,
-					filter = function( pEntity )
-						if pEntity == self || pEntity.__PROJECTILE__ then return false end
-						return true
-					end
-				}
+
+				local vForward = CAngle_Forward( aEye )
+				CVector_Mul( vForward, flLen )
+				CVector_Set( vTemp, vPos )
+				CVector_Add( vTemp, vForward )
+
+				local tr = util_TraceLine( trRequestAnalyze )
+
 				local vHitPos = tr.HitPos
-				local v = render_GetLightColor( vHitPos )
-				v:Add( render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
-				v:Mul( 1.5 )
-				vColor:Add( v )
+				local vLight = render_GetLightColor( vHitPos )
+				CVector_Add( vLight, render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
+				CVector_Mul( vLight, 1.5 )
+				CVector_Add( vColor, vLight )
+
 				aEye[ 1 ] = aEye[ 1 ] - flPitch
 				aEye[ 2 ] = aEye[ 2 ] - flYaw
 			end
 		end
-		vColor:Div( iPasses )
+
+		CVector_Div( vColor, iPasses )
+
 		net_WriteColor( vColor:ToColor(), false )
 		net_SendToServer()
 	end
 	
 	local flFrameTime = RealTime() - flLastTickCall
 	if flFrameTime < .05 then return end // This will be ran 20 FPS MAX
-	
+
 	flLastTickCall = RealTime()
+
 	DOFModeHack( true )
-	vColor = Vector()
-	local iPasses = 0
-	local vEye, aEye, dEye = EyePos(), EyeAngles(), EyeVector()
-	for flPitch = -22.5, 22.5, ANALYZATION_STEP do
-		for flYaw = -22.5, 22.5, ANALYZATION_STEP do
-			iPasses = iPasses + 1
+
+	CVector_Set( vColor, vector_origin )
+
+	local flPasses = 0
+	local vEye, aEye = EyePos(), pLocalPlayer:EyeAngles()
+
+	trRequestAnalyze.start = vEye
+
+	for flPitch = -90, 90, ANALYZATION_STEP do
+		for flYaw = -90, 90, ANALYZATION_STEP do
 			aEye[ 1 ] = aEye[ 1 ] + flPitch
 			aEye[ 2 ] = aEye[ 2 ] + flYaw
-			local tr = util_TraceLine {
-				start = vEye,
-				endpos = vEye + aEye:Forward() * 999999,
-				mask = MASK_VISIBLE_AND_NPCS,
-				filter = self
-			}
+
+			local vForward = CAngle_Forward( aEye )
+			CVector_Mul( vForward, 999999 )
+			CVector_Set( vTemp, vEye )
+			CVector_Add( vTemp, vForward )
+
+			local tr = util_TraceLine( trRequestAnalyze )
+
 			local vHitPos = tr.HitPos
-			local v = render_GetLightColor( vHitPos )
-			v:Add( render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
-			v:Mul( 1.5 )
-			vColor:Add( v )
+			local vLight = render_GetLightColor( vHitPos )
+			CVector_Add( vLight, render_ComputeDynamicLighting( vHitPos, tr.HitNormal ) )
+
+			// Leaving this here in case anyone needs it
+			// Do not uncomment this unless testing, as it produces a comical load lol
+			//	debugoverlay.Cross( tr.HitPos, 14, 1, ( vLight * 3 ):ToColor(), true )
+
+			flPasses = flPasses + ( 1 / 3 ) + VectorSum( vLight ) * ( 2 / 3 )
+
+			CVector_Add( vColor, vLight )
+
 			aEye[ 1 ] = aEye[ 1 ] - flPitch
 			aEye[ 2 ] = aEye[ 2 ] - flYaw
 		end
 	end
-	vColor:Div( iPasses )
+
+	CVector_Div( vColor, flPasses )
+
+	local vTargetColor = LerpVector( ( VectorSum( vColor ) / 3 ) ^ 2, vColor, BREEZE_VECTOR_COLOR )
+	flFogR = math_Approach( flFogR, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
+	flFogG = math_Approach( flFogG, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
+	flFogB = math_Approach( flFogB, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
+
+	vColor[ 1 ] = vColor[ 1 ] ^ .5
+	vColor[ 2 ] = vColor[ 2 ] ^ .5
+	vColor[ 3 ] = vColor[ 3 ] ^ .5
+
 	flColorSum = VectorSum( vColor )
 
-	local flDeath = math_Clamp( self:Health() / self:GetMaxHealth(), 0, 1 ) ^ 1.5
+	local flDeath = math_Clamp( pLocalPlayer:Health() / pLocalPlayer:GetMaxHealth(), 0, 1 ) ^ 1.5
 	tDrawColorModify[ "$pp_colour_colour" ] = flDeath
 	tDrawColorModify[ "$pp_colour_contrast" ] = 1
 
-	local flOxygen, flOxygenLimit = self:GetNW2Float( "GAME_flOxygen", -1 ), self:GetNW2Float( "GAME_flOxygenLimit", -1 )
+	local flOxygen, flOxygenLimit = pLocalPlayer:GetNW2Float( "GAME_flOxygen", -1 ), pLocalPlayer:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .5
 		if flOxygen <= f then
@@ -361,38 +412,43 @@ hook.Add( "Tick", "Graphics", function()
 		end
 	end
 
-	local f = math_Clamp( math_Remap( self:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - self:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
+	local f = math_Clamp( math_Remap( pLocalPlayer:GetNW2Float( "GAME_flBlood", 0 ), .2, 1, 0, 1 ) - pLocalPlayer:GetNW2Float( "GAME_flBleeding", 0 ) * 2, 0, 1 )
 	if f < 1 then
 		bBleedingBlur = true
 		flBleedingBlur = math_Clamp( math_Remap( f, 1, 0, 0, 4 ), 0, 4 ) * f
 		flBleedingMotionBlurAdd = math_Clamp( math_Remap( f, 1, 0, .5, .05 ), .05, .5 ) / f
 		flBleedingMotionBlurDraw = math_Clamp( 1 - f, 0, 1 ) * f
 	else bBleedingBlur = nil end
-	if self:WaterLevel() >= 3 then
+	if pLocalPlayer:WaterLevel() >= 3 then
 		WATER_BLUR = math_Approach( WATER_BLUR || 0, 1, WATER_BLUR_CHANGE_SPEED_TO * flFrameTime )
 	else WATER_BLUR = math_Approach( WATER_BLUR || 0, 0, WATER_BLUR_CHANGE_SPEED_FROM * flFrameTime ) end
 	bWaterBlur = WATER_BLUR > 0
 	RecalculateWaterBlurAmounts()
-	local vTargetColor = LerpVector( ( flColorSum / 3 ) ^ 2, vColor, BREEZE_VECTOR_COLOR )
-	flFogDensityMul = math_Approach( flFogDensityMul || .1, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .25, .5 ), flFrameTime )
-	flColor = math_Clamp( flColorSum, 0, 1 )
-	flFogR = math_Approach( flFogR || 255, vTargetColor[ 1 ] * 255, 32 * flFrameTime )
-	flFogG = math_Approach( flFogG || 255, vTargetColor[ 2 ] * 255, 32 * flFrameTime )
-	flFogB = math_Approach( flFogB || 255, vTargetColor[ 3 ] * 255, 32 * flFrameTime )
-	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, UTIL_IsUnderSkybox() && math_Remap( flColor, 0, 1, 512, 12288 ) || math_Remap( flColor, 0, 1, 512, 8192 ) )
+
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
-	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, 1 - flColor )
-	flBloomDarken = math_Remap( flBloom, 0, 2, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 3 )
-	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1 + 1 / 3, 2 )
+
+	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, math_max( 0, 1 - flColorSum ) )
+
+	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 1, 6 )
+	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1, 1.25 )
+
+	flFogDensityMul = math_Approach( flFogDensityMul, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .2, 1 ), flFrameTime )
+	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, math_Remap( flColorSum, 0, 1, 512, 12288 ) )
 	flFogMaxDensity = ( flBrightness < .5 && math_Remap( flBrightness, 0, .5, 0, 1 ) || math_Remap( flBrightness, .5, 1, 1, 0 ) ) * ( flFogDensityMul || 0 )
-	local pVehicle = self:GetNW2Entity "GAME_pVehicle"
+
+	local pVehicle = pLocalPlayer:GetNW2Entity "GAME_pVehicle"
+
+	local vForward = EyeVector()
+	CVector_Mul( vForward, 999999 )
+	CVector_Add( vForward, vEye )
+
 	local tr = util_TraceLine {
 		start = vEye,
-		endpos = vEye + dEye * 999999,
+		endpos = vEye + EyeVector() * 999999,
 		mask = MASK_OPAQUE_AND_NPCS,
 		filter = function( pEntity )
-			if pEntity == self || pEntity == pVehicle || pEntity.__PROJECTILE__ then return false end
+			if pEntity == pLocalPlayer || pEntity == pVehicle || pEntity.__PROJECTILE__ then return false end
 			return true
 		end
 	}
@@ -434,12 +490,12 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		1, // Size X
-		1, // Size Y
-		1, // Passes
+		4, // Size X
+		4, // Size Y
+		4, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
-
+	
 	DrawColorModify( tDrawColorModify )
 
 	cam_Start3D()
@@ -628,17 +684,19 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
 			tView.drawviewer = true
 			local bAiming = ply:KeyDown( IN_ZOOM )
-			local bCrouchWalking = ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
+			local bWalking = ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
 			local vTarget = Vector(
-				-ply:OBBMaxs()[ 1 ] * ( bAiming && 1.5 || 2.5 ),
-				( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) * ( bAiming && 1 || 1.5 ) * ( ( ply:Crouching() && bAiming && bCrouchWalking ) && 1.3 || 1 ),
-				ply:OBBMaxs()[ 3 ] * ( ply:Crouching() && ( bCrouchWalking && .4 || .1 ) || ( bAiming && -.02 || -.008 ) ) )
+				( ply:OBBMaxs()[ 1 ] / HULL_HUMAN_MAXS[ 1 ] ) * -8 * ( bAiming && 2.5 || 5 ),
+				( cThirdPersonShoulder:GetBool() && ply:OBBMaxs()[ 2 ] || -ply:OBBMaxs()[ 2 ] ) / HULL_HUMAN_MAXS[ 2 ] * 8 * ( bAiming && 2 || 3 ) * ( ( bAiming && bWalking ) && 1.3 || 1 ),
+				ply:OBBMaxs()[ 3 ] / HULL_HUMAN_MAXS[ 3 ] * 66 * ( ply:Crouching() && ( bWalking && .2 || -.1 ) || ( bAiming && -.02 || -.004 ) ) )
 			local bInCover = ply:GetNW2Bool "CTRL_bInCover" || ply:GetNW2Bool "CTRL_bGunUsesCoverStance"
 			if bInCover || PEEK != COVER_PEEK_NONE then
 				if VARIANTS == COVER_VARIANTS_LEFT || PEEK == COVER_FIRE_LEFT || PEEK == COVER_BLINDFIRE_LEFT then
-					vTarget[ 2 ] = ply:OBBMaxs()[ 2 ] * ( bAiming && 1 || 2 )
+					vTarget[ 2 ] = ply:OBBMaxs()[ 2 ] / HULL_HUMAN_MAXS[ 2 ] * 8 * ( bAiming && 2 || 4 )
+					vTarget[ 3 ] = ply:OBBMaxs()[ 3 ] / HULL_HUMAN_MAXS[ 3 ] * 66 * .04
 				elseif bInCover && VARIANTS == COVER_VARIANTS_RIGHT || PEEK == COVER_FIRE_RIGHT || PEEK == COVER_BLINDFIRE_RIGHT then
-					vTarget[ 2 ] = -ply:OBBMaxs()[ 2 ] * ( bAiming && 1 || 2 )
+					vTarget[ 2 ] = -ply:OBBMaxs()[ 2 ] / HULL_HUMAN_MAXS[ 2 ] * 8 * ( bAiming && 2 || 4 )
+					vTarget[ 3 ] = ply:OBBMaxs()[ 3 ] / HULL_HUMAN_MAXS[ 3 ] * 66 * .04
 				elseif bInCover && VARIANTS == COVER_VARIANTS_BOTH || PEEK == COVER_BLINDFIRE_UP || PEEK == COVER_FIRE_UP then
 					if !bAiming && RealTime() > flThirdPersonAttackTime then vTarget[ 2 ] = 0 end
 				end
@@ -803,6 +861,6 @@ HUD_SHOULD_NOT_DRAW = {
 
 local HUD_SHOULD_NOT_DRAW = HUD_SHOULD_NOT_DRAW
 
-hook.Add( "HUDShouldDraw", "Director", function( sName )
+hook.Add( "HUDShouldDraw", "Graphics", function( sName )
 	return !HUD_SHOULD_NOT_DRAW[ sName ]
 end )

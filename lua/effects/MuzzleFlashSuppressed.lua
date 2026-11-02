@@ -18,25 +18,26 @@ function EFFECT:Init( pData )
 	local pEntity, pOwner = pData:GetEntity()
 
 	local fGetMuzzleFlashPosition = pEntity.GetMuzzleFlashPosition
-	if fGetMuzzleFlashPosition then
+	if fGetMuzzleFlashPosition && fGetMuzzleFlashPosition( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex ) then
 		local iGetMaterialIndex = pData:GetMaterialIndex()
 		fGetPos = function()
 			if !IsValid( pEntity ) then return vector_origin end
 			return fGetMuzzleFlashPosition( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex )
 		end
-	end
+	else fGetMuzzleFlashPosition = nil end
 
 	local fGetMuzzleFlashAngles = pEntity.GetMuzzleFlashAngles
-	if fGetMuzzleFlashAngles then
+	if fGetMuzzleFlashAngles && fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex ) then
 		local iGetMaterialIndex = pData:GetMaterialIndex()
 		fGetAngles = function()
 			if !IsValid( pEntity ) then return angle_zero end
 			return fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex )
 		end
-	end
+	else fGetMuzzleFlashAngles = nil end
 
 	if !fGetMuzzleFlashPosition && IsValid( pEntity ) then
 		pOwner = pEntity:GetOwner()
+
 		if IsValid( pOwner ) then
 			local iAttachment = pData:GetAttachment()
 			v = self:GetTracerShootPos( vector_origin, pEntity, iAttachment )
@@ -45,6 +46,7 @@ function EFFECT:Init( pData )
 				return self:GetTracerShootPos( vector_origin, pEntity, iAttachment )
 			end
 		end
+
 		if v == vector_origin then
 			fGetPos = function()
 				if !IsValid( pEntity ) then return vector_origin end
@@ -166,9 +168,11 @@ function EFFECT:Init( pData )
 		pPart:SetAirResistance( 140 )
 	end
 
+	self.m_flLifeTime = CurTime() + math.max( 1, flLifeTime * 8 )
+
 	pEmitter:Finish()
 end
 
 function EFFECT:Render() end
-function EFFECT:Think() return false end
+function EFFECT:Think() return CurTime() <= self.m_flLifeTime end
 

@@ -60,3 +60,39 @@ sound.Add {
 	volume = 1,
 	channel = CHAN_AUTO
 }
+
+sound.Add {
+	name = "BoneFleshyBreak",
+	sound = { "physics/body/body_medium_break2.wav", "physics/body/body_medium_break3.wav" },
+	level = 90,
+	pitch = { 80, 120 },
+	volume = .7,
+	channel = CHAN_STATIC
+}
+
+sound.Add {
+	name = "BoneFleshyCrack",
+	sound = "physics/body/body_medium_break4.wav",
+	level = 90,
+	pitch = { 80, 120 },
+	volume = .7,
+	channel = CHAN_STATIC
+}
+
+sound.Add {
+	name = "BoneFleshyBreakQ",
+	sound = { "physics/body/body_medium_break2.wav", "physics/body/body_medium_break3.wav" },
+	level = 90,
+	pitch = { 80, 120 },
+	volume = .4,
+	channel = CHAN_STATIC
+}
+
+sound.Add {
+	name = "BoneFleshyCrackQ",
+	sound = "physics/body/body_medium_break4.wav",
+	level = 90,
+	pitch = { 80, 120 },
+	volume = .4,
+	channel = CHAN_STATIC
+}

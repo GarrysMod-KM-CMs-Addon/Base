@@ -79,10 +79,6 @@ RunConsoleCommand( "sv_friction", FRICTION_NORMAL )
 
 RunConsoleCommand( "sv_gravity", GRAVITY_NORMAL )
 
-HULL_HUMAN_MINS, HULL_HUMAN_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 72 )
-HULL_HUMAN_DUCK_MINS, HULL_HUMAN_DUCK_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 36 )
-HULL_HUMAN_DUCK_HIT_MINS, HULL_HUMAN_DUCK_HIT_MAXS = Vector( -16, -16, 0 ), Vector( 16, 16, 48 )
-
 local CAP_WEAPON_RANGE_ATTACK1 = CAP_WEAPON_RANGE_ATTACK1
 local CAP_WEAPON_RANGE_ATTACK2 = CAP_WEAPON_RANGE_ATTACK2
 
@@ -200,8 +196,7 @@ function EntityUniqueIdentifier( ent )
 		elseif i == 2 then sIdentifier = sIdentifier .. char( random( 97, 122 ) )
 		else sIdentifier = sIdentifier .. random( 0, 9 ) end
 	end
-	
-	-- Combine them cleanly
+
 	ent.__UNIQUE_IDENTIFIER__ = CEntity_GetClass( ent ) .. "_" .. CEntity_EntIndex( ent ) .. "_" .. sIdentifier
 	return ent.__UNIQUE_IDENTIFIER__
 end
@@ -349,17 +344,6 @@ hook.Add( "PlayerHurt", "GameImprovements", function( ply, pAttacker, flHealth, 
 	flDamage / ( max( ply:Health(), ply:GetMaxHealth() ) * 112 ) ) )
 end )
 
-hook.Add( "PlayerCanHearPlayersVoice", "GameImprovements", function( pListener, pSpeaker )
-	if !pSpeaker:Alive() then return false, false end
-	if pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) > ( pSpeaker.GAME_flSpeakDistanceSqr || 13249600/*3640*/ ) then return false, false end
-	return true, true
-end )
-
-hook.Add( "PlayerCanSeePlayersChat", "GameImprovements", function( _/*sText*/, _/*bTeamOnly*/, pListener, pSpeaker )
-	if !IsValid( pSpeaker ) then return true end
-	return pListener:GetPos():DistToSqr( pSpeaker:GetPos() ) <= ( pSpeaker.GAME_flSpeakDistanceSqr || 13249600/*3640*/ )
-end )
-
 hook.Add( "GetFallDamage", "GameImprovements", function( ply, flSpeed )
 	local flRatio = flSpeed / ( ply:GetJumpPower() * 1.5 )
 	if flRatio <= 1 then return 0 end
@@ -390,9 +374,9 @@ hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll 
 end )
 
 TRACER_COLOR = {
-	Bullet = { 255, 48, 0, 1024 },
+	Bullet = { 255, 24, 0, 1024 },
 	AR2Tracer = { 48, 255, 255, 1024 },
-	HelicopterTracer = { 48, 255, 255, 2048 }
+	HelicopterTracer = { 48, 255, 255, 1536 }
 }
 
 local TRACER_COLOR = TRACER_COLOR
@@ -412,7 +396,7 @@ local cSGT = CreateConVar(
 	0, 1
 )
 
-function ViolentAssRandomInternal() return 1 - .9 * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() * random() end
+function ViolentAssRandomInternal() return 1 - .75 * random() * random() * random() * random() end
 
 hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COMP )
 	if COMP then
@@ -458,7 +442,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 		Data.Damage = Data.Damage * .1
 	end
 
-	local flMuzzleFlashTime = math_Clamp( ( pShooter.Primary_flDelay || .1 ) * Rand( .5, 1 ), 0, .2 )
+	local flMuzzleFlashTime = math_Clamp( ( pShooter.Primary_flDelay || .1 ) * ( 1 + ( 1 - random() * random() ) * 4 ), 0, .6 )
 	local flForce = max( Data.Force, 1 )
 	Data.Callback = function( atk, tr, dmg )
 		DispatchRangeAttack( atk, tr.StartPos, tr.HitPos, flDamage )
@@ -488,11 +472,11 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 	
 		local fOnBulletImpact = pTarget.OnBulletImpact
 		if fOnBulletImpact then fOnBulletImpact( pTarget, dDamage ) end
-	
+
 		if bMuzzleFlash then
 			net_Start "EphemeralLight"
-				net_WriteFloat( tColor[ 4 ] / 255 * .2 * ViolentAssRandomInternal() ) // Brightness
-				net_WriteFloat( 512 * ViolentAssRandomInternal() ) // Size
+				net_WriteFloat( tColor[ 4 ] / 255 * ViolentAssRandomInternal() ) // Brightness
+				net_WriteFloat( 384 * ViolentAssRandomInternal() ) // Size
 				local f = flMuzzleFlashTime * ViolentAssRandomInternal()
 				net_WriteFloat( f ) // Existence length
 				net_WriteFloat( f ) // Fade time
@@ -500,7 +484,7 @@ hook.Add( "EntityFireBullets", "GameImprovements", function( pShooter, Data, COM
 				net_WriteUInt( tColor[ 1 ], 8 ) net_WriteUInt( tColor[ 2 ], 8 ) net_WriteUInt( tColor[ 3 ], 8 ) // R, G, B
 			net_Broadcast()
 		end
-	
+
 		return { damage = false, effects = true }
 	end
 
@@ -514,6 +498,10 @@ hook.Add( "PhysgunPickup", "GameImprovements", function() return true end )
 
 hook.Add( "EntityTakeDamage", "GameImprovements", function( pEntity, dDamage )
 	// Bloodloss only works on players for now, so see PlayerHurt for bloodloss code
+
+	if pEntity:GetNW2Bool "GAME_bControlling" then dDamage:ScaleDamage( 0 ) return end
+
+	if dDamage:GetDamageForce() == vector_origin then dDamage:SetDamageForce( Vector( 0, 0, 1 ) ) end
 
 	local pInflictor = dDamage:GetInflictor()
 	if IsValid( pInflictor ) then
@@ -1254,7 +1242,7 @@ function GameImprovements_StartCommand( ply, cmd )
 				maxs = vMaxs,
 				filter = ply
 			} ).Hit
-			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] * 2, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] * 2
+			local vLeft, vRight = ply:GetPos() + tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] / HULL_HUMAN_MAXS[ 2 ] * 24, ply:GetPos() - tr.HitNormal:Angle():Right() * ply:OBBMaxs()[ 2 ] / HULL_HUMAN_MAXS[ 2 ] * 24
 			if !util_TraceLine( {
 				start = ply:GetPos() + ply:GetViewOffsetDucked(),
 				endpos = vLeft + ply:GetViewOffsetDucked(),
@@ -1322,6 +1310,7 @@ function GameImprovements_StartCommand( ply, cmd )
 
 				local f = math.NormalizeAngle( math.AngleDifference( ( -trDuck.HitNormal ):Angle()[ 2 ], aEye[ 2 ] ) )
 				if !bLeft && !bRight then
+					VARIANTS = COVER_VARIANTS_BOTH
 					if f < -10 then
 						OVERRIDE_VARIANTS = COVER_VARIANTS_LEFT
 					elseif f > 10 then
@@ -1522,15 +1511,17 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 	local vPos = Data.Pos || ( pEntity:GetPos() + pEntity:OBBCenter() )
 
+	local flDistSqr = flDistance * flDistance
 	for pActor in pairs( __ACTOR_LIST__ ) do
 		if pActor == pEntity || pActor == pOwner then continue end
-
+	
 		local ActorTable = CEntity_GetTable( pActor )
 		if bUnableToPinpointLocation then
 			// Nothing, for now
 			// TODO: "What was that sound?", based on context?
 		else
-			if ActorTable.flHearingStrength > 0 && ActorTable.GetShootPos( pActor ):Distance( vPos ) <= ( flDistance * ActorTable.flHearingStrength ) then
+			local f = ActorTable.flHearingStrength
+			if f > 0 && ActorTable.GetShootPos( pActor ):DistToSqr( vPos ) <= flDistSqr * f * f then
 				fCallOnAllHearers( pActor )
 				ActorTable.OnHeardSomething( pActor, pOwner, Data )
 			end
@@ -1609,3 +1600,5 @@ hook.Add( "EntityRemoved", "GameImprovements", function( pEntity )
 	end
 	pEntity.GAME_tIWantACallBackWhenThisIsRemoved = nil
 end )
+
+include "Voice.lua"

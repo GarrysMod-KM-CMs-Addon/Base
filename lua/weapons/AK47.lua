@@ -30,6 +30,9 @@ SWEP.flUpwardsRecoilMin = .66
 SWEP.flUpwardsRecoilMax = 1
 SWEP.sAimSound = "BaseWeapon_Aim_Rifle"
 SWEP.sHoldType = "AR2"
+SWEP.flCoverX = -14
+SWEP.flCoverY = -2
+SWEP.flCoverZ = -4
 
 if IsMounted "left4dead2" then
 	SWEP.ViewModel = Model "models/v_models/v_rifle_ak47.mdl"

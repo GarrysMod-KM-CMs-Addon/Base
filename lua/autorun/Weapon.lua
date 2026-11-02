@@ -8,10 +8,10 @@ WeaponTemplate_t {
 	SpreadX -> Number
 	SpreadY -> Number
 
-	GDelay -> Number
+	Delay -> Number
 
 	Sound -> Sound
-	SoundAuto -> Sound, CHAN_AUTO
+	SoundAuto -> Sound[, Sound][, Sound]
 
 	Damage -> Number
 
@@ -74,8 +74,14 @@ function FireWeapon( pEntity, sTemplate, TEMPLATE )
 	CEntity_FireBullets( pEntity, tBullet )
 
 	local sSound = TEMPLATE.Sound && TEMPLATE.Sound( pEntity, TEMPLATE )
-	if sSound then pEntity:EmitSound( sSound ) end
+	if sSound then CEntity_EmitSound( pEntity, sSound ) end
 
-	sSound = TEMPLATE.SoundAuto && TEMPLATE.SoundAuto( pEntity, TEMPLATE )
-	if sSound then pEntity:EmitSound( sSound ) end
+	// TODO: Maybe cache the pitch in GameImprovements and force these to have the same pitch as the sound above?
+	local f = TEMPLATE.SoundAuto
+	if f then
+		local sSound, sIntensifierOne, sIntensifierTwo = f( pEntity, TEMPLATE )
+		if sSound then CEntity_EmitSound( pEntity, sSound ) end
+		if sIntensifierOne then CEntity_EmitSound( pEntity, sIntensifierOne ) end
+		if sIntensifierTwo then CEntity_EmitSound( pEntity, sIntensifierTwo ) end
+	end
 end

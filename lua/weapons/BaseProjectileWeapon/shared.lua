@@ -65,11 +65,11 @@ function SWEP:PrimaryAttack()
 		MyTable.LaunchProjectile( self, pProjectile, v, MyTable )
 
 		if MyTable.bBulletLight then
-			local flMuzzleFlashTime = math.Clamp( MyTable.Primary_flDelay * math.Rand( .5, 1 ), 0, .2 )
+			local flMuzzleFlashTime = math.Clamp( MyTable.Primary_flDelay * ( 1 + ( 1 - math.random() * math.random() ) * 4 ), 0, .6 )
 			net.Start "EphemeralLight"
 				local tColor = MyTable.tBulletLightColor
-				net.WriteFloat( tColor[ 4 ] / 255 * .2 * ViolentAssRandomInternal() ) // Brightness
-				net.WriteFloat( 512 * ViolentAssRandomInternal() ) // Size
+				net.WriteFloat( tColor[ 4 ] / 255 * ViolentAssRandomInternal() ) // Brightness
+				net.WriteFloat( ( tColor[ 5 ] || 384 ) * ViolentAssRandomInternal() ) // Size
 				local f = flMuzzleFlashTime * ViolentAssRandomInternal()
 				net.WriteFloat( f ) // Existence length
 				net.WriteFloat( f ) // Fade time

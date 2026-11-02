@@ -50,6 +50,7 @@ function EFFECT:Init( pData )
 				return self:GetTracerShootPos( vector_origin, pEntity, iAttachment )
 			end
 		end
+
 		if v == vector_origin then
 			fGetPos = function()
 				if !IsValid( pEntity ) then return vector_origin end
@@ -156,14 +157,14 @@ function EFFECT:Init( pData )
 
 	for i = 1, 8 do
 		local pPart = pEmitter:Add( bFirstPerson && "MuzzleFlashHeatHazeView" || "MuzzleFlashHeatHazeWorld", fGetPos() )
-
+	
 		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
 		local flResultingSpreadUp = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
 		local vAdd = ( vForward + flResultingSpreadRight * vRight + flResultingSpreadUp * vUp ):GetNormalized()
 		pPart:SetVelocity( vAdd / math_max( .1, abs( flResultingSpreadRight ) + abs( flResultingSpreadUp ) ) * flScale / flLifeTime * 4 )
 		pPart.m_vOffset = Vector()
-
-		pPart:SetDieTime( flLifeTime * math_Rand( 3, 6 ) )
+	
+		pPart:SetDieTime( flLifeTime * math_Rand( 2, 5 ) )
 		pPart:SetStartAlpha( 0 )
 		pPart:SetEndAlpha( 255 )
 		pPart:SetStartSize( math_Rand( 32, 48 ) * flScale )
@@ -172,7 +173,7 @@ function EFFECT:Init( pData )
 		pPart:SetRollDelta( math_Rand( -3, 3 ) )
 		pPart:SetColor( 255, 180, 120 )
 		pPart:SetAirResistance( 140 )
-
+	
 		pPart:SetNextThink( CurTime() )
 		pPart:SetThinkFunction( function()
 			local vOffset = pPart.m_vOffset
@@ -185,10 +186,10 @@ function EFFECT:Init( pData )
 		end )
 	end
 
-	pEmitter:Finish()
+	self.m_flLifeTime = CurTime() + flLifeTime * 5
 
-	self.flLifeTime = CurTime() + 48 * flScale
+	pEmitter:Finish()
 end
 
 function EFFECT:Render() end
-function EFFECT:Think() return CurTime() <= self.flLifeTime end
+function EFFECT:Think() return CurTime() <= self.m_flLifeTime end
