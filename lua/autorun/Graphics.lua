@@ -216,17 +216,23 @@ local ANALYZATION_STEP = 30
 
 local mDepthOfField = Material "pp/dof"
 
-local tDrawColorModify = {
+COLOR_DEFAULT_BRIGHTNESS = 0
+COLOR_DEFAULT_CONTRAST = 1
+COLOR_DEFAULT_COLOR = 1
+
+g_pDrawColorModify = g_pDrawColorModify || {
 	[ "$pp_colour_addr" ] = 0,
 	[ "$pp_colour_addg" ] = 0,
 	[ "$pp_colour_addb" ] = 0,
-	[ "$pp_colour_brightness" ] = 0,
-	[ "$pp_colour_contrast" ] = 1,
-	[ "$pp_colour_colour" ] = 1,
+	[ "$pp_colour_brightness" ] = COLOR_DEFAULT_BRIGHTNESS,
+	[ "$pp_colour_contrast" ] = COLOR_DEFAULT_CONTRAST,
+	[ "$pp_colour_colour" ] = COLOR_DEFAULT_COLOR,
 	[ "$pp_colour_mulr" ] = 0,
 	[ "$pp_colour_mulg" ] = 0,
 	[ "$pp_colour_mulb" ] = 0
 }
+
+local g_pDrawColorModify = g_pDrawColorModify
 
 local vColor, flColorSum, flColor = Vector(), 0, 0
 
@@ -290,6 +296,11 @@ local trRequestAnalyze = {
 	end
 }
 
+local pairs = pairs
+
+g_pCurrentScreenspaceEffectsModifyColor = g_pCurrentScreenspaceEffectsModifyColor || {}
+local g_pCurrentScreenspaceEffectsModifyColor = g_pCurrentScreenspaceEffectsModifyColor
+
 local flLastTickCall = RealTime()
 hook.Add( "Tick", "Graphics", function()
 	pLocalPlayer = LocalPlayer()
@@ -349,6 +360,18 @@ hook.Add( "Tick", "Graphics", function()
 
 	flLastTickCall = RealTime()
 
+	g_pDrawColorModify[ "$pp_colour_addr" ] = 0
+	g_pDrawColorModify[ "$pp_colour_addg" ] = 0
+	g_pDrawColorModify[ "$pp_colour_addb" ] = 0
+
+	g_pDrawColorModify[ "$pp_colour_mulr" ] = 0
+	g_pDrawColorModify[ "$pp_colour_mulg" ] = 0
+	g_pDrawColorModify[ "$pp_colour_mulb" ] = 0
+
+	g_pDrawColorModify[ "$pp_colour_brightness" ] = COLOR_DEFAULT_BRIGHTNESS
+	g_pDrawColorModify[ "$pp_colour_contrast" ] = COLOR_DEFAULT_CONTRAST
+	g_pDrawColorModify[ "$pp_colour_colour" ] = COLOR_DEFAULT_COLOR
+
 	DOFModeHack( true )
 
 	CVector_Set( vColor, vector_origin )
@@ -378,7 +401,7 @@ hook.Add( "Tick", "Graphics", function()
 			// Do not uncomment this unless testing, as it produces a comical load lol
 			//	debugoverlay.Cross( tr.HitPos, 14, 1, ( vLight * 3 ):ToColor(), true )
 
-			flPasses = flPasses + ( 1 / 3 ) + VectorSum( vLight ) * ( 2 / 3 )
+			flPasses = flPasses + .5 + VectorSum( vLight ) * .5
 
 			CVector_Add( vColor, vLight )
 
@@ -401,14 +424,13 @@ hook.Add( "Tick", "Graphics", function()
 	flColorSum = VectorSum( vColor )
 
 	local flDeath = math_Clamp( pLocalPlayer:Health() / pLocalPlayer:GetMaxHealth(), 0, 1 ) ^ 1.5
-	tDrawColorModify[ "$pp_colour_colour" ] = flDeath
-	tDrawColorModify[ "$pp_colour_contrast" ] = 1
+	g_pDrawColorModify[ "$pp_colour_colour" ] = g_pDrawColorModify[ "$pp_colour_colour" ] * flDeath
 
 	local flOxygen, flOxygenLimit = pLocalPlayer:GetNW2Float( "GAME_flOxygen", -1 ), pLocalPlayer:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
 		local f = flOxygenLimit * .5
 		if flOxygen <= f then
-			tDrawColorModify[ "$pp_colour_contrast" ] = tDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
+			g_pDrawColorModify[ "$pp_colour_contrast" ] = g_pDrawColorModify[ "$pp_colour_contrast" ] * math_Remap( flOxygen, f, 0, 1, 0 )
 		end
 	end
 
@@ -430,7 +452,7 @@ hook.Add( "Tick", "Graphics", function()
 	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, math_max( 0, 1 - flColorSum ) )
 
 	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 1, 6 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, .5, 6 )
 	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1, 1.25 )
 
 	flFogDensityMul = math_Approach( flFogDensityMul, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .2, 1 ), flFrameTime )
@@ -472,11 +494,18 @@ hook.Add( "Tick", "Graphics", function()
 	else
 		flActualDoFBegin = Lerp( FRILerpRate( 1.5, flFrameTime ), flActualDoFBegin, 0 )
 	end
+
+	for _, pEffect in pairs( g_pCurrentScreenspaceEffectsModifyColor ) do pEffect() end
 end )
+
+g_pCurrentScreenspaceEffectsPreBuiltIn = g_pCurrentScreenspaceEffectsPreBuiltIn || {}
+local g_pCurrentScreenspaceEffectsPreBuiltIn = g_pCurrentScreenspaceEffectsPreBuiltIn
 
 local cvBuildingCubemaps = GetConVar "building_cubemaps"
 hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 	if cvBuildingCubemaps:GetBool() then return end
+
+	for _, pEffect in pairs( g_pCurrentScreenspaceEffectsPreBuiltIn ) do pEffect() end
 
 	if bWaterBlur then
 		DrawBlur( flWaterBlurDirect )
@@ -495,8 +524,8 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 		4, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
-	
-	DrawColorModify( tDrawColorModify )
+
+	DrawColorModify( g_pDrawColorModify )
 
 	cam_Start3D()
 		local vEye, vForward = EyePos(), EyeVector()
@@ -531,6 +560,8 @@ hook.Add( "SetupSkyboxFog", "Graphics", function( flScale )
 	return true
 end )
 
+hook.Add( "HUDDrawPickupHistory", "Graphics", function() return true end )
+
 local vThirdPersonCameraOffset = Vector()
 
 local bAllowThirdPerson = GetConVar "bAllowThirdPerson"
@@ -552,12 +583,72 @@ local flThirdPersonToAttackLerp = 0
 
 local net_WriteVector = net.WriteVector
 
+local flWheelTime = 0
+local flSelectCooldown = 0
+local bLastWheelUp
+
+g_flLastSelectWeaponIndex = g_flLastSelectWeaponIndex || 0
+
 hook.Add( "CreateMove", "Graphics", function( cmd )
-	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then return end
-	if !cThirdPerson:GetBool() then return end
 	local pPlayer = LocalPlayer()
 	if !IsValid( pPlayer ) then return end
+
+	if !cmd:KeyDown( IN_SPEED ) then
+		local flWheel = cmd:GetMouseWheel()
+
+		if bLastWheelUp == nil || CurTime() <= flWheelTime then
+			if CurTime() > flSelectCooldown && flWheel != 0 then
+				g_flLastSelectWeaponIndex = g_flLastSelectWeaponIndex + flWheel
+
+				bLastWheelUp = flWheel > 0
+
+				local pWeapons = pPlayer:GetWeapons()
+				local pSelect = pWeapons[ math.floor( g_flLastSelectWeaponIndex ) ]
+				if !IsValid( pSelect ) then g_flLastSelectWeaponIndex = bLastWheelUp && 1 || #pWeapons end
+
+				flWheelTime = CurTime() + .1
+			end
+		else
+			flSelectCooldown = CurTime() + .1
+
+			local pWeapons = pPlayer:GetWeapons()
+
+			local pSelect = pWeapons[ math.floor( g_flLastSelectWeaponIndex ) ]
+
+			// For SOME REASON, cmd:SelectWeapon just DOES NOT WORK lol
+			if IsValid( pSelect ) then
+				input.SelectWeapon( pSelect )
+			else
+				g_flLastSelectWeaponIndex = bLastWheelUp && 1 || #pWeapons
+
+				local pSelect = pWeapons[ g_flLastSelectWeaponIndex ]
+
+				if IsValid( pSelect ) then input.SelectWeapon( pSelect ) end
+			end
+
+			bLastWheelUp = nil
+		end
+	end
+
 	local pWeapon = pPlayer:GetActiveWeapon()
+	if IsValid( pWeapon ) then
+		// I love Modern Wokefare and patched this for it!! :)
+		// Though sadly it has no flag so we check this instead
+		if pWeapon.Camera && pWeapon.m_AimModeDeltaLerp then
+			local bZoom, bAttack2 = cmd:KeyDown( IN_ZOOM ), cmd:KeyDown( IN_ATTACK2 )
+			if bZoom == bAttack2 then
+			elseif bZoom then
+				cmd:RemoveKey( IN_ZOOM )
+				cmd:AddKey( IN_ATTACK2 )
+			else
+				cmd:RemoveKey( IN_ATTACK2 )
+				cmd:AddKey( IN_ZOOM )
+			end
+		end
+	end
+
+	if bAllowThirdPerson && !bAllowThirdPerson:GetBool() then return end
+	if !cThirdPerson:GetBool() then return end
 	if IsValid( pWeapon ) && pWeapon.__WEAPON__ && pWeapon.bSniper && pWeapon.flAimMultiplier <= ( pWeapon.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) then return end
 
 	net_Start "ThirdPersonCameraDirection"
@@ -581,6 +672,17 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 	cmd:SetForwardMove( f * aAim:Forward():Dot( vDirection ) )
 	cmd:SetSideMove( f * aAim:Right():Dot( vDirection ) )
 
+	if cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSliding" then
+		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
+	
+		local r = LerpAngle( FRILerpRate( 1, FrameTime() ), cmd:GetViewAngles(), aDirection )
+		r[ 3 ] = 0
+		cmd:SetViewAngles( r )
+		aLastThirdPersonAngle = Angle( r )
+	
+		return
+	end
+
 	if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) then flThirdPersonAttackTime = RealTime() + .5 end
 
 	local bSpecial = !pPlayer:IsOnGround() && pPlayer:WaterLevel() > 0
@@ -590,7 +692,7 @@ hook.Add( "CreateMove", "Graphics", function( cmd )
 		cmd:SetViewAngles( LerpAngle( flThirdPersonToAttackLerp, aLastThirdPersonAngle, aThirdPerson ) )
 		if math.AngleDifference( cmd:GetViewAngles()[ 1 ], aThirdPerson[ 1 ] ) > 1 || math.AngleDifference( cmd:GetViewAngles()[ 2 ], aThirdPerson[ 2 ] ) > 1 then cmd:RemoveKey( IN_ATTACK ) end
 
-	elseif !bSpecial && flActualBiggerMove > 0 && ( !cmd:KeyDown( IN_ATTACK ) && !cmd:KeyDown( IN_ATTACK2 ) && ( cmd:KeyDown( IN_SPEED ) || pPlayer:GetNW2Bool "CTRL_bSprinting" || pPlayer:GetNW2Bool "CTRL_bSliding" ) ) then
+	elseif !bSpecial && flActualBiggerMove > 0 then
 		flThirdPersonToAttackLerp = Lerp( FRILerpRate( 5, FrameTime() ), flThirdPersonToAttackLerp, 0 )
 
 		local r = LerpAngle( FRILerpRate( 5, FrameTime() ), cmd:GetViewAngles(), aDirection )
@@ -636,8 +738,11 @@ hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 	x = x * FrameTime()
 	y = y * FrameTime()
 
+	local flPitch = pPlayer:EyeAngles()[ 1 ]
+	local flRealY = ( flPitch <= -89 || flPitch >= 89 ) && 0 || y
+
 	if WEAPON_SWAY then
-		WEAPON_SWAY[ 1 ] = WEAPON_SWAY[ 1 ] - y
+		WEAPON_SWAY[ 1 ] = WEAPON_SWAY[ 1 ] - flRealY
 		WEAPON_SWAY[ 2 ] = WEAPON_SWAY[ 2 ] + x
 	end
 
@@ -683,7 +788,7 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 			if IsValid( pWeapon ) && pWeapon.__WEAPON__ then pWeapon:CalcView( ply, Vector( 0, 0, 0 ), Angle( 0, 0, 0 ) ) end
 			local VARIANTS, PEEK = ply:GetNW2Int "CTRL_Variants", ply:GetNW2Int "CTRL_Peek"
 			tView.drawviewer = true
-			local bAiming = ply:KeyDown( IN_ZOOM )
+			local bAiming = !ply:GetNW2Bool "CTRL_bSprinting" && ply:KeyDown( IN_ZOOM )
 			local bWalking = ply:GetVelocity():Length() > ply:GetSlowWalkSpeed() * .9
 			local vTarget = Vector(
 				( ply:OBBMaxs()[ 1 ] / HULL_HUMAN_MAXS[ 1 ] ) * -8 * ( bAiming && 2.5 || 5 ),
@@ -856,11 +961,34 @@ HUD_SHOULD_NOT_DRAW = {
 	CHudDamageIndicator = true,
 	CHudHealth = true,
 	CHudHistoryResource = true,
-	CHUDQuickInfo = true
+	CHUDQuickInfo = true,
+	CHudWeaponSelection = true
 }
 
 local HUD_SHOULD_NOT_DRAW = HUD_SHOULD_NOT_DRAW
 
+HUD_SHOULD_NOT_DRAW_IMMERSIVE = {
+	CHudHistoryResource = true,
+	CHudGeiger = true,
+	CHudDamageIndicator = true,
+	CHudHealth = true,
+	CHudHistoryResource = true,
+	CHUDQuickInfo = true,
+	CHudWeaponSelection = true,
+
+	CHudAmmo = true,
+	CHudSecondaryAmmo = true,
+	CHudCrosshair = true
+}
+
+local HUD_SHOULD_NOT_DRAW_IMMERSIVE = HUD_SHOULD_NOT_DRAW_IMMERSIVE
+
 hook.Add( "HUDShouldDraw", "Graphics", function( sName )
-	return !HUD_SHOULD_NOT_DRAW[ sName ]
+	if GetGlobal2Bool "g_bImmersiveMode" then
+		return !HUD_SHOULD_NOT_DRAW_IMMERSIVE[ sName ]
+	else
+		return !HUD_SHOULD_NOT_DRAW[ sName ]
+	end
 end )
+
+hook.Add( "OnCloseCaptionEmit", "Graphics", function( sName ) return sName != "customLuaToken" end )

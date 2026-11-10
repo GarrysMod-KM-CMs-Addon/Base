@@ -157,14 +157,12 @@ hook.Add( "Tick", "Director", function()
 				if flTimeLeft <= 0 then
 					ply:EmitSound "Bleed"
 					local v = ply:GetPos()
-					local f = ply:BoundingRadius()
-					util_Decal( "Blood", v, v + VectorRand():GetNormalized() * f * 12, ply )
+					local f = ply:BoundingRadius() * ( 1 + 2 / 3 )
 					v:Add( ply:OBBCenter() )
-					f = f * 4
-					for i = 1, math_random( 3 ) do
+					for i = 1, math_random( 2 ) do
 						local d = VectorRand()
 						d:Normalize()
-						v = ply:NearestPoint( v + d * math_Rand( 0, f ) )
+						v = ply:NearestPoint( v + d * f )
 						util_Decal( "Blood", v, v + d * f, ply )
 					end
 					PlyTable.GAME_flBleedTimeLeft = 1
@@ -202,7 +200,7 @@ hook.Add( "Tick", "Director", function()
 		local flHealthPart = ply:Health() / ply:GetMaxHealth()
 		ply:SetDSP( flHealthPart <= .3 && 16 || flHealthPart <= .4 && 15 || flHealthPart <= .9 && 14 || 1 )
 
-		PlyTable.GAME_flSuppression = math_Approach( PlyTable.GAME_flSuppression || 0, 0, math_max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) * .33 ) * FrameTime() )
+		PlyTable.GAME_flSuppression = math_Approach( PlyTable.GAME_flSuppression || 0, 0, math_max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) / 3 ) * FrameTime() )
 		local EThreat = DIRECTOR_THREAT_NULL
 		local tMusicEntities = PlyTable.DR_tMusicEntities || {}
 		if RealTime() > ( PlyTable.DR_flNextUpdate || 0 ) then

@@ -23,7 +23,7 @@ SWEP.Primary_flSpreadY = 0
 SWEP.flCrosshairAlpha = 255
 
 function SWEP:GatherCrosshairPosition( MyTable )
-	if !MyTable.m_bDrawSniperScope then return ScrW() * .5, ScrH() * .5 end
+	if cvars.Bool "bAllowThirdPerson" && cvars.Bool "bThirdPerson" then return ScrW() * .5, ScrH() * .5 end
 
 	local pVehicle = LocalPlayer():GetNW2Entity "GAME_pVehicle"
 

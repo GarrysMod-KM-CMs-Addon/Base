@@ -360,6 +360,8 @@ hook.Add( "CreateEntityRagdoll", "GameImprovements", function( pOwner, pRagdoll 
 	local f = pOwner.BloodSplatter
 	if f then pRagdoll.BloodSplatter = f end
 
+	pRagdoll.GAME_flBoundingRadiusAtDeath = pOwner:BoundingRadius()
+
 	pRagdoll.GAME_ERagdollBloodColor = pOwner:GetBloodColor()
 
 	local f = pOwner.OnCreateRagdoll
@@ -387,6 +389,14 @@ local TRACER_SIZE = TRACER_SIZE
 hook.Add( "ScalePlayerDamage", "GameImprovements", function( ply, EHitGroup, dDamage )
 	if EHitGroup == HITGROUP_HEAD then dDamage:ScaleDamage( ply.GAME_flHeadshotDamageMultiplier || 4 ) return false end
 end )
+
+local cImmersiveMode = CreateConVar(
+	"ImmersiveMode",
+	0,
+	FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_CHEAT,
+	"",
+	0, 1
+)
 
 local cSGT = CreateConVar(
 	"SGT",
@@ -598,7 +608,7 @@ ENTITY_BY_CLASS.prop_ragdoll = function( pEntity )
 		if flTimeLeft <= 0 then
 			local v = pEntity:GetPos()
 			v:Add( pEntity:OBBCenter() )
-			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * pEntity:BoundingRadius() * 4, pEntity ) end
+			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ( pEntity.GAME_flBoundingRadiusAtDeath || pEntity:BoundingRadius() ) * ( 1 + 2 / 3 ), pEntity ) end
 			pEntity.GAME_flBleedTimeLeft = 1
 		else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 128 * Rand( .9, 1.1 ) * FrameTime() end
 	end
@@ -618,6 +628,8 @@ ENTITY_BY_CLASS.env_tonemap_controller = function( pEntity )
 end
 
 hook.Add( "Think", "GameImprovements", function()
+	SetGlobal2Bool( "g_bImmersiveMode", cImmersiveMode:GetBool() )
+
 	if ACTOR_QUEUE_LAST then
 		if !ACTOR_QUEUE_CURRENT then ACTOR_QUEUE_CURRENT = ACTOR_QUEUE_LAST.pNext end
 
@@ -895,13 +907,7 @@ function GameImprovements_StartCommand( ply, cmd )
 
 	if ply:GetNW2Bool "CTRL_bSliding" then cmd:RemoveKey( IN_ATTACK ) cmd:RemoveKey( IN_ATTACK2 ) end
 
-	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK )
-	elseif !cmd:KeyDown( IN_SPEED ) then
-		if cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) then cmd:AddKey( IN_WALK ) else
-			local pWeapon = ply:GetActiveWeapon()
-			if IsValid( pWeapon ) && ( ( CurTime() <= ( pWeapon.flReloadTime || 0 ) || CurTime() > ( pWeapon.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() + 1 / 3 || CurTime() <= pWeapon:GetNextSecondaryFire() + 1 / 3 ) ) then cmd:AddKey( IN_WALK ) end
-		end
-	end
+	if !ply.GAME_bSprinting && cmd:KeyDown( IN_ZOOM ) then cmd:RemoveKey( IN_SPEED ) end
 
 	local bAllDirectionalSprint = PlyTable.CTRL_bAllDirectionalSprint || ply:Crouching()
 	if bAllDirectionalSprint then
@@ -910,10 +916,10 @@ function GameImprovements_StartCommand( ply, cmd )
 	else
 		local bCrouchingAndNotSliding = ply:Crouching() && !ply:GetNW2Bool "CTRL_bSliding"
 
-		if bCrouchingAndNotSliding || cmd:KeyDown( IN_ZOOM ) || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then cmd:RemoveKey( IN_SPEED ) end
+		if bCrouchingAndNotSliding || !( cmd:KeyDown( IN_FORWARD ) || cmd:KeyDown( IN_BACK ) || cmd:KeyDown( IN_MOVELEFT ) || cmd:KeyDown( IN_MOVERIGHT ) ) then cmd:RemoveKey( IN_SPEED ) end
 
 		if cmd:KeyDown( IN_SPEED ) then
-			cmd:AddKey( IN_SPEED )
+			ply.GAME_bSprinting = true
 			local pWeapon = ply:GetActiveWeapon()
 			if cmd:GetForwardMove() < 0 || cmd:GetForwardMove() <= 0 && cmd:GetSideMove() == 0 || IsValid( pWeapon ) && ( ( CurTime() <= ( pWeapon.flReloadTime || 0 ) || CurTime() > ( pWeapon.flReloadTime || 0 ) + 2 / 3 ) && ( CurTime() <= pWeapon:GetNextPrimaryFire() + 1 / 3 || CurTime() <= pWeapon:GetNextSecondaryFire() + 1 / 3 ) ) then
 				cmd:RemoveKey( IN_SPEED )
@@ -926,13 +932,17 @@ function GameImprovements_StartCommand( ply, cmd )
 
 				ply:SetNW2Bool( "CTRL_bSprinting", bSprinting )
 
-				if bSprinting && ( cmd:KeyDown( IN_ATTACK ) || cmd:KeyDown( IN_ATTACK2 ) || cmd:KeyDown( IN_ZOOM ) ) then
-					cmd:RemoveKey( IN_SPEED )
-					ply:SetNW2Bool( "CTRL_bSprinting", false )
-				end
+				cmd:RemoveKey( IN_ATTACK )
+				cmd:RemoveKey( IN_ATTACK2 )
+				cmd:RemoveKey( IN_ZOOM )
 			end
-		else ply:SetNW2Bool( "CTRL_bSprinting", false ) end
+		else
+			ply:SetNW2Bool( "CTRL_bSprinting", false )
+			ply.GAME_bSprinting = nil
+		end
 	end
+
+	if cmd:KeyDown( IN_ZOOM ) then cmd:AddKey( IN_WALK ) end
 
 	local s = PlyTable.GAME_sCoverState
 	if s then

@@ -128,6 +128,7 @@ function SWEP:TranslateActivity( EIntendedActivity )
 					self:SetWeaponHoldType "Shotgun"
 					return EActivity
 				end
+			// TODO: Replace this bullshit with a proper ability to lower the gun
 			elseif CurTime() > self.flLastShot + 1 then
 				if EIntendedActivity == ACT_MP_WALK then
 					return PISTOL_REVOLVER_ETC[ self:GetHoldType() ] && ACT_HL2MP_WALK || ACT_HL2MP_WALK_PASSIVE
@@ -202,8 +203,8 @@ if CLIENT then
 	SWEP.flRecoilCameraShake = 0
 
 	function SWEP:LastShot() self.flLastShot = CurTime() end
-	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + f end
-	function SWEP:DrawTime( f ) self.flDrawTime = CurTime() + f end
+	function SWEP:ReloadTime( f ) self.flReloadTime = CurTime() + tonumber( f ) end
+	function SWEP:DrawTime( f ) self.flDrawTime = CurTime() + tonumber( f ) end
 
 	function SWEP:RecoilImpulseUp( f )
 		local pOwner = self:GetOwner()
@@ -370,26 +371,28 @@ local vector_origin = vector_origin
 if CLIENT then
 	function BASE_WEAPON_ON_DROP()
 		local pLocalPlayer = LocalPlayer()
-		if !IsValid( pLocalPlayer ) then return end
 
-		local pViewModel = pLocalPlayer:GetViewModel()
-		if IsValid( pViewModel ) then
-			pViewModel:SetColor( color_white )
+		timer.Simple( .1, function()
+			if !IsValid( pLocalPlayer ) then return end
+			local pViewModel = pLocalPlayer:GetViewModel()
+			if IsValid( pViewModel ) then
+				pViewModel:SetColor( color_white )
 
-			for i = 0, pViewModel:GetNumBodyGroups() do pViewModel:SetBodygroup( i, 0 ) end
+				for i = 0, pViewModel:GetNumBodyGroups() do pViewModel:SetBodygroup( i, 0 ) end
 
-			for i = 0, pViewModel:GetBoneCount() do
-				pViewModel:ManipulateBoneScale( i, Vector1 )
-				pViewModel:ManipulateBoneAngles( i, angle_zero )
-				pViewModel:ManipulateBonePosition( i, vector_origin )
+				for i = 0, pViewModel:GetBoneCount() do
+					pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )
+					pViewModel:ManipulateBoneAngles( i, Angle( 0, 0, 0 ) )
+					pViewModel:ManipulateBonePosition( i, Vector( 0, 0, 0 ) )
+				end
+
+				// Yeah, we're just guessing lmao
+				// Made for Quake IV SWEPs, 'cause we can't just get the SWEP
+				// Well, we can, but it'll require a lot of changes to this already duct taped system, so no
+				pViewModel:SetSubMaterial( 3, nil )
+				pViewModel:SetSubMaterial( 5, nil )
 			end
-
-			// Yeah, we're just guessing lmao
-			// Made for Quake IV SWEPs, 'cause we can't just get the SWEP
-			// Well, we can, but it'll require a lot of changes to this already duct taped system, so no
-			pViewModel:SetSubMaterial( 3, nil )
-			pViewModel:SetSubMaterial( 5, nil )
-		end
+		end )
 	end
 end
 
@@ -407,6 +410,8 @@ function SWEP:HolsterWasRan()
 		pViewModel = pViewModel( pOwner )
 		if IsValid( pViewModel ) then
 			pViewModel:SetColor( color_white )
+
+			for i = 0, pViewModel:GetNumBodyGroups() do pViewModel:SetBodygroup( i, 0 ) end
 
 			for i = 0, pViewModel:GetBoneCount() do
 				pViewModel:ManipulateBoneScale( i, Vector( 1, 1, 1 ) )
