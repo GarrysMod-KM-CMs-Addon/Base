@@ -247,8 +247,11 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 end
 
 local function fDropWeaponsOnDeath( pPlayer )
-	local pWeapon = pPlayer:GetActiveWeapon()
-	if IsValid( pWeapon ) then pPlayer:DropWeapon( pWeapon ) end
+	// Dunno why, but it actually makes their current gun NOT drop, for... some reason
+	//	local pWeapon = pPlayer:GetActiveWeapon()
+	//	
+	//	if IsValid( pWeapon ) then pPlayer:DropWeapon( pWeapon ) end
+
 	for _, pWeapon in ipairs( pPlayer:GetWeapons() ) do pPlayer:DropWeapon( pWeapon ) end
 
 	// TODO: Actually spawn the items they've picked up, 'cuz as is,
@@ -1562,31 +1565,6 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 			fCallOnAllHearers( ply )
 
 			table_insert( tCaptionPlayers, ply )
-
-			if NOT_A_VOICELINE[ sRealSound ] then continue end
-
-			if Director_GetThreat( ply, pEntity ) < DIRECTOR_THREAT_COMBAT && Director_GetThreat( ply, pOwner ) < DIRECTOR_THREAT_COMBAT then continue end
-
-			local PlyTable = CEntity_GetTable( ply )
-
-			local f = ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT )
-
-			PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME = CurTime() + .5
-
-			local t = PlyTable.DR_tSpotted
-			if t then t[ pOwner ] = 0
-			else PlyTable.DR_tSpotted = { [ pOwner ] = 0 } end
-			local t = PlyTable.DR_tMusicEntities
-
-			if t then t[ pOwner ] = true
-			else PlyTable.DR_tMusicEntities = { [ pOwner ] = true } end
-
-			if PlyTable.DR_EThreat == DIRECTOR_THREAT_COMBAT then continue end
-
-			if f <= 0 then
-				PlyTable.DR_EThreat = DIRECTOR_THREAT_COMBAT
-				continue
-			end
 		end
 
 		if !table_IsEmpty( tCaptionPlayers ) then

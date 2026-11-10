@@ -39,42 +39,6 @@ local tostring = tostring
 local ents_FindInPVS = ents.FindInPVS
 local math_random = math.random
 
-function Director_GetThreat( pPlayer, pEntity )
-	if pEntity.__ALARM__ then
-		if pEntity.bIsOn then return DIRECTOR_THREAT_COMBAT end
-		return DIRECTOR_THREAT_NULL
-	end
-
-	if IsValid( pEntity.Enemy ) then return DIRECTOR_THREAT_COMBAT end
-
-	local f = pEntity.GetEnemy
-	if f && IsValid( f( pEntity ) ) then return DIRECTOR_THREAT_COMBAT end
-
-	local f = pEntity.GetNPCState
-	if f then
-		f = f( pEntity )
-		if f == NPC_STATE_COMBAT then
-			return DIRECTOR_THREAT_COMBAT
-		elseif f == NPC_STATE_ALERT then
-			return DIRECTOR_THREAT_ALERT
-		else
-			local f = pEntity.Disposition
-			if f then
-				f = f( pEntity, pPlayer )
-				if f == D_FR || f == D_HT then return DIRECTOR_THREAT_HEAT end
-			end
-		end
-	else
-		local f = pEntity.Disposition
-		if f then
-			f = f( pEntity, pPlayer )
-			if f == D_FR || f == D_HT then return DIRECTOR_THREAT_HEAT end
-		end
-	end
-
-	return DIRECTOR_THREAT_NULL
-end
-
 local cVisibleHostileReinforcementCountDown = CreateConVar(
 	"bVisibleHostileReinforcementCountDown",
 	1,
@@ -94,9 +58,8 @@ hook.Add( "Tick", "Director", function()
 		local vEyePos = ply:EyePos()
 		local aAim = ply:EyeAngles()
 		local dAim = aAim:Forward()
-		if IsValid( pFlashlight ) then
-			pFlashlight:SetPos( vEyePos + dAim * 32 )
-		end
+		if IsValid( pFlashlight ) then pFlashlight:SetPos( vEyePos + dAim * 32 ) end
+
 		local vShoot = ply:GetShootPos()
 		local trShoot = util_TraceLine {
 			start = vShoot,
@@ -119,7 +82,9 @@ hook.Add( "Tick", "Director", function()
 				end
 			end
 		end
+
 		if b then CEntity_SetNW2Int( ply, "DR_EAimingAt", nil ) end
+
 		local flReinforcements
 		local b = !cVisibleHostileReinforcementCountDown:GetBool()
 		for pEntity in pairs( __ALARMS_ACTIVE__ ) do
@@ -133,11 +98,15 @@ hook.Add( "Tick", "Director", function()
 				end
 			end
 		end
+
 		CEntity_SetNW2Float( ply, "ALARM_flHostileReinforcements", flReinforcements || 0 )
+
 		if CurTime() > ( PlyTable.DIRECTOR_MUSIC_VO_WAIT_RECOVER_TIME || 0 ) then
 			CEntity_SetNW2Float( ply, "DIRECTOR_MUSIC_VO_WAIT", math_Clamp( Lerp( FRILerpRate( .5, FrameTime() ), ply:GetNW2Float( "DIRECTOR_MUSIC_VO_WAIT", DIRECTOR_MUSIC_VO_WAIT ), DIRECTOR_MUSIC_VO_WAIT ), 0, DIRECTOR_MUSIC_VO_WAIT ) )
 		end
+
 		CEntity_SetNW2Float( ply, "GAME_flOxygenLimit", PlyTable.GAME_flOxygenLimit || 60 )
+
 		if ply:Alive() then
 			local o = CEntity_GetNW2Float( ply, "GAME_flOxygen", CEntity_GetNW2Float( ply, "GAME_flOxygenLimit", -1 ) )
 			if o == 0 then
@@ -201,101 +170,7 @@ hook.Add( "Tick", "Director", function()
 		ply:SetDSP( flHealthPart <= .3 && 16 || flHealthPart <= .4 && 15 || flHealthPart <= .9 && 14 || 1 )
 
 		PlyTable.GAME_flSuppression = math_Approach( PlyTable.GAME_flSuppression || 0, 0, math_max( ply:Health() * 2, ( PlyTable.GAME_flSuppression || 0 ) / 3 ) * FrameTime() )
-		local EThreat = DIRECTOR_THREAT_NULL
-		local tMusicEntities = PlyTable.DR_tMusicEntities || {}
-		if RealTime() > ( PlyTable.DR_flNextUpdate || 0 ) then
-			local aEye, flFoVHalf = ply:EyeAngles(), ply:GetInfoNum( "fov_desired", UNIVERSAL_FOV ) * .5
-			for _, pEntity in ipairs( ents_FindInPVS( ply ) ) do
-				if !ply:Visible( pEntity ) then continue end
-				local ETheirThreat = Director_GetThreat( ply, pEntity )
-				if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
-				local a = ( pEntity:GetPos() + pEntity:OBBCenter() - vEyePos ):Angle()
-				if math_abs( math_AngleDifference( aEye[ 1 ], a[ 1 ] ) ) > flFoVHalf then continue end
-				if math_abs( math_AngleDifference( aEye[ 2 ], a[ 2 ] ) ) > flFoVHalf then continue end
-				tMusicEntities[ pEntity ] = true
-			end
-			PlyTable.DR_flNextUpdate = RealTime() + math_Rand( .1, .2 )
-		end
-		local tSpotted = PlyTable.DR_tSpotted || {}
-		local tNewMusicEntities = {}
-		local flAllSuppression, flAllHealth = 0, 0
-		local tThreatDirections = {}
-		local pVehicle = PlyTable.GAME_pVehicle
-		for pEntity in pairs( tMusicEntities ) do
-			if !IsValid( pEntity ) || pEntity.__ACTOR_BULLSEYE__ then continue end
-			local ETheirThreat = Director_GetThreat( ply, pEntity )
-			if ETheirThreat <= DIRECTOR_THREAT_NULL then continue end
-			if pEntity:Visible( ply ) || IsValid( pVehicle ) && pEntity:Visible( pVehicle ) then
-				if pEntity.__ACTOR__ then
-					local pEnemy = pEntity.Enemy
-					if IsValid( pEnemy ) then
-						local pEnemy, pTrueEnemy = pEntity:SetupEnemy( pEnemy )
-						if pTrueEnemy == ply then table.insert( tThreatDirections, pEntity ) end
-					end
-				else
-					local f = pEntity.GetEnemy
-					if f then
-						f = f( pEntity )
-						if IsValid( f ) && f == ply then
-							table.insert( tThreatDirections, pEntity )
-						end
-					end
-				end
-			end
-			// TODO: Improve this, dammit!
-			if pEntity:NearestPoint( vEyePos ):DistToSqr( vEyePos ) > 9437184/*3072*/ then
-				tNewMusicEntities[ pEntity ] = true
-				tSpotted[ pEntity ] = nil
-				continue
-			end
-			// We're doin' shit to them, so add it!
-			// (Or someone else's doin' shit to them)
-			flAllSuppression = flAllSuppression + ( pEntity.GAME_flSuppression || 0 )
-			flAllHealth = flAllHealth + pEntity:Health()
-			tNewMusicEntities[ pEntity ] = true
-			f = tSpotted[ pEntity ]
-			if f then if CurTime() > f then EThreat = ETheirThreat end
-			else tSpotted[ pEntity ] = CurTime() + DIRECTOR_MUSIC_VO_WAIT end
-		end
 
-		local i = 1
-		while true do
-			local sI = tostring( i )
-			local s = "GAME_v3DThreat" .. sI
-			local v = ply:GetNW2Vector( s )
-			if v == vector_origin then break end
-			CEntity_SetNW2Vector( ply, s )
-			CEntity_SetNW2Bool( ply, "GAME_b3DThreat" .. sI )
-			i = i + 1
-		end
-		for i, pEntity in ipairs( tThreatDirections ) do
-			local sI = tostring( i )
-			CEntity_SetNW2Vector( ply, "GAME_v3DThreat" .. sI, pEntity:GetPos() + pEntity:OBBCenter() )
-			CEntity_SetNW2Bool( ply, "GAME_b3DThreat" .. sI, pEntity.GAME_bHurtEnemy )
-		end
-		local tNewSpotted = {}
-		for pEntity, flTime in pairs( tSpotted ) do
-			if !IsValid( pEntity ) then continue end
-			if !tNewMusicEntities[ pEntity ] then continue end
-			tNewSpotted[ pEntity ] = flTime
-		end
-		PlyTable.DR_tSpotted = tNewSpotted
-		flIntensity = math.max( 0, flAllSuppression ) / flAllHealth
-		if flIntensity != flIntensity then flIntensity = 0 end // nan
-		PlyTable.DR_tMusicEntities = tNewMusicEntities
-		PlyTable.DR_EThreat = EThreat
-		ply:SendLua( "DIRECTOR_THREAT=" .. tostring( EThreat ) )
-		local sIntensity = tostring( flIntensity )
-		if !tonumber( sIntensity ) then sIntensity = "0" end
-		ply:SendLua( "DIRECTOR_MUSIC_INTENSITY=" .. sIntensity )
-		local flTension = PlyTable.DR_flMusicTension || 0
-		if flTension > flIntensity then flTension = Lerp( FRILerpRate( .1, FrameTime() ), flTension || 0, flIntensity )
-		else flTension = Lerp( FRILerpRate( .25, FrameTime() ), flTension || 0, flIntensity ) end
-		if flTension != flTension then flTension = 0 end // nan
-		PlyTable.DR_flMusicTension = flTension
-		local sTension = tostring( flTension )
-		if !tonumber( sTension ) then sTension = "0" end
-		ply:SendLua( "DIRECTOR_MUSIC_TENSION=" .. sTension )
 		hook.Run( "PostDirectorPlayerThink", ply )
 	end
 end )
