@@ -34,134 +34,53 @@ function ENT:SetupDataTables()
 end
 
 local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
-if CLIENT then
-	function ENT:Initialize()
-		local MyTable = CEntity_GetTable( self )
-		MyTable.Update( self, MyTable )
-		self.pixelvis_handle_t = util.GetPixelVisibleHandle()
-		self:DrawShadow( false )
-	end
-	local Vector = Vector
-	function ENT:Think()
-		self:DrawShadow( false )
-		local d = self:GetShadows() && self:GetDistance() || self:GetTrueDistance()
-		self:SetRenderBounds( Vector( -d, -d, -d ), Vector( d, d, d ) )
-		local MyTable = CEntity_GetTable( self )
-		MyTable.Update( self, MyTable )
-		self:SetNextClientThink( CurTime() )
-		return true
-	end
-	local math_max = math.max
-	local tonumber = tonumber
-	function ENT:Update( MyTable )
-		if #self:GetTexture() <= 0 then self:SetTexture "effects/flashlight/soft" end
-		local pt = MyTable.ProjectedTexture
-		if !pt then MyTable.ProjectedTexture = ProjectedTexture() pt = MyTable.ProjectedTexture end
-		pt:SetPos( self:GetPos() )
-		pt:SetAngles( self:GetAngles() )
-		pt:SetTexture( self:GetTexture() )
-		pt:SetShadowFilter( 0 )
-		pt:SetNearZ( math_max( tonumber( self:GetMinDistance() ), 10 ) )
-		pt:SetFarZ( self:GetDistance() )
-		pt:SetColor( self:GetLightColor():ToColor() )
-		pt:SetBrightness( self:GetBrightness() )
-		pt:SetQuadraticAttenuation( self:GetDistance() ^ 2 / self:GetTrueDistance() ^ 2 )
-		pt:SetHorizontalFOV( self:GetHorFOV() )
-		pt:SetVerticalFOV( self:GetVerFOV() )
-		if self:GetShadows() then
-			pt:SetEnableShadows( true )
-		else
-			pt:SetEnableShadows( false )
-			pt:SetFarZ( self:GetTrueDistance() )
-		end
-		pt:Update()
-	end
-	function ENT:OnRemove() if IsValid( self.ProjectedTexture ) then self.ProjectedTexture:Remove() end end
 
-	ENT.RenderGroup = RENDERGROUP_BOTH
-	ENT.WantsTranslucency = true
-
-	local mLight = Material "sprites/light_ignorez"
-	local mBeam = Material "effects/lamp_beam"
-
-	function ENT:Draw()
-		local pixelvis_handle_t = self.pixelvis_handle_t
-		if !pixelvis_handle_t || GetViewEntity() == LocalPlayer() then return end
-		local vViewNormal = self:GetPos() - EyePos()
-		local flDistance = vViewNormal:Length()
-		vViewNormal:Normalize()
-		local vForward = self:GetForward()
-		local flViewDot = vViewNormal:Dot( vForward * -1 )
-		local c = self:GetLightColor():ToColor()
-		local r, g, b = c.r, c.g, c.b
-		local v = self:GetPos()
-		render.SetMaterial( mBeam )
-		local flTrueDistance = self:GetTrueDistance() * .5
-		local flWidth = flTrueDistance * math.abs( math.sin( ( self:GetVerFOV() + self:GetHorFOV() ) * .5 ) ) * .125
-		local flAlpha = math.Remap( flViewDot ^ 5, 1, .5, 0, 1 )
-		local flActualAlpha = flAlpha * self:GetBrightness() * .02
-		render.StartBeam( 3 )
-			render.AddBeam( v + vForward * 1, flWidth, 0, Color( r, g, b, 32 * flActualAlpha ) )
-			render.AddBeam( v + vForward * flTrueDistance * .5, flWidth, .5, Color( r, g, b, 96 * flActualAlpha ) )
-			render.AddBeam( v + vForward * flTrueDistance, flWidth, 1, Color( r, g, b, 0 ) )
-		render.EndBeam()
-		render.SetMaterial( mLight )
-		local flVisible = util.PixelVisible( v, 16, pixelvis_handle_t )
-		if !flVisible then return end
-		// Beam flare
-		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
-		local flSize = self:GetBrightness() * self:GetDistance() * .002 * flVisible
-		c.a = flAlpha * 255 * self:GetBrightness() * .05
-		render.DrawSprite( v + vForward, flSize, flSize, c )
-		// Directly exposed flare
-		flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
-		local flSize = self:GetBrightness() * self:GetDistance() * .005 * flVisible
-		c.a = flViewDot ^ 25 * 255
-		render.DrawSprite( v + vForward, flSize, flSize, c )
-	end
-
-	ENT.DrawTranslucent = ENT.Draw
-else
+if SERVER then
 	function ENT:Initialize()
 		self:Update()
 		self:DrawShadow( false )
 	end
+
 	function ENT:Think()
 		self:DrawShadow( false )
 		self:Update()
 		self:NextThink( CurTime() + .01 )
 		return true
 	end
+
 	local util_TraceLine = util.TraceLine
 	local math = math
 	local math_cos = math.cos
 	local math_acos = math.acos
 	local math_Clamp = math.Clamp
+
 	function ENT:Update()
-		if !self:GetShadows() || self:GetComputeTrueDistance() then
-			local t = { [ self ] = true }
-			local pOwner = self:GetOwner()
-			if IsValid( pOwner ) then
-				t[ pOwner ] = true
-				for _, e in ipairs( pOwner:GetChildren() ) do t[ e ] = true end
-			end
-			local pParent = self:GetParent()
-			if IsValid( pParent ) then
-				t[ pParent ] = true
-				for _, e in ipairs( pParent:GetChildren() ) do t[ e ] = true end
-			end
-			local tr = util_TraceLine {
-				start = self:GetPos(),
-				endpos = self:GetPos() + self:GetForward() * 999999,
-				filter = function( ent ) return t[ ent ] == nil end,
-				mask = MASK_VISIBLE_AND_NPCS
-			}
-			local f = tr.HitNormal:Dot( -self:GetForward() )
-			f = math.Clamp( ( f != 0 && ( tr.HitPos:Distance( self:GetPos() ) / math_cos( math_acos( math_Clamp( f, -1, 1 ) ) ) ) || tr.HitPos:Distance( self:GetPos() ) ) + 128, 0, self:GetDistance() )
-			self.flShadowDistance = f
-			self:SetTrueDistance( f )
+		local t = { [ self ] = true }
+
+		local pOwner = self:GetOwner()
+		if IsValid( pOwner ) then
+			t[ pOwner ] = true
+			for _, e in ipairs( pOwner:GetChildren() ) do t[ e ] = true end
 		end
+
+		local pParent = self:GetParent()
+		if IsValid( pParent ) then
+			t[ pParent ] = true
+			for _, e in ipairs( pParent:GetChildren() ) do t[ e ] = true end
+		end
+
+		local tr = util_TraceLine {
+			start = self:GetPos(),
+			endpos = self:GetPos() + self:GetForward() * 999999,
+			filter = function( ent ) return t[ ent ] == nil end,
+			mask = MASK_VISIBLE_AND_NPCS
+		}
+
+		f = math.Clamp( tr.HitPos:Distance( self:GetPos() ) + 128, 0, self:GetDistance() )
+		self.flShadowDistance = f
+		self:SetTrueDistance( f )
 	end
+
 	function ENT:KeyValue( k, v )
 		k = string.lower( k )
 		if self:SetNetworkKeyValue( k, v ) then return end
@@ -179,6 +98,7 @@ else
 		elseif k == "texture" then self:SetTexture( v )
 		elseif k == "shadows" || k == "shadowquality" then self:SetShadows( v == "1" ) end
 	end
+
 	function ENT:AcceptInput( k, _, _, v )
 		k = string.lower( k )
 		if k == "settexture" || k == "spotlighttexture" then self:SetTexture( v )
@@ -195,4 +115,123 @@ else
 		elseif k == "setfov" || k == "fov" then self:SetHorFOV( v ) self:SetVerFOV( v )
 		elseif k == "shadows"  ||  k  ==  "enableshadows" then self:SetShadows( v  ==  "1" ) end
 	end
+
+	return
 end
+
+function ENT:Initialize()
+	local MyTable = CEntity_GetTable( self )
+	MyTable.Update( self, MyTable )
+
+	self.pixelvis_handle_t = util.GetPixelVisibleHandle()
+
+	self:DrawShadow( false )
+end
+
+local vTemp1, vTemp2 = Vector(), Vector()
+function ENT:Think()
+	self:DrawShadow( false )
+
+	local flDistance = self:GetTrueDistance()
+
+	vTemp1[ 1 ] = flDistance
+	vTemp1[ 2 ] = flDistance
+	vTemp1[ 3 ] = flDistance
+
+	vTemp2[ 1 ] = flDistance
+	vTemp2[ 2 ] = flDistance
+	vTemp2[ 3 ] = flDistance
+
+	self:SetRenderBounds( vTemp1, vTemp2 )
+
+	local MyTable = CEntity_GetTable( self )
+	MyTable.Update( self, MyTable )
+
+	self:SetNextClientThink( CurTime() )
+	return true
+end
+
+local math_max = math.max
+local tonumber = tonumber
+function ENT:Update( MyTable )
+	if #self:GetTexture() <= 0 then self:SetTexture "effects/flashlight/soft" end
+
+	local pTexture = MyTable.m_pProjectedTexture
+	if !pTexture then
+		pTexture = ProjectedTexture()
+		MyTable.m_pProjectedTexture = pTexture
+	end
+
+	pTexture:SetPos( self:GetPos() )
+	pTexture:SetAngles( self:GetAngles() )
+	pTexture:SetTexture( self:GetTexture() )
+	pTexture:SetShadowFilter( 0 )
+	pTexture:SetNearZ( math_max( tonumber( self:GetMinDistance() ), 10 ) )
+	pTexture:SetFarZ( self:GetDistance() )
+	pTexture:SetColor( self:GetLightColor():ToColor() )
+	pTexture:SetBrightness( self:GetBrightness() )
+	pTexture:SetHorizontalFOV( self:GetHorFOV() )
+	pTexture:SetVerticalFOV( self:GetVerFOV() )
+
+	if self:GetShadows() then
+		pTexture:SetEnableShadows( true )
+	else
+		pTexture:SetEnableShadows( false )
+	end
+
+	pTexture:SetFarZ( self:GetTrueDistance() )
+
+	pTexture:Update()
+end
+
+function ENT:OnRemove()
+	local pTexture = CEntity_GetTable( self ).m_pProjectedTexture
+	if IsValid( pTexture ) then pTexture:Remove() end
+end
+
+ENT.RenderGroup = RENDERGROUP_BOTH
+ENT.WantsTranslucency = true
+
+local mLight = Material "sprites/light_ignorez"
+local mBeam = Material "effects/lamp_beam"
+
+function ENT:Draw()
+	local pixelvis_handle_t = self.pixelvis_handle_t
+
+	// TODO: This is a really bad check. We need to optionally store the player that owns it in each LightStream.
+	if !pixelvis_handle_t || GetViewEntity() == LocalPlayer() then return end
+
+	local vViewNormal = self:GetPos() - EyePos()
+	local flDistance = vViewNormal:Length()
+	vViewNormal:Normalize()
+	local vForward = self:GetForward()
+	local flViewDot = vViewNormal:Dot( vForward * -1 )
+	local c = self:GetLightColor():ToColor()
+	local r, g, b = c.r, c.g, c.b
+	local v = self:GetPos()
+	render.SetMaterial( mBeam )
+	local flTrueDistance = self:GetTrueDistance() * .5
+	local flWidth = flTrueDistance * math.abs( math.sin( ( self:GetVerFOV() + self:GetHorFOV() ) * .5 ) ) * .125
+	local flAlpha = math.Remap( flViewDot ^ 5, 1, .5, 0, 1 )
+	local flActualAlpha = flAlpha * self:GetBrightness() * .02
+	render.StartBeam( 3 )
+		render.AddBeam( v + vForward * 1, flWidth, 0, Color( r, g, b, 32 * flActualAlpha ) )
+		render.AddBeam( v + vForward * flTrueDistance * .5, flWidth, .5, Color( r, g, b, 96 * flActualAlpha ) )
+		render.AddBeam( v + vForward * flTrueDistance, flWidth, 1, Color( r, g, b, 0 ) )
+	render.EndBeam()
+	render.SetMaterial( mLight )
+	local flVisible = util.PixelVisible( v, 16, pixelvis_handle_t )
+	if !flVisible then return end
+	// Beam flare
+	flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
+	local flSize = self:GetBrightness() * self:GetDistance() * .002 * flVisible
+	c.a = flAlpha * 255 * self:GetBrightness() * .05
+	render.DrawSprite( v + vForward, flSize, flSize, c )
+	// Directly exposed flare
+	flDistance = math.Clamp( flTrueDistance, 32, self:GetDistance() )
+	local flSize = self:GetBrightness() * self:GetDistance() * .005 * flVisible
+	c.a = flViewDot ^ 25 * 255
+	render.DrawSprite( v + vForward, flSize, flSize, c )
+end
+
+ENT.DrawTranslucent = ENT.Draw
