@@ -9,6 +9,12 @@ local SURFACE_PROP_EJECTA_COLORS = {
 		{ 80, 70, 40 },
 		{ 80, 70, 40 },
 		{ 80, 70, 40 }
+	},
+
+	[ util.GetSurfaceIndex "plaster" ] = {
+		{ 166, 155, 130 },
+		{ 166, 155, 130 },
+		{ 166, 155, 130 },
 	}
 }
 
@@ -37,7 +43,7 @@ function FX_EjectaCloudLand( tData )
 
 	local flScale = flMagnitude / 800
 
-	local flTimeScale = flScale
+	local flTimeScale = flScale * 2
 
 	if flStrengthOverride then flTimeScale = flStrengthOverride / 800 end
 
@@ -62,9 +68,23 @@ function FX_EjectaCloudLand( tData )
             pPart:SetRollDelta( math.Rand( -1, 1 ) )
             pPart:SetAirResistance( 100 )
             pPart:SetGravity( Vector( 0, 0, math.Rand( -100, -400 ) ) )
-            pPart:SetColor( flColor1R, flColor1G, flColor1B )
             pPart:SetCollide( true )
 			pPart:SetBounce( 1.5 * math.random() * math.random() )
+
+			pPart:SetNextThink( CurTime() )
+			pPart:SetThinkFunction( function( pPart )
+				local vPos = pPart:GetPos()
+
+				local vColor = render.GetLightColor( vPos )
+
+				pPart:SetColor(
+					Lerp( math.Clamp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor1R ),
+					Lerp( math.Clamp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor1G ),
+					Lerp( math.Clamp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor1B )
+				)
+
+				pPart:SetNextThink( CurTime() )
+			end )
         end
     end
 
@@ -80,10 +100,24 @@ function FX_EjectaCloudLand( tData )
             pPart:SetRoll( math.Rand( 150, 360 ) )
             pPart:SetRollDelta( math.Rand( -1, 1 ) )
             pPart:SetAirResistance( 200 )
-            pPart:SetGravity( Vector( math.Rand( -20, 20 ), math.Rand( -20, 20 ), math.Rand( -20, 20 ) ) * flScale )
-            pPart:SetColor( flColor2R, flColor2G, flColor2B )
+            pPart:SetGravity( Vector( math.Rand( -20, 20 ), math.Rand( -20, 20 ), math.Rand( -40, -5 ) ) * flScale )
             pPart:SetCollide( true )
 			pPart:SetBounce( 1.5 * math.random() * math.random() )
+
+			pPart:SetNextThink( CurTime() )
+			pPart:SetThinkFunction( function( pPart )
+				local vPos = pPart:GetPos()
+
+				local vColor = render.GetLightColor( vPos )
+
+				pPart:SetColor(
+					Lerp( math.Clamp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor2R ),
+					Lerp( math.Clamp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor2G ),
+					Lerp( math.Clamp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor2B )
+				)
+
+				pPart:SetNextThink( CurTime() )
+			end )
         end
     end
 
@@ -98,10 +132,24 @@ function FX_EjectaCloudLand( tData )
             pPart:SetRoll( math.Rand( 0, 360 ) )
             pPart:SetRollDelta( math.Rand( -5, 5 ) )
             pPart:SetAirResistance( 40 )
-            pPart:SetColor( flColor3R, flColor3G, flColor3B )
             pPart:SetGravity( Vector( 0, 0, -600 ) )
             pPart:SetCollide( true )
 			pPart:SetBounce( 1.5 * math.random() * math.random() )
+
+			pPart:SetNextThink( CurTime() )
+			pPart:SetThinkFunction( function( pPart )
+				local vPos = pPart:GetPos()
+
+				local vColor = render.GetLightColor( vPos )
+
+				pPart:SetColor(
+					Lerp( math.Clamp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor3R ),
+					Lerp( math.Clamp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor3G ),
+					Lerp( math.Clamp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 1 ), 0, flColor3B )
+				)
+
+				pPart:SetNextThink( CurTime() )
+			end )
         end
     end
 

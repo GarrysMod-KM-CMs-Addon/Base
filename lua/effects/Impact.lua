@@ -511,46 +511,12 @@ local EFFECTS = {
 	//	[ util.GetSurfaceIndex "plaster" ] = function( self, pData )
 	[ -1 ] = function( self, pData )
 		local vPos = pData:GetOrigin()
-		EmitSound( "BulletImpactPlaster", vPos, nil, nil, math_Rand( 1 / 3, 1 ) )
-		local vDir = ( vPos - pData:GetStart() ):GetNormalized()
-		local tr = util_TraceLine {
-			start = vPos - vDir * 6,
-			endpos = vPos + vDir * 6,
-			mask = MASK_SOLID
+
+		FX_EjectaCloud {
+			vOrigin = vPos,
+			flMagnitude = 300,
+			ESurfaceProp = pData:GetSurfaceProp()
 		}
-		local dNormal = tr.HitNormal
-		local pEmitter = ParticleEmitter( vPos )
-		for i = 1, math_random( 1, 4 ) do
-			local pPart = pEmitter:Add( "particles/smokey", vPos )
-			if pPart then
-				local v = LerpVector( .5, dNormal, VectorRand() ):GetNormalized()
-				pPart:SetAngles( v:Angle() )
-				pPart:SetDieTime( math_Rand( 0, 12 ) )
-				pPart:SetStartAlpha( math_Rand( 190, 255 ) )
-				pPart:SetEndAlpha( 0 )
-				pPart:SetStartSize( math_Rand( 0, 32 ) )
-				pPart:SetEndSize( math_Rand( 0, 32 ) )
-				pPart:SetCollide( true )
-				pPart:SetVelocity( v * math_Rand( 128, 384 ) )
-				pPart:SetNextThink( CurTime() )
-				pPart:SetThinkFunction( function( pPart )
-					local vPos = pPart:GetPos()
-					local vColor = render_GetLightColor( vPos )
-					pPart:SetColor(
-						Lerp( vColor[ 1 ] ^ ( 1 / 3 ), 0, 166 ),
-						Lerp( vColor[ 2 ] ^ ( 1 / 3 ), 0, 150 ),
-						Lerp( vColor[ 3 ] ^ ( 1 / 3 ), 0, 130 )
-					)
-					if bit_band( util_PointContents( vPos ), CONTENTS_WATER ) == 0 then
-						pPart:SetGravity( vGravity )
-					else pPart:SetGravity( vGravityWater ) end
-					pPart:SetNextThink( CurTime() )
-				end )
-				pPart:SetRoll( math_Rand( 0, 360 ) )
-				pPart:SetRollDelta( math_Rand( -4, 4 ) )
-			end
-		end
-		pEmitter:Finish()
 	end
 }
 

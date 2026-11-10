@@ -12,7 +12,7 @@ local vWhite, vOrange = Vector( 255, 255, 255 ), Vector( 255, 128, 64 )
 function EFFECT:Init( pData )
 	self:SetRenderMode( RENDERMODE_TRANSALPHA )
 
-	local fGetPos, fGetAngles = function() return vector_origin end, function() return angle_zero end
+	local fGetPos//, fGetAngles = function() return vector_origin end, function() return angle_zero end
 
 	local v = pData:GetStart()
 	local pEntity, pOwner = pData:GetEntity()
@@ -26,14 +26,14 @@ function EFFECT:Init( pData )
 		end
 	else fGetMuzzleFlashPosition = nil end
 
-	local fGetMuzzleFlashAngles = pEntity.GetMuzzleFlashAngles
-	if fGetMuzzleFlashAngles && fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex ) then
-		local iGetMaterialIndex = pData:GetMaterialIndex()
-		fGetAngles = function()
-			if !IsValid( pEntity ) then return angle_zero end
-			return fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex )
-		end
-	else fGetMuzzleFlashAngles = nil end
+	//	local fGetMuzzleFlashAngles = pEntity.GetMuzzleFlashAngles
+	//	if fGetMuzzleFlashAngles && fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex ) then
+	//		local iGetMaterialIndex = pData:GetMaterialIndex()
+	//		fGetAngles = function()
+	//			if !IsValid( pEntity ) then return angle_zero end
+	//			return fGetMuzzleFlashAngles( pEntity, "MuzzleFlashGeneric", iGetMaterialIndex )
+	//		end
+	//	else fGetMuzzleFlashAngles = nil end
 
 	if !fGetMuzzleFlashPosition && IsValid( pEntity ) then
 		pOwner = pEntity:GetOwner()
@@ -67,12 +67,12 @@ function EFFECT:Init( pData )
 		end
 	end
 
-	if !fGetMuzzleFlashAngles then
-		fGetAngles = function()
-			if !IsValid( pOwner ) then return angle_zero end
-			return pOwner:EyeAngles()
-		end
-	end
+	//	if !fGetMuzzleFlashAngles then
+	//		fGetAngles = function()
+	//			if !IsValid( pOwner ) then return angle_zero end
+	//			return pOwner:EyeAngles()
+	//		end
+	//	end
 
 	self.m_pWeapon = pWeapon
 
@@ -113,7 +113,7 @@ function EFFECT:Init( pData )
 			local vOffset = pPart.m_vOffset
 			vOffset:Add( pPart:GetVelocity() * FrameTime() )
 			local v = Vector( vOffset )
-			v:Rotate( fGetAngles() )
+			//	v:Rotate( fGetAngles() )
 			v:Add( fGetPos() )
 			pPart:SetPos( v )
 			pPart:SetNextThink( CurTime() )
