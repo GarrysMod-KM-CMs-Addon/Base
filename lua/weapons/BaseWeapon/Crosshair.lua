@@ -335,24 +335,112 @@ SWEP.bDontDrawCrosshairDuringZoom = true
 SWEP.flCrosshairInAccuracyGapPart = 0
 SWEP.flCrosshairInAccuracyRecoilPart = 0
 
-// Allowing this to be toggled on by the client for testing
-// how good guns feel without the smooth crosshair disappearance,
-// and because this is a straight up nerf, not a buff.
-local cNoWeaponHuD = CreateConVar(
-	"bNoWeaponHuD",
-	0,
-	FCVAR_NEVER_AS_STRING,
-	"",
-	0, 1
-)
-
 function SWEP:DoDrawCrosshair()
 	local f = SysTime()
 	local flFrameTime = f - flLastDoDrawCrosshairCall
 	flLastDoDrawCrosshairCall = f
 
-	if cNoWeaponHuD:GetBool() then return true end
 	if developer:GetBool() then return end
+
+	local MyTable = CEntity_GetTable( self )
+
+	local ply = LocalPlayer()
+
+	if CallPlayerClassHook( ply, "BaseWeapon_DoDrawCrosshair", self, MyTable ) then return true end
+
+	if !MyTable.bDontDrawAmmo then
+		local flClip = math_max( self:Clip1(), self:GetMaxClip1() )
+
+		local flW, flH = ScrW() * .9, ScrH() * .9
+		surface_SetDrawColor( 0, 0, 0, 255 )
+		local flWidth, flHeight, sFont
+		local b = MyTable.bDontDrawAmmoBars && ( !cvars.Bool "bAllowThirdPerson" || !cvars.Bool "bThirdPerson" )
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN || MyTable.WPN_SHOOT == WPN_PISTOL || self:GetMaxClip1() <= 15 then
+			flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
+		else
+			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
+		end
+
+		local flSpacing = flWidth
+		local flVertical = 1
+		if MyTable.WPN_SHOOT == WPN_SHOTGUN then
+			flSpacing = flSpacing * 1.5
+			flWidth = flWidth * 1.25
+		elseif MyTable.WPN_SHOOT == WPN_PISTOL then
+			flVertical = flVertical * 12
+		end
+
+		local flX, flY = flW - flWidth, flH - flHeight
+
+		local a = self.Primary.Ammo
+		if a && a != "" && string.lower( a ) != "none" then
+			a = ply:GetAmmoCount( a )
+			if a > 0 then
+				draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
+			end
+		end
+
+		if !b then
+			local flTotal = flSpacing * flClip
+			flX = flX - flTotal
+			surface_DrawRect( flX, flY + 1.25 * flVertical - 1, flTotal, flHeight - 2 * flVertical + 2 )
+
+			if CurTime() <= MyTable.flReloadTime then
+				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, flClip do
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 2, flHeight - 2 * flVertical )
+				end
+			else
+				surface_SetDrawColor( 255, 255, 255, 255 )
+				local flX, flY = flW - flWidth, flH - flHeight
+				for _ = 1, self:Clip1() do
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
+				end
+
+				surface_SetDrawColor( 32, 32, 32, 255 )
+				for _ = self:Clip1() + 1, flClip do
+					flX = flX - flSpacing
+					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
+				end
+			end
+		end
+	end
+
+	if !cvars.Bool "bAllowThirdPerson" || !cThirdPerson:GetBool() then
+		if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
+		if MyTable.flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
+	end
+
+	local v = __WEAPON_CROSSHAIR_TABLE__[ MyTable.Crosshair ]
+	if v != nil then
+		local EAimingAt = ply:GetNW2Int "DR_EAimingAt"
+		if EAimingAt == 1 then
+			if v( MyTable, self, 255, 0, 0, MyTable.flCrosshairAlpha ) then return true end
+		elseif EAimingAt == 2 then
+			if v( MyTable, self, 0, 255, 0, MyTable.flCrosshairAlpha ) then return true end
+		elseif v( MyTable, self, 255, 255, 255, MyTable.flCrosshairAlpha ) then return true end
+	end
+
+	local flHeight, flWidth = ScrH(), ScrW()
+	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
+	local flEnd = .002 * flHeight
+	local flCrosshairAlpha = MyTable.flCrosshairAlpha
+	for I = 0, flEnd do surface.DrawCircle( flX, flY, I, 255, 255, 255, flCrosshairAlpha ) end
+	local flTarget = flEnd + .0001 * flHeight
+	for I = flEnd, flTarget do surface.DrawCircle( flX, flY, I, 0, 0, 0, flCrosshairAlpha ) end
+
+	return true
+end
+
+local flLastDrawHUDCall = SysTime()
+
+function SWEP:DrawHUD()
+	local f = SysTime()
+	local flFrameTime = f - flLastDrawHUDCall
+	flLastDrawHUDCall = f
 
 	local MyTable = CEntity_GetTable( self )
 
@@ -429,94 +517,6 @@ function SWEP:DoDrawCrosshair()
 		MyTable.DrawSniperScope( self, MyTable )
 		return true
 	end
-
-	if CallPlayerClassHook( ply, "BaseWeapon_DoDrawCrosshair", self, MyTable ) then return true end
-
-	if !MyTable.bDontDrawAmmo then
-		local flClip = math_max( self:Clip1(), self:GetMaxClip1() )
-
-		local flW, flH = ScrW() * .9, ScrH() * .9
-		surface_SetDrawColor( 0, 0, 0, 255 )
-		local flWidth, flHeight, sFont
-		local b = MyTable.bDontDrawAmmoBars && ( !cvars.Bool "bAllowThirdPerson" || !cvars.Bool "bThirdPerson" )
-		if MyTable.WPN_SHOOT == WPN_SHOTGUN || MyTable.WPN_SHOOT == WPN_PISTOL || self:GetMaxClip1() <= 15 then
-			flWidth, flHeight, sFont = AMMO_BAR_LARGE_WIDTH, AMMO_BAR_LARGE_HEIGHT, "BaseWeapon_AmmoBarLargeText"
-		else
-			flWidth, flHeight, sFont = AMMO_BAR_WIDTH, AMMO_BAR_HEIGHT, "BaseWeapon_AmmoBarText"
-		end
-
-		local flSpacing = flWidth
-		local flVertical = 1
-		if MyTable.WPN_SHOOT == WPN_SHOTGUN then
-			flSpacing = flSpacing * 1.5
-			flWidth = flWidth * 1.25
-		elseif MyTable.WPN_SHOOT == WPN_PISTOL then
-			flVertical = flVertical * 12
-		end
-
-		local flX, flY = flW - flWidth, flH - flHeight
-
-		local a = self.Primary.Ammo
-		if a && a != "" && string.lower( a ) != "none" then
-			a = ply:GetAmmoCount( a )
-			if a > 0 then
-				draw.SimpleTextOutlined( a, sFont, flX, flY, Color( 255, 255, 255, 255 ), nil, nil, 1, Color( 0, 0, 0, 255 ) )
-			end
-		end
-
-		if !b then
-			local flTotal = flSpacing * flClip
-			flX = flX - flTotal
-			surface_DrawRect( flX, flY + 1.25 * flVertical - 1, flTotal, flHeight - 2 * flVertical + 2 )
-
-			if CurTime() <= MyTable.flReloadTime then
-				surface_SetDrawColor( 255, 255, 255, 255 * ( 1 - math.abs( math.sin( RealTime() * 5 ) ) * .9 ) )
-				local flX, flY = flW - flWidth, flH - flHeight
-				for _ = 1, flClip do
-					flX = flX - flSpacing
-					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 2, flHeight - 2 * flVertical )
-				end
-			else
-				surface_SetDrawColor( 255, 255, 255, 255 )
-				local flX, flY = flW - flWidth, flH - flHeight
-				for _ = 1, self:Clip1() do
-					flX = flX - flSpacing
-					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
-				end
-
-				surface_SetDrawColor( 32, 32, 32, 255 )
-				for _ = self:Clip1() + 1, flClip do
-					flX = flX - flSpacing
-					surface_DrawRect( flX + 1, flY + 1.25 * flVertical, flWidth - 1, flHeight - 2 * flVertical )
-				end
-			end
-		end
-	end
-
-	if !cvars.Bool "bAllowThirdPerson" || !cThirdPerson:GetBool() then
-		if CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )|| CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) || CEntity_GetNW2Bool( ply, "CTRL_bInCover" ) && !CEntity_GetNW2Bool( ply, "CTRL_bGunUsesCoverStance" ) then return true end
-		if flAimMultiplier <= .5 && MyTable.bDontDrawCrosshairDuringZoom && MyTable.vViewModelAim then return true end
-	end
-
-	local v = __WEAPON_CROSSHAIR_TABLE__[ MyTable.Crosshair ]
-	if v != nil then
-		local EAimingAt = ply:GetNW2Int "DR_EAimingAt"
-		if EAimingAt == 1 then
-			if v( MyTable, self, 255, 0, 0, MyTable.flCrosshairAlpha ) then return true end
-		elseif EAimingAt == 2 then
-			if v( MyTable, self, 0, 255, 0, MyTable.flCrosshairAlpha ) then return true end
-		elseif v( MyTable, self, 255, 255, 255, MyTable.flCrosshairAlpha ) then return true end
-	end
-
-	local flHeight, flWidth = ScrH(), ScrW()
-	local flX, flY = MyTable.GatherCrosshairPosition( self, MyTable )
-	local flEnd = .002 * flHeight
-	local flCrosshairAlpha = MyTable.flCrosshairAlpha
-	for I = 0, flEnd do surface.DrawCircle( flX, flY, I, 255, 255, 255, flCrosshairAlpha ) end
-	local flTarget = flEnd + .0001 * flHeight
-	for I = flEnd, flTarget do surface.DrawCircle( flX, flY, I, 0, 0, 0, flCrosshairAlpha ) end
-
-	return true
 end
 
 function SWEP:CustomAmmoDisplay() return {} end

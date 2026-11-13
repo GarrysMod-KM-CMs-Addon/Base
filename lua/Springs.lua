@@ -1,4 +1,4 @@
-local exp = math.exp
+local sqrt = math.sqrt
 
 function CreateImportantSpring( flStiffness, flDamping )
 	local flCurrentX, flCurrentY, flCurrentZ = 0, 0, 0
@@ -8,6 +8,8 @@ function CreateImportantSpring( flStiffness, flDamping )
 	flStiffness = flStiffness || 1
 	flDamping = flDamping || 1
 
+	local flSqrt = sqrt( flStiffness )
+
 	return {
 		SetTarget = function( flX, flY, flZ )
 			flTargetX = flX
@@ -16,26 +18,29 @@ function CreateImportantSpring( flStiffness, flDamping )
 		end,
 
 		// Not sure if we'll ever need these
-		//	SetStiffness = function( flNew ) flStiffness = flNew end,
-		//	SetDamping = function( flNew ) flDamping = flNew end,
+		SetStiffness = function( flNew )
+			flStiffness = flNew
+			flSqrt = sqrt( flNew )
+		end,
+
+		SetDamping = function( flNew ) flDamping = flNew end,
 
 		Unpack = function()
 			return flCurrentX, flCurrentY, flCurrentZ
 		end,
 
 		Decay = function( flFrameTime )
-			flVelocityX = flVelocityX + ( flTargetX - flCurrentX ) * flStiffness * flFrameTime
-			flVelocityY = flVelocityY + ( flTargetY - flCurrentY ) * flStiffness * flFrameTime
-			flVelocityZ = flVelocityZ + ( flTargetZ - flCurrentZ ) * flStiffness * flFrameTime
+			local flForceX = ( flTargetX - flCurrentX ) * flStiffness + ( -flVelocityX * flDamping ) * flSqrt
+			local flForceY = ( flTargetY - flCurrentY ) * flStiffness + ( -flVelocityY * flDamping ) * flSqrt
+			local flForceZ = ( flTargetZ - flCurrentZ ) * flStiffness + ( -flVelocityZ * flDamping ) * flSqrt
 
-			local flExpDamp = exp( -flDamping * flFrameTime )
-			flVelocityX = flVelocityX * flExpDamp
-			flVelocityY = flVelocityY * flExpDamp
-			flVelocityZ = flVelocityZ * flExpDamp
+			flVelocityX = flVelocityX + ( flForceX * flFrameTime )
+			flVelocityY = flVelocityY + ( flForceY * flFrameTime )
+			flVelocityZ = flVelocityZ + ( flForceZ * flFrameTime )
 
-			flCurrentX = flCurrentX + flVelocityX * flFrameTime
-			flCurrentY = flCurrentY + flVelocityY * flFrameTime
-			flCurrentZ = flCurrentZ + flVelocityZ * flFrameTime
+			flCurrentX = flCurrentX + ( flVelocityX * flFrameTime )
+			flCurrentY = flCurrentY + ( flVelocityY * flFrameTime )
+			flCurrentZ = flCurrentZ + ( flVelocityZ * flFrameTime )
 		end
 	}
 end

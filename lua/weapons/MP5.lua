@@ -25,6 +25,7 @@ SWEP.DrawAmmo = true
 SWEP.Crosshair = "SubmachineGun"
 SWEP.sAimSound = "BaseWeapon_Aim_SubmachineGun"
 SWEP.sHoldType = "SMG"
+SWEP.WPN_SHOOT = WPN_SUBMACHINEGUN
 
 if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
 	SWEP.ViewModelFOV = 45
@@ -52,13 +53,21 @@ if file.Exists( "models/weapons/FC3W/FC3MP5w.mdl", "GAME" ) then
 		level = 80,
 		sound = "MP5/Bolt.wav"
 	}
+
+	function SWEP:GetMuzzleFlashPosition()
+		local pOwner = self:GetOwner()
+		if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() then return end
+		return self:GetPos() - self:GetAngles():Forward() * 20 + self:GetAngles():Up() * 2
+	end
+	
 	function SWEP:DrawWorldModel()
 		self:DrewWorldModelAndUsedRenderOverrides()
 		local pOwner = self:GetOwner()
 		if !IsValid( pOwner ) then self:SetRenderOrigin( nil ) self:SetRenderAngles( nil ) self:DrawModel() return end
 		local tHand = pOwner:GetAttachment( pOwner:LookupAttachment "anim_attachment_rh" ) if !tHand then return end
 		local ang = tHand.Ang
-		local vOffset = ang:Right() * 1 + ang:Forward() * 0 + ang:Up() * 2
+		local vOffset = ang:Right() * 1
+		ang:RotateAroundAxis( ang:Right(), 10 )
 		ang:RotateAroundAxis( ang:Up(), 180 )
 		self:SetRenderOrigin( tHand.Pos + vOffset )
 		self:SetRenderAngles( ang )
@@ -75,7 +84,7 @@ sound.Add {
 	channel = CHAN_WEAPON,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^MP5Shot.wav"
+	sound = "^MP5/Fire.wav"
 }
 SWEP.sSound = "MP5Shot"
 
@@ -84,7 +93,7 @@ sound.Add {
 	channel = CHAN_AUTO,
 	level = 150,
 	pitch = { 90, 110 },
-	sound = "^MP5Shot.wav"
+	sound = "^MP5/Fire.wav"
 }
 SWEP.sSoundAuto = "MP5ShotAuto"
 

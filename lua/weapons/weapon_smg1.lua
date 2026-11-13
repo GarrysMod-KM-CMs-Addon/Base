@@ -31,7 +31,8 @@ SWEP.flRecoil = .9
 SWEP.flSidewaysRecoilMin = -.22
 SWEP.flSidewaysRecoilMax = .22
 SWEP.flUpwardsRecoilMin = .55
-SWEP.flUpwardsRecoilMax = .95
+SWEP.flUpwardsRecoilMax = .95
+SWEP.WPN_SHOOT = WPN_SUBMACHINEGUN
 SWEP.flViewModelX = 0
 
 if CLIENT then

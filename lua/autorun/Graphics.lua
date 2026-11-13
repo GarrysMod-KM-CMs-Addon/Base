@@ -216,17 +216,13 @@ local ANALYZATION_STEP = 30
 
 local mDepthOfField = Material "pp/dof"
 
-COLOR_DEFAULT_BRIGHTNESS = 0
-COLOR_DEFAULT_CONTRAST = 1
-COLOR_DEFAULT_COLOR = 1
-
 g_pDrawColorModify = g_pDrawColorModify || {
 	[ "$pp_colour_addr" ] = 0,
 	[ "$pp_colour_addg" ] = 0,
 	[ "$pp_colour_addb" ] = 0,
-	[ "$pp_colour_brightness" ] = COLOR_DEFAULT_BRIGHTNESS,
-	[ "$pp_colour_contrast" ] = COLOR_DEFAULT_CONTRAST,
-	[ "$pp_colour_colour" ] = COLOR_DEFAULT_COLOR,
+	[ "$pp_colour_brightness" ] = 0,
+	[ "$pp_colour_contrast" ] = 1,
+	[ "$pp_colour_colour" ] = 1,
 	[ "$pp_colour_mulr" ] = 0,
 	[ "$pp_colour_mulg" ] = 0,
 	[ "$pp_colour_mulb" ] = 0
@@ -368,9 +364,9 @@ hook.Add( "Tick", "Graphics", function()
 	g_pDrawColorModify[ "$pp_colour_mulg" ] = 0
 	g_pDrawColorModify[ "$pp_colour_mulb" ] = 0
 
-	g_pDrawColorModify[ "$pp_colour_brightness" ] = COLOR_DEFAULT_BRIGHTNESS
-	g_pDrawColorModify[ "$pp_colour_contrast" ] = COLOR_DEFAULT_CONTRAST
-	g_pDrawColorModify[ "$pp_colour_colour" ] = COLOR_DEFAULT_COLOR
+	g_pDrawColorModify[ "$pp_colour_brightness" ] = 0
+	g_pDrawColorModify[ "$pp_colour_contrast" ] = 1
+	g_pDrawColorModify[ "$pp_colour_colour" ] = 1
 
 	DOFModeHack( true )
 
@@ -992,3 +988,61 @@ hook.Add( "HUDShouldDraw", "Graphics", function( sName )
 end )
 
 hook.Add( "OnCloseCaptionEmit", "Graphics", function( sName ) return sName != "customLuaToken" end )
+
+local l_flHorizontalBlur = 0
+local l_flVerticalBlur = 0
+local l_flRadialBlur = 0
+
+local MAX_RADIAL_BLUR = 5
+local MAX_HORIZONTAL_BLUR = 5
+local MAX_VERTICAL_BLUR = 5
+local MAX_ROTATIONAL_BLUR = 5
+
+// Maybe let people change the formulas or tweak the intensity?
+// But that's for later regardless, lol.
+
+hook.Add( "GetMotionBlurValues", "Graphics", function()
+	// flHorizontal and flVertical DO matter, since they offset to the target,
+	// e.g. 10 is to the right, -10 is to the left.
+	// flRadial seems to not be any different.
+	// flRotational is to the right.
+
+	local flHorizontal, flVertical, flRadial, flRotational = 0, 0, 0, 0
+
+	local pPlayer = LocalPlayer()
+
+	local aEye = EyeAngles()
+
+	local vVelocity = GetVelocity( pPlayer )
+
+	local flVelocity = vVelocity:Length()
+
+	local pVehicle = pPlayer:GetNW2Entity "GAME_pVehicle"
+	if IsValid( pVehicle ) then
+		// For now
+		return 0, 0, 0, 0
+	end
+
+	local bGround = pPlayer:IsOnGround() || pPlayer:WaterLevel() > 0
+
+	local flRightDot = vVelocity:GetNormalized():Dot( aEye:Right() )
+	if math.abs( flRightDot ) >= .7071067 then flRightDot = flRightDot > 0 && 1 || -1 end
+
+	if bGround && pPlayer:GetNW2Bool "CTRL_bSliding" then
+		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() * .5, 0, MAX_RADIAL_BLUR ) )
+	elseif bGround && pPlayer:GetNW2Bool "CTRL_bSprinting" then
+		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() * .25, 0, MAX_RADIAL_BLUR ) )
+	else
+		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( ( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() ) ^ 5 * .25, 0, MAX_RADIAL_BLUR ) )
+	end
+
+	l_flHorizontalBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flHorizontalBlur, math_Clamp( ( flVelocity * flRightDot / pPlayer:GetRunSpeed() ) ^ 2 * .03, -MAX_HORIZONTAL_BLUR, MAX_HORIZONTAL_BLUR ) )
+
+	l_flVerticalBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flVerticalBlur, math_Clamp( ( flVelocity * vVelocity:GetNormalized():Dot( aEye:Up() ) / pPlayer:GetRunSpeed() ) * .05, -MAX_VERTICAL_BLUR, MAX_VERTICAL_BLUR ) )
+
+	flRadial = flRadial + l_flRadialBlur
+	flHorizontal = flHorizontal + l_flHorizontalBlur
+	flVertical = flVertical + l_flVerticalBlur
+
+	return flHorizontal, flVertical, flRadial, flRotational
+end )

@@ -1,11 +1,3 @@
-// Lots of code is taken from Buu342's Weapon Base 2
-// You can find it here: https://github.com/buu342/GMod-BuuBaseRedone
-// I could've just took the code because it's the best way to do it,
-// and because he took the general idea and some assets from Far Cry 3,
-// but his base really helped me, and I really wanted to credit him.
-//
-// Thank you, Buu.
-
 local math_Clamp = math.Clamp
 local util_Effect = util.Effect
 local math_Rand = math.Rand
