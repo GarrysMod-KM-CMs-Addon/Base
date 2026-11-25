@@ -119,7 +119,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 		local vPos = CEntity_GetPos( self )
 		local vGoal = CEntity_GetPos( pEnemy )
 
-		if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then return end
+		if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then pData.bStartedThread = nil return true end
 
 		MyTable.ComputePath( self, pPath, vGoal )
 

@@ -6,7 +6,8 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		return
 	end
 
-	MyTable.GekkoChirpControllerCombat( self, MyTable )
+	local fGekkoChirpControllerCombat = MyTable.GekkoChirpControllerCombat
+	if fGekkoChirpControllerCombat then fGekkoChirpControllerCombat( self, MyTable ) end
 
 	if table.IsEmpty( MyTable.tEnemies ) then return true end
 
@@ -14,6 +15,9 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 	if !IsValid( pEnemy ) then return true end
 
 	local pEnemy, pTrueEnemy = self:SetupEnemy( pEnemy )
+
+	local pEnemy = MyTable.Enemy
+	if !IsValid( pEnemy ) then return true end
 
 	local f
 	local fGetStompDamageRadius = MyTable.GetStompDamageRadius
@@ -178,7 +182,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	if !self:Visible( pEnemy ) then return end
 
-	if MyTable.Taunt && math.random() <= .06 * MyTable.m_flFrameTime then
+	if MyTable.Taunt && math.random() <= .04 * MyTable.m_flFrameTime then
 		MyTable.Taunt( self, pEnemy, MyTable )
 		pSchedule.flMeleeTimer = 4 + math.random() * 4
 		return
@@ -190,7 +194,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	local f = MyTable.flChargeSpeed * MyTable.flChargeTimeMin * .4
 
-	if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .1 then
+	if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .05 then
 		local pCharge = MyTable.SetSchedule( self, MyTable.sChargeSchedule, MyTable )
 		pCharge.fOnComplete = function()
 			if math.random( 3 ) == 1 then

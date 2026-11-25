@@ -196,7 +196,10 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 
 	local pDestination = pSchedule.pDestination
 	if !pDestination then
+		MyTable.Stand( self, MyTable )
+
 		if pSchedule.bSearching then return end
+
 		pSchedule.bSearching = true
 
 		ACTOR_QUEUE( function()
@@ -205,8 +208,6 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 			local pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
 
 			while true do
-				MyTable.Stand( self, MyTable )
-
 				for i = 1, 16 do
 					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
