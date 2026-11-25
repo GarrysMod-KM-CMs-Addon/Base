@@ -182,10 +182,22 @@ function ENT:Think()
 	local flVolume = flRoundsPerMinute / flRoundsPerMinuteIdle * .5
 	local flRoundsPerMinuteLimit = self.flRoundsPerMinuteLimit
 	local flPitch = math.Clamp( flRoundsPerMinute / flRoundsPerMinuteIdle, 0, 1 ) * 75 + math.Clamp( ( flRoundsPerMinute - flRoundsPerMinuteIdle ) / flRoundsPerMinuteLimit, 0, 1 ) * 25
+
 	local p = self.m_pRotorLoop
-	if p then p:ChangeVolume( flVolume ) p:ChangePitch( flPitch ) end
+	if p then
+		self.SOUND_bSmoothEntry = true
+		p:ChangeVolume( flVolume )
+		self.SOUND_bSmoothEntry = true
+		p:ChangePitch( flPitch )
+	end
 	local p = self.m_pWhineLoop
-	if p then p:ChangeVolume( flVolume ) p:ChangePitch( flPitch ) end
+	if p then
+		self.SOUND_bSmoothEntry = true
+		p:ChangeVolume( flVolume )
+		self.SOUND_bSmoothEntry = true
+		p:ChangePitch( flPitch )
+	end
+
 	local flSpeed = math.Clamp( flRoundsPerMinute / flRoundsPerMinuteIdle, 0, 1 ) * 1.5 + math.Clamp( ( flRoundsPerMinute - flRoundsPerMinuteIdle ) / flRoundsPerMinuteLimit, 0, 1 ) * 5
 	self:SetSkin( flSpeed > 1 && 0 || 1 )
 	local vMove = self.m_vMove
