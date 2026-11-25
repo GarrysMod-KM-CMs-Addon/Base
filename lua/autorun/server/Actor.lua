@@ -99,6 +99,9 @@ ACTOR_STATE_ALERT = 2
 ACTOR_STATE_COMBAT = 3
 
 function ACTOR_TAKE_CONTROL( pActor, pPlayer )
+	local pControlling = pPlayer:GetNW2Entity "GAME_pControlling"
+	if IsValid( pControlling ) then ACTOR_STOP_CONTROL( pControlling, pPlayer ) end
+
 	pPlayer:SetNW2Bool( "GAME_bControlling", true )
 	pPlayer:SetNW2Entity( "GAME_pControlling", pActor )
 	pPlayer:SetNoTarget( true )

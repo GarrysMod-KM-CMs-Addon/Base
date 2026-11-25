@@ -163,7 +163,7 @@ FRICTION_NORMAL = 4
 ACCELERATION_NORMAL = 5
 GRAVITY_NORMAL = 1200
 
-HUMAN_SPRINT_SPEED = 300
+HUMAN_SPRINT_SPEED = 285
 HUMAN_JOG_SPEED = 180
 HUMAN_WALK_SPEED = 70
 
@@ -203,7 +203,7 @@ TRAVERSES_WATER = 1
 TRAVERSES_GROUND = 2
 TRAVERSES_AIR = 4
 
-UNIVERSAL_FOV = 90
+UNIVERSAL_FOV = 65
 
 local RealTime = RealTime
 local FrameTime = FrameTime
@@ -467,6 +467,7 @@ else
 		local cColor = net_ReadColor( false )
 		local sSound = net_ReadString()
 		local flDuration = net_ReadFloat()
+
 		sSound = "Caption_" .. sSound
 		local sCaption = language_GetPhrase( sSound )
 		if sCaption == sSound then return end
@@ -788,21 +789,25 @@ end
 
 // "In Multiplayer this does not return the current map in the CLIENT realm before GM:Initialize."
 if CLIENT then
+	include "DirectorClient.lua"
+
 	hook.Add( "Initialize", "Improvements", function()
 		hook.Remove( "Initialize", "Improvements" )
 
 		local sMap = game.GetMap()
 
-		sFile = "MapClient/" .. sMap .. ".lua"
+		local sFile = "MapClient/" .. sMap .. ".lua"
 		if file.Exists( sFile, "LUA" ) then include( sFile ) end
 
 		sFile = "MapShared/" .. sMap .. ".lua"
 		if file.Exists( sFile, "LUA" ) then include( sFile ) end
 	end )
 else
+	include "DirectorClient/Send.lua"
+
 	local sMap = game.GetMap()
 
-	sFile = "MapServer/" .. sMap .. ".lua"
+	local sFile = "MapServer/" .. sMap .. ".lua"
 	if file.Exists( sFile, "LUA" ) then
 		include( sFile )
 	end

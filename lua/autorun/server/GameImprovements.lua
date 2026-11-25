@@ -226,6 +226,12 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 			filter = SimpleRelatedFilter( ent )
 		} ).Hit then continue end
 
+		if ent:IsPlayer() then
+			net_Start( "GiveMeMahTerrorBlur", false )
+				net_WriteFloat( math.Remap( flDamage, 30, 150, 100, 160 ) )
+			net_Send( ent )
+		end
+
 		local f = ent.GAME_OnRangeAttacked
 		if f == nil then ent.GAME_flSuppression = ( ent.GAME_flSuppression || 0 ) + flDamage else f( ent, Owner, vStart, vEnd, flDamage ) end
 	end
@@ -246,13 +252,9 @@ function DispatchRangeAttack( Owner, vStart, vEnd, flDamage )
 	end
 end
 
+// Known bug: doesn't drop the current weapon for some reason :(
 local function fDropWeaponsOnDeath( pPlayer )
-	// Dunno why, but it actually makes their current gun NOT drop, for... some reason
-	//	local pWeapon = pPlayer:GetActiveWeapon()
-	//	
-	//	if IsValid( pWeapon ) then pPlayer:DropWeapon( pWeapon ) end
-
-	for _, pWeapon in ipairs( pPlayer:GetWeapons() ) do pPlayer:DropWeapon( pWeapon ) end
+	for _, pWeapon in ipairs( pPlayer:GetWeapons() ) do pPlayer:DropWeapon( pWeapon, nil, vector_origin ) end
 
 	// TODO: Actually spawn the items they've picked up, 'cuz as is,
 	// twenty grenades can just turn into one
@@ -611,12 +613,12 @@ ENTITY_BY_CLASS.prop_ragdoll = function( pEntity )
 		if flTimeLeft <= 0 then
 			local v = pEntity:GetPos()
 			v:Add( pEntity:OBBCenter() )
-			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ( pEntity.GAME_flBoundingRadiusAtDeath || pEntity:BoundingRadius() ) * ( 1 + 2 / 3 ), pEntity ) end
+			for i = 1, random( 2 ) do util_Decal( "Blood", v, v + VectorRand():GetNormalized() * ( pEntity.GAME_flBoundingRadiusAtDeath || pEntity:BoundingRadius() ) * 3, pEntity ) end
 			pEntity.GAME_flBleedTimeLeft = 1
 		else pEntity.GAME_flBleedTimeLeft = flTimeLeft - f * 128 * Rand( .9, 1.1 ) * FrameTime() end
 	end
 
-	// We can't regenerate blood if we're dead
+	// We cannot regenerate blood if we're dead!
 	//	flBlood = math.Clamp( flBlood + ( f > 0 && ( .0016 - f ) || .016 ) * FrameTime(), 0, 1 )
 	flBlood = math.Clamp( flBlood - f * .5 * FrameTime(), 0, 1 )
 	pEntity:SetNW2Float( "GAME_flBlood", flBlood )
@@ -1490,6 +1492,7 @@ NOT_A_VOICELINE[ "npc/zombie/moan_loop3.wav" ] = true
 NOT_A_VOICELINE[ "npc/zombie/moan_loop4.wav" ] = true
 
 util.AddNetworkString "CaptionSound"
+util.AddNetworkString "GiveMeMahTerrorBlur"
 
 hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 	if COMP then
@@ -1524,6 +1527,12 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 	local vPos = Data.Pos || ( pEntity:GetPos() + pEntity:OBBCenter() )
 
+	local flDecibels = pEntity.SOUND_flFakeTerrorDecibels || Data.SoundLevel
+	pEntity.SOUND_flFakeTerrorDecibels = nil
+
+	local bSmoothEntry = pEntity.SOUND_bSmoothEntry
+	pEntity.SOUND_bSmoothEntry = nil
+
 	local flDistSqr = flDistance * flDistance
 	for pActor in pairs( __ACTOR_LIST__ ) do
 		if pActor == pEntity || pActor == pOwner then continue end
@@ -1536,7 +1545,7 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 			local f = ActorTable.flHearingStrength
 			if f > 0 && ActorTable.GetShootPos( pActor ):DistToSqr( vPos ) <= flDistSqr * f * f then
 				fCallOnAllHearers( pActor )
-				ActorTable.OnHeardSomething( pActor, pOwner, Data )
+				ActorTable.OnHeardSomething( pActor, pOwner, Data, flDecibels, bSmoothEntry )
 			end
 		end
 	end
@@ -1559,10 +1568,24 @@ hook.Add( "EntityEmitSound", "GameImprovements", function( Data, COMP )
 
 		local tCaptionPlayers = {}
 
+		local flShockDist = math.Clamp( math.Remap( flDecibels, 85, 100, 0, 1 ), 0, 1 ) + ( math.max( 0, math.Remap( flDecibels, 120, 180, 0, 1 ) ) ^ 3 ) * 9 + ( math.max( 0, math.Remap( flDecibels, 180, 200, 0, 1 ) ) ^ 3 ) * 10
+		local flShock = math.Clamp( math.Remap( flDecibels, 85, 100, 0, 1 ), 0, 1 ) + ( math.max( 0, math.Remap( flDecibels, 150, 180, 0, 1 ) ) ^ 3 ) * 9 + ( math.max( 0, math.Remap( flDecibels, 180, 200, 0, 1 ) ) ^ 3 ) * 20
+
 		for _, ply in player_Iterator() do
-			if ply:EyePos():DistToSqr( vPos ) > flDistSqr then continue end
+			local flDistToPlrSqr = ply:EyePos():DistToSqr( vPos )
+			if flDistToPlrSqr > flDistSqr then continue end
 
 			fCallOnAllHearers( ply )
+
+			local flTerrorSqr = ply:BoundingRadius() * 40 * ( flDecibels / 100 ) * flShockDist
+			flTerrorSqr = flTerrorSqr * flTerrorSqr
+
+			net_Start( "GiveMeMahTerrorBlur", false )
+				net_WriteFloat( ( bSmoothEntry || flDistToPlrSqr > flTerrorSqr || flDecibels <= 85 ) && 0 ||
+				flDecibels
+				* flShock
+				* math.Clamp( math.Remap( flDistToPlrSqr, 0, flTerrorSqr, 1, 0 ), 0, 1 ) )
+			net_Send( ply )
 
 			table_insert( tCaptionPlayers, ply )
 		end

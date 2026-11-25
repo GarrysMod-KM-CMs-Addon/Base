@@ -1,18 +1,29 @@
 local VELOCITY = 8192
 
-local CEntity_GetTable = FindMetaTable( "Entity" ).GetTable
+local CEntity = FindMetaTable "Entity"
+local CEntity_GetTable = CEntity.GetTable
+local CEntity_SetPos = CEntity.SetPos
+
+local CVector = FindMetaTable "Vector"
+local CVector_Set = CVector.Set
+local CVector_Mul = CVector.Mul
+local CVector_Sub = CVector.Sub
+local CVector_Add = CVector.Add
+local CVector_Normalize = CVector.Normalize
+local CVector_Dot = CVector.Dot
 
 local CurTime = CurTime
 
 local LocalPlayer = LocalPlayer
 
 local vTemp = Vector()
-local vTemp2 = Vector()
 
 local EyePos = EyePos
 local CreateSound = CreateSound
 
 local Approach = math.Approach
+
+local IsValid = IsValid
 
 sound.Add {
 	name = "BulletWhizLoop",
@@ -34,18 +45,24 @@ function EFFECT:Init( pData )
 
 	local pOwner = pWeapon:GetOwner()
 
-	if !IsValid( pOwner ) then pOwner = pWeapon end
-	if !IsValid( pOwner ) then MyTable.m_bFirstPersonTracer = true return end
+	if !IsValid( pOwner ) then
+		pOwner = pWeapon
+		if !IsValid( pOwner ) then MyTable.m_bFirstPersonTracer = true return end
+	end
 
 	if pOwner == LocalPlayer() then
 		MyTable.m_bNoSound = true
-		if !pOwner:ShouldDrawLocalPlayer() then MyTable.m_bFirstPersonTracer = true return end
+
+		if !pOwner:ShouldDrawLocalPlayer() then
+			MyTable.m_bFirstPersonTracer = true
+			return
+		end
 	end
 
 	local vEnd = pData:GetOrigin()
 	local v = pData:GetStart()
 	if IsValid( pWeapon ) then
-		local fOverrideTracerOrigin = pWeapon.OverrideTracerOrigin
+		local fOverrideTracerOrigin = CEntity_GetTable( pWeapon ).OverrideTracerOrigin
 		if fOverrideTracerOrigin then
 			v = fOverrideTracerOrigin( pWeapon, "Bullet" )
 		else
@@ -79,6 +96,8 @@ function EFFECT:Init( pData )
 	MyTable.m_flLifeTime = flLifeTime
 
 	MyTable.m_flDieTime = CurTime() + flLifeTime
+
+	MyTable.m_vLocation = Vector()
 end
 
 local BULLET_WHIZ_DISTANCE = 4096
@@ -107,45 +126,66 @@ local function GetTheSoundOut( MyTable )
 	pWhiz:ChangePitch( MyTable.m_flLastTruePitch * flSound )
 end
 
+local trFilter = {}
+
+local trData = {
+	filter = trFilter,
+	mask = MASK_VISIBLE_AND_NPCS
+}
+
 local function Update( self, MyTable, bDontUpdateSound )
 	if CurTime() > MyTable.m_flDieTime then return end
 
 	local flLifeTime = MyTable.m_flLifeTime
-	vTemp:Set( MyTable.m_vStart )
 
-	vTemp2:Set( MyTable.m_dDirection )
-	vTemp2:Mul( MyTable.m_flDistance * ( flLifeTime - ( MyTable.m_flDieTime - CurTime() ) ) / flLifeTime )
+	local vLocation = MyTable.m_vLocation
 
-	vTemp:Add( vTemp2 )
+	CVector_Set( vLocation, MyTable.m_vStart )
 
-	self:SetPos( vTemp )
+	CVector_Set( vTemp, MyTable.m_dDirection )
+	CVector_Mul( vTemp, MyTable.m_flDistance * ( flLifeTime - ( MyTable.m_flDieTime - CurTime() ) ) / flLifeTime )
+
+	CVector_Add( vLocation, vTemp )
+
+	CEntity_SetPos( self, vLocation )
 
 	if MyTable.m_bNoSound || bDontUpdateSound then return end
 
 	local vEyePos = EyePos()
-	local flDistSqr = vEyePos:DistToSqr( vTemp )
+	local flDistSqr = vEyePos:DistToSqr( vLocation )
 	if flDistSqr > BULLET_WHIZ_DISTANCE * BULLET_WHIZ_DISTANCE then
 		GetTheSoundOut( MyTable )
 		return
 	end
 
-	if util_TraceLine( {
-		start = vEyePos,
-		endpos = vTemp,
-		filter = tFilter,
-		mask = MASK_VISIBLE_AND_NPCS
-	} ).Hit then
-		GetTheSoundOut( MyTable )
-		return
-	end
+	local ply = LocalPlayer()
+
+	trFilter[ 1 ] = nil
+	trFilter[ 2 ] = nil
+	trFilter[ 3 ] = nil
 
 	local pOwner = MyTable.m_pOwner
 
-	local ply = LocalPlayer()
+	if IsValid( pOwner ) && pOwner != ply then
+		trFilter[ 1 ] = ply
+		trFilter[ 2 ] = pOwner
 
-	local tFilter = ( IsValid( pOwner ) && pOwner != ply ) && { ply, pOwner } || { ply }
-	local pViewEntity = ply:GetViewEntity()
-	if IsValid( pViewEntity ) then table.insert( tFilter, pViewEntity ) end
+		local pViewEntity = ply:GetViewEntity()
+		if IsValid( pViewEntity ) then trFilter[ 3 ] = pViewEntity end
+	else
+		trFilter[ 1 ] = ply
+
+		local pViewEntity = ply:GetViewEntity()
+		if IsValid( pViewEntity ) then trFilter[ 2 ] = pViewEntity end
+	end
+
+	trData.startpos = vEyePos
+	trData.endpos = vLocation
+
+	if util_TraceLine( trData ).Hit then
+		GetTheSoundOut( MyTable )
+		return
+	end
 
 	local pWhiz = MyTable.m_pWhiz
 	if !pWhiz then
@@ -154,7 +194,11 @@ local function Update( self, MyTable, bDontUpdateSound )
 		MyTable.m_pWhiz = pWhiz
 	end
 
-	local flDot = MyTable.m_dDirection:Dot( ( vEyePos - vTemp ):GetNormalized() )
+	CVector_Set( vTemp, vEyePos )
+	CVector_Sub( vTemp, vLocation )
+	CVector_Normalize( vTemp )
+
+	local flDot = CVector_Dot( MyTable.m_dDirection, vTemp )
 
 	local flVolume = 1 - sqrt( flDistSqr ) / BULLET_WHIZ_DISTANCE
 	MyTable.m_flLastTrueVolume = flVolume
@@ -205,17 +249,16 @@ function EFFECT:Render()
 
 	Update( self, MyTable, true )
 
-	local vPos = self:GetPos()
+	local vPos = MyTable.m_vLocation
 	local dDirection = MyTable.m_dDirection
 
 	render_SetMaterial( mMaterial )
 
-	for i = 0, 1, 1 / 40 do
-		vTemp:Set( vPos )
-		vTemp2:Set( dDirection )
-		vTemp2:Mul( i * -20 )
-		vTemp:Sub( vTemp2 )
-
+	for i = 0, 1, 1 / 20 do
+		CVector_Set( vTemp, dDirection )
+		CVector_Mul( vTemp, i * -15 )
+		CVector_Add( vTemp, vPos )
+	
 		render_DrawSprite( vTemp, 8, 8, COLOR )
 	end
 

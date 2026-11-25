@@ -1,6 +1,6 @@
 /*
 WeaponTemplate_t {
-	Attachment -> Any, usually a key for m_pActiveBodyTemplates
+	Attachment -> Any, usually a key for pActiveBodyTemplates
 
 	BarrelVector -> Vector
 	BarrelAngle -> Angle

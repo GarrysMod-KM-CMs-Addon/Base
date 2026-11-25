@@ -377,8 +377,8 @@ hook.Add( "Tick", "Graphics", function()
 
 	trRequestAnalyze.start = vEye
 
-	for flPitch = -90, 90, ANALYZATION_STEP do
-		for flYaw = -90, 90, ANALYZATION_STEP do
+	for flPitch = -33.75, 33.75, ANALYZATION_STEP do
+		for flYaw = -45, 45, ANALYZATION_STEP do
 			aEye[ 1 ] = aEye[ 1 ] + flPitch
 			aEye[ 2 ] = aEye[ 2 ] + flYaw
 
@@ -419,8 +419,11 @@ hook.Add( "Tick", "Graphics", function()
 
 	flColorSum = VectorSum( vColor )
 
-	local flDeath = math_Clamp( pLocalPlayer:Health() / pLocalPlayer:GetMaxHealth(), 0, 1 ) ^ 1.5
-	g_pDrawColorModify[ "$pp_colour_colour" ] = g_pDrawColorModify[ "$pp_colour_colour" ] * flDeath
+	local flDeath = math_Clamp( pLocalPlayer:Health() / pLocalPlayer:GetMaxHealth(), 0, 1 )
+
+	g_pDrawColorModify[ "$pp_colour_colour" ] = g_pDrawColorModify[ "$pp_colour_colour" ] * flDeath ^ .5
+
+	g_pDrawColorModify[ "$pp_colour_brightness" ] = g_pDrawColorModify[ "$pp_colour_brightness" ] + math_Remap( flDeath ^ 2, 0, 1, -1 / 3, 0 )
 
 	local flOxygen, flOxygenLimit = pLocalPlayer:GetNW2Float( "GAME_flOxygen", -1 ), pLocalPlayer:GetNW2Float( "GAME_flOxygenLimit", -1 )
 	if flOxygen != -1 && flOxygenLimit != -1 then
@@ -445,11 +448,11 @@ hook.Add( "Tick", "Graphics", function()
 
 	local flBrightness = GetBrightness( flFogR, flFogG, flFogB )
 
-	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, math_max( 0, 1 - flColorSum ) )
+	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, math_max( 0, 1 - flColorSum * math_Clamp( math_Remap( flColorSum, 0, 2, 0, 1 ), 0, 1 ) ) )
 
-	flBloomDarken = math_Remap( flBloom, 0, 1, .2, 0 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, .5, 6 )
-	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1, 1.25 )
+	flBloomDarken = math_Remap( flBloom, 0, 1, .4, .1 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, 1, 4 )
+	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1, 1.5 )
 
 	flFogDensityMul = math_Approach( flFogDensityMul, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .2, 1 ), flFrameTime )
 	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, math_Remap( flColorSum, 0, 1, 512, 12288 ) )
@@ -515,9 +518,9 @@ hook.Add( "RenderScreenspaceEffects", "Graphics", function()
 
 	DrawBloom(
 		flBloomDarken, flBloomMultiply,
-		4, // Size X
-		4, // Size Y
-		4, // Passes
+		10, // Size X
+		10, // Size Y
+		10, // Passes
 		flBloomColorMultiply, 1, 1, 1
 	)
 
@@ -752,6 +755,11 @@ hook.Add( "InputMouseApply", "Graphics", function( _, x, y )
 	return true
 end )
 
+local l_vLastCamera = Vector()
+local l_aLastCamera = Angle()
+
+local l_flLastDeathCamera = 0
+
 hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfar )
 	local tView = {
 		origin = origin,
@@ -761,6 +769,31 @@ hook.Add( "CalcView", "Graphics", function( ply, origin, angles, fov, znear, zfa
 		zfar = zfar,
 		drawviewer = false
 	}
+
+	local pRagdoll = ply:GetRagdollEntity()
+	if IsValid( pRagdoll ) then
+		l_flLastDeathCamera = Lerp( FRILerpRate( 25, RealFrameTime() ), l_flLastDeathCamera, 1 )
+
+		local pos, ang = pRagdoll:GetBonePosition( pRagdoll:LookupBone "ValveBiped.Bip01_Head1" )
+
+		ang:RotateAroundAxis( ang:Up(), -80 )
+		pos:Add( ang:Right() * -2 )
+		pos:Add( ang:Forward() * 4.7 )
+
+		tView.origin = LerpVector( l_flLastDeathCamera, tView.origin, pos + ang:Forward() * 5 + ang:Right() * 4.5 )
+		tView.angles = LerpAngle( l_flLastDeathCamera, tView.angles, ang )
+	else
+		l_flLastDeathCamera = Lerp( FRILerpRate( 25, RealFrameTime() ), l_flLastDeathCamera, 0 )
+
+		local pos, ang = ply:GetBonePosition( ply:LookupBone "ValveBiped.Bip01_Head1" )
+
+		ang:RotateAroundAxis( ang:Up(), -80 )
+		pos:Add( ang:Right() * -2 )
+		pos:Add( ang:Forward() * 4.7 )
+
+		l_vLastCamera:Set( tView.origin )
+		l_aLastCamera:Set( tView.angles )
+	end
 
 	if drive.CalcView( ply, tView ) then
 		fMoreEffects( ply, tView )
@@ -998,8 +1031,17 @@ local MAX_HORIZONTAL_BLUR = 5
 local MAX_VERTICAL_BLUR = 5
 local MAX_ROTATIONAL_BLUR = 5
 
-// Maybe let people change the formulas or tweak the intensity?
-// But that's for later regardless, lol.
+FLINCH_TERROR_BLUR = FLINCH_TERROR_BLUR || 0
+
+FLINCH_TERROR_BLUR_LERPED = FLINCH_TERROR_BLUR_LERPED || 0
+
+net.Receive( "GiveMeMahTerrorBlur", function()
+	FLINCH_TERROR_BLUR = FLINCH_TERROR_BLUR + net_ReadFloat()
+end )
+
+function ClampBlur( flHorizontal, flVertical, flRadial, flRotational )
+	return  flHorizontal, flVertical, math_Clamp( flRadial, 0, 50 ), flRotational
+end
 
 hook.Add( "GetMotionBlurValues", "Graphics", function()
 	// flHorizontal and flVertical DO matter, since they offset to the target,
@@ -1017,10 +1059,18 @@ hook.Add( "GetMotionBlurValues", "Graphics", function()
 
 	local flVelocity = vVelocity:Length()
 
+	FLINCH_TERROR_BLUR_LERPED = Lerp( FRILerpRate( 20, FrameTime() ), FLINCH_TERROR_BLUR_LERPED, FLINCH_TERROR_BLUR )
+	FLINCH_TERROR_BLUR = Lerp( FRILerpRate( 5, FrameTime() ), FLINCH_TERROR_BLUR, 0 )
+
+	// TODO: Maybe, instead of a min, let us get used to the terror blur?
+	// E.g. dampening increases as blur stays and lowers as it disappears
+	flRadial = flRadial + min( FLINCH_TERROR_BLUR_LERPED * ( 1 / 150 / 8 ) * pPlayer:GetNW2Float( "GAME_flTerrorBlurAmount", 1 ), 10 )
+
 	local pVehicle = pPlayer:GetNW2Entity "GAME_pVehicle"
 	if IsValid( pVehicle ) then
 		// For now
-		return 0, 0, 0, 0
+		flHorizontal, flVertical, flRadial, flRotational = ClampBlur( flHorizontal, flVertical, flRadial, flRotational )
+		return flHorizontal, flVertical, flRadial, flRotational
 	end
 
 	local bGround = pPlayer:IsOnGround() || pPlayer:WaterLevel() > 0
@@ -1032,11 +1082,13 @@ hook.Add( "GetMotionBlurValues", "Graphics", function()
 		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() * .5, 0, MAX_RADIAL_BLUR ) )
 	elseif bGround && pPlayer:GetNW2Bool "CTRL_bSprinting" then
 		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() * .25, 0, MAX_RADIAL_BLUR ) )
-	else
+	elseif bGround then
 		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( ( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ) / pPlayer:GetRunSpeed() ) ^ 5 * .25, 0, MAX_RADIAL_BLUR ) )
+	else
+		l_flRadialBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flRadialBlur, math_Clamp( ( math.abs( flVelocity * vVelocity:GetNormalized():Dot( aEye:Forward() ) ^ 5 ) / pPlayer:GetRunSpeed() ) ^ 5 * .25, 0, MAX_RADIAL_BLUR ) )
 	end
 
-	l_flHorizontalBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flHorizontalBlur, math_Clamp( ( flVelocity * flRightDot / pPlayer:GetRunSpeed() ) ^ 2 * .03, -MAX_HORIZONTAL_BLUR, MAX_HORIZONTAL_BLUR ) )
+	l_flHorizontalBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flHorizontalBlur, math_Clamp( ( flVelocity * flRightDot / pPlayer:GetRunSpeed() ) ^ 2 * .01, -MAX_HORIZONTAL_BLUR, MAX_HORIZONTAL_BLUR ) )
 
 	l_flVerticalBlur = Lerp( FRILerpRate( 50, FrameTime() ), l_flVerticalBlur, math_Clamp( ( flVelocity * vVelocity:GetNormalized():Dot( aEye:Up() ) / pPlayer:GetRunSpeed() ) * .05, -MAX_VERTICAL_BLUR, MAX_VERTICAL_BLUR ) )
 
@@ -1044,5 +1096,6 @@ hook.Add( "GetMotionBlurValues", "Graphics", function()
 	flHorizontal = flHorizontal + l_flHorizontalBlur
 	flVertical = flVertical + l_flVerticalBlur
 
+	flHorizontal, flVertical, flRadial, flRotational = ClampBlur( flHorizontal, flVertical, flRadial, flRotational )
 	return flHorizontal, flVertical, flRadial, flRotational
 end )

@@ -77,7 +77,7 @@ cvars.AddChangeCallback( "PostProcess_Camera_00", function( _ /* sName */, _ /* 
 		g_pDrawColorModify[ "$pp_colour_mulg" ] = g_pDrawColorModify[ "$pp_colour_mulg" ] + .05
 		g_pDrawColorModify[ "$pp_colour_mulb" ] = g_pDrawColorModify[ "$pp_colour_mulb" ] + .1
 
-		g_pDrawColorModify[ "$pp_colour_brightness" ] = g_pDrawColorModify[ "$pp_colour_brightness" ] + -.08
+		g_pDrawColorModify[ "$pp_colour_brightness" ] = g_pDrawColorModify[ "$pp_colour_brightness" ] + -.04
 		g_pDrawColorModify[ "$pp_colour_contrast" ] = g_pDrawColorModify[ "$pp_colour_contrast" ] * 1.65
 		g_pDrawColorModify[ "$pp_colour_colour" ] = g_pDrawColorModify[ "$pp_colour_colour" ] * .45
 	end

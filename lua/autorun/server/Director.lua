@@ -126,7 +126,7 @@ hook.Add( "Tick", "Director", function()
 				if flTimeLeft <= 0 then
 					ply:EmitSound "Bleed"
 					local v = ply:GetPos()
-					local f = ply:BoundingRadius() * ( 1 + 2 / 3 )
+					local f = ply:BoundingRadius() * 3
 					v:Add( ply:OBBCenter() )
 					for i = 1, math_random( 2 ) do
 						local d = VectorRand()
