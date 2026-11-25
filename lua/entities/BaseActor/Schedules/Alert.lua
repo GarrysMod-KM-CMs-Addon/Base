@@ -2,8 +2,8 @@ ENT.tAlertSearchedAreas = {}
 ENT.tAlertContext = {}
 
 function ENT:PrepareAlert( MyTable )
-	MyTable.tAlertSearchedAreas = {}
-	//	MyTable.tAlertContext = {}
+	//	MyTable.tAlertSearchedAreas = {}
+	MyTable.tAlertContext = {}
 end
 
 function ENT:ShareAlertContext( pOther, MyTable )
@@ -30,13 +30,19 @@ local function LookAround( self, pSchedule, MyTable )
 		return
 	end
 
-	local flTime = CurTime() + math.random() * math.random() * 8
+	local flTime = CurTime() + 1 + math.random() * math.random() * 8
+
+	local flNextLook = 0
+
+	MyTable.vaAimTargetBody = pSchedule.aInitialFacing
 
 	while CurTime() <= flTime do
-		if CurTime() > ( pSchedule.flNextLook || 0 ) then
+		MyTable.Stand( self, MyTable )
+
+		if CurTime() > flNextLook then
 			local a = Angle( math.Rand( -20, 20 ), math.Rand( -70, 70 ) )
-			MyTable.vaAimTargetPose = self:GetAngles() + a
-			pSchedule.flNextLook = CurTime() + ( math.abs( a[ 1 ] ) + math.abs( a[ 2 ] ) ) / math.Rand( 20, 40 )
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody + a
+			flNextLook = CurTime() + ( math.abs( a[ 1 ] ) + math.abs( a[ 2 ] ) ) / math.Rand( 20, 40 )
 		end
 
 		coroutine.yield()
@@ -47,18 +53,31 @@ local function LookAround( self, pSchedule, MyTable )
 		return
 	end
 
-	MyTable.vaAimTargetBody = ( -pSchedule.aInitialFacing:Forward() ):Angle()
-	MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+	MyTable.vaAimTargetPose = nil
 
-	coroutine.wait( math.Rand( 1, 2 ) )
+	local fForceTurnAroundLeft = MyTable.ForceTurnAroundLeft
+	local fForceTurnAroundRight = MyTable.ForceTurnAroundRight
 
-	local flTime = CurTime() + math.random() * math.random() * 8
+	if fForceTurnAroundLeft || fForceTurnAroundRight then
+		if fForceTurnAroundLeft then fForceTurnAroundLeft( self, MyTable )
+		else fForceTurnAroundRight( self, MyTable ) end
+	else
+		MyTable.vaAimTargetBody = ( -pSchedule.aInitialFacing:Forward() ):Angle()
+	
+		coroutine.wait( math.Rand( 1, 2 ) )
+	end
+
+	flNextLook = 0
+
+	local flTime = CurTime() + 1 + math.random() * math.random() * 8
 
 	while CurTime() <= flTime do
-		if CurTime() > ( pSchedule.flNextLook || 0 ) then
+		MyTable.Stand( self, MyTable )
+
+		if CurTime() > flNextLook then
 			local a = Angle( math.Rand( -20, 20 ), math.Rand( -70, 70 ) )
-			MyTable.vaAimTargetPose = self:GetAngles() + a
-			pSchedule.flNextLook = CurTime() + ( math.abs( a[ 1 ] ) + math.abs( a[ 2 ] ) ) / math.Rand( 20, 40 )
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			flNextLook = CurTime() + ( math.abs( a[ 1 ] ) + math.abs( a[ 2 ] ) ) / math.Rand( 20, 40 )
 		end
 
 		coroutine.yield()
@@ -73,7 +92,11 @@ RegisterSchedule( "AlertLookAround", { Execute = function( self, pSchedule, MyTa
 
 	MyTable.EScheduleState = ACTOR_STATE_ALERT
 
-	if !pSchedule.aInitialFacing then pSchedule.aInitialFacing = self:GetAngles() end
+	if !pSchedule.aInitialFacing then
+		local aAngles = self:GetAngles()
+		aAngles[ 3 ] = 0 // Juuuust in case
+		pSchedule.aInitialFacing = aAngles
+	end
 
 	if pSchedule.bShutTheHellUp == nil then pSchedule.bShutTheHellUp = math.random( 2 ) == 1 end
 
@@ -114,15 +137,14 @@ local function GoToDestination( self, pSchedule, MyTable )
 		local pGoal = pPath:GetCurrentGoal()
 		if pGoal then
 			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
-			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		else
 			MyTable.vaAimTargetBody = GetVelocity( self ):Angle()
-			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
+		MyTable.vaAimTargetPose = self:GetAngles()
 
 		if LevelOfDetail( pSchedule, "flNextPath" ) then MyTable.ComputePath( self, pPath, vGoal ) end
 
-		MyTable.MoveAlongPath( self, pPath, MyTable.flPowerWalkSpeed || MyTable.flWalkSpeed )
+		MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed )
 
 		local f = self:OBBMaxs()[ 1 ]
 		if self:GetPos():DistToSqr( vGoal ) <= f * f then
@@ -159,7 +181,8 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 
 	MyTable.EScheduleState = ACTOR_STATE_ALERT
 
-	if !pSchedule.aInitialFacing then pSchedule.aInitialFacing = self:GetAngles() end
+	MyTable.vaAimTargetBody = nil
+	MyTable.vaAimTargetPose = nil
 
 	if pSchedule.bShutTheHellUp == nil then pSchedule.bShutTheHellUp = math.random( 2 ) == 1 end
 
@@ -179,9 +202,11 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 		ACTOR_QUEUE( function()
 			if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
-			local pIterator = MyTable.SearchAreas( self, nil, nil, MyTable )
+			local pIterator = MyTable.SearchAreas( self, nil, function() return math.random() end, MyTable )
 
 			while true do
+				MyTable.Stand( self, MyTable )
+
 				for i = 1, 16 do
 					if !IsValid( self ) || MyTable.Schedule != pSchedule then return true end
 
@@ -190,7 +215,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 						MyTable.SetSchedule( self, "AlertLookAround", MyTable )
 						return true
 					end
-	
+
 					if MyTable.tAlertSearchedAreas[ pArea:GetID() ] then
 						coroutine.yield()
 						continue
@@ -202,7 +227,7 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 						coroutine.yield()
 						continue
 					end
-	
+
 					TellAlliesTheAreaIsClear( MyTable, pArea:GetID() )
 					pSchedule.pDestination = pArea
 					return true

@@ -22,9 +22,14 @@ function ENT:SetSchedule( Name, MyTable )
 		end
 	end
 
-	local sched = { m_pOwner = self, m_sName = Name }
-	MyTable.Schedule = sched
-	return sched
+	if istable( Name ) then
+		MyTable.Schedule = Name
+		return Name
+	else
+		local pSchedule = { m_pOwner = self, m_sName = Name }
+		MyTable.Schedule = pSchedule
+		return pSchedule
+	end
 end
 
 local __SCHEDULE__ = __SCHEDULE__
@@ -116,6 +121,7 @@ include "Schedules/FreeMovement.lua"
 include "Schedules/Alert.lua"
 include "Schedules/IntimidationWalk.lua"
 include "Schedules/WeaponsPlatformMelee.lua"
+include "Schedules/WeaponsPlatformStrut.lua"
 include "Schedules/WeaponsPlatformSkate.lua"
 include "Schedules/WeaponsPlatformSkateMelee.lua"
 

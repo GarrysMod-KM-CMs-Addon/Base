@@ -300,7 +300,74 @@ function ENT:CanAttackCustom( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vS
 
 	local flTargetDot = ( vTarget - vShoot ):GetNormalized():Dot( vAim )
 
-	if !IsValid( pTarget ) then return flTargetDot > flDot end
+	if flTargetDot > math_max( math_min( flDot, cos( rad( flStitch || 10 ) ) ) ) then return true end
+end
+
+function ENT:CanAttackCustomSpacePart( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vShoot, flSpreadX, flSpreadY, flStitch )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local pTarget, vTarget
+
+	if isentity( VecOrEnt ) then
+		pTarget = VecOrEnt
+		vTarget = vOverride || pTarget:GetPos() + pTarget:OBBCenter()
+	else vTarget = VecOrEnt end
+
+	if IsValid( pTrueEnemy ) then
+		if util.TraceLine( {
+			start = vShoot,
+			endpos = vTarget,
+			filter = SimpleRelatedFilterTripleDouble( self, pTarget, pTrueEnemy ),
+			mask = MASK_SHOT_HULL
+		} ).Hit then return end
+	elseif IsValid( pTarget ) then
+		if util.TraceLine( {
+			start = vShoot,
+			endpos = vTarget,
+			filter = SimpleRelatedFilterDouble( self, pTarget ),
+			mask = MASK_SHOT_HULL
+		} ).Hit then return end
+	end
+
+	local pWeapon = MyTable.Weapon
+
+	local flDot = 1 - math_max( flSpreadX || .05, flSpreadY || .05 )
+
+	local tAllies = MyTable:GetAlliesByClass()
+	if tAllies then
+		for pAlly in pairs( tAllies ) do
+			if !IsValid( pAlly ) || self == pAlly then continue end
+			local vPoint = pAlly:NearestPoint( vShoot )
+			if ( vPoint - vShoot ):GetNormalized():Dot( vAim ) > flDot then
+				if util.TraceLine( {
+					start = vShoot,
+					endpos = vPoint,
+					filter = SimpleRelatedFilterDouble( self, pAlly ),
+					mask = MASK_SHOT_HULL
+				} ).Hit then continue end
+				return
+			end
+		end
+	end
+
+	return true
+end
+
+function ENT:CanAttackCustomAimPart( VecOrEnt, pTrueEnemy, MyTable, vOverride, vAim, vShoot, flSpreadX, flSpreadY, flStitch )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local pTarget, vTarget
+
+	if isentity( VecOrEnt ) then
+		pTarget = VecOrEnt
+		vTarget = vOverride || pTarget:GetPos() + pTarget:OBBCenter()
+	else vTarget = VecOrEnt end
+
+	local pWeapon = MyTable.Weapon
+
+	local flDot = 1 - math_max( flSpreadX || .05, flSpreadY || .05 )
+
+	local flTargetDot = ( vTarget - vShoot ):GetNormalized():Dot( vAim )
 
 	if flTargetDot > math_max( math_min( flDot, cos( rad( flStitch || 10 ) ) ) ) then return true end
 end

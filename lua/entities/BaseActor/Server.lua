@@ -17,8 +17,8 @@ include "Sentence.lua"
 include "Skill.lua"
 include "Defense.lua"
 
-ENT.tActiveBodyTemplates = {}
-ENT.tActiveWeaponTemplates = {}
+ENT.pActiveBodyTemplates = {}
+ENT.pActiveWeaponTemplates = {}
 
 local min = math.min
 local exp = math.exp
@@ -127,7 +127,7 @@ local CEntity_SetOwner = CEntity.SetOwner
 function ENT:CreateProjectile( sClass )
 	local pProjectile = ents_Create( sClass )
 	if !IsValid( pProjectile ) then return end
-	CEntity_GetTable( pProjectile ).iClass = CEntity_GetTable( self ).iClass
+	CEntity_GetTable( pProjectile ).iClass = self:Classify()
 	CEntity_SetOwner( pProjectile, self )
 	return pProjectile
 end
@@ -135,39 +135,9 @@ end
 function ENT:CreateActor( sClass )
 	local pActor = ents_Create( sClass )
 	if !IsValid( pActor ) then return end
-	CEntity_GetTable( pActor ).iClass = CEntity_GetTable( self ).iClass
+	CEntity_GetTable( pActor ).iClass = self:Classify()
 	// TODO: Copy our enemies to them
 	return pActor
-end
-
-function ENT:SelectAim( pEnemy, vShoot, flSpeed, flRadius, flBound )
-	local vPos = pEnemy:GetPos()
-	local v = ( vShoot - vPos ):GetNormalized()
-	v[ 3 ] = 0
-	local tr = util.TraceLine {
-		start = vPos,
-		endpos = vPos - Vector( 0, 0, flRadius ) + v * flBound,
-		mask = MASK_SOLID,
-		filter = pEnemy
-	}
-	if tr.Hit then
-		v = tr.HitPos
-		if self:VisibleVec( v ) then
-			self.vaAimTargetBody = v + GetVelocity( pEnemy ) * v:Distance( vShoot ) / flSpeed
-			self.vaAimTargetPose = self.vaAimTargetBody
-		else
-			local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
-			local vOffset = GetVelocity( pEnemy ) * vTarget:Distance( vShoot ) / flSpeed
-			vTarget = vTarget + vOffset
-			self.vaAimTargetBody = vTarget
-			self.vaAimTargetPose = self.vaAimTargetBody
-		end
-	else
-		local vTarget = pEnemy:GetPos() + pEnemy:OBBCenter()
-		local vOffset = GetVelocity( pEnemy ) * vTarget:Distance( vShoot ) / flSpeed
-		self.vaAimTargetBody = vTarget
-		self.vaAimTargetPose = self.vaAimTargetBody
-	end
 end
 
 function ENT:Stand() self.loco:SetDesiredSpeed( 0 ) self.loco:Approach( self:GetPos(), 1 ) end
@@ -329,7 +299,10 @@ function ENT:OnTakeDamage( dDamage )
 	local v = dDamage:GetDamageForce()
 	local l = v:Length()
 	v:Normalize()
-	v:Mul( min( l, 2048 * 32 ) )
+
+	local pPhys = self:GetPhysicsObject()
+	if IsValid( pPhys ) then v:Mul( min( l, 4096 * pPhys:GetMass() ) ) end
+
 	dDamage:SetDamageForce( v )
 
 	hook.Run( "ScalePlayerDamage", self, MyTable.ELastHitGroup, dDamage )
@@ -534,13 +507,15 @@ ENT.flYawVelocity = 0
 ENT.vAimVelocity = Vector()
 
 ENT.flAimStiffness = 64
-ENT.flAimDamping = -8
+ENT.flAimDamping = 8
 
 ENT.flBodyStiffness = 14
-ENT.flBodyDamping = -8
+ENT.flBodyDamping = 8
 
 ENT.m_flLastHandleTurningCall = 0
 
+// Will smoothly slow down respective axes if vaAimTargetBody/vaAimTargetPose are unset.
+// This is handy when playing sequences with root motion and wanting to move the head only.
 function ENT:HandleTurning( MyTable )
 	local flFrameTime = CurTime() - MyTable.m_flLastHandleTurningCall
 
@@ -574,7 +549,7 @@ function ENT:HandleTurning( MyTable )
 		math_AngleDifference( aDesAim[ 1 ], Angles[ 1 ] + flPitch ),
 		math_AngleDifference( aDesAim[ 2 ], Angles[ 2 ] + flYaw )
 	) * flAimStiffnessThisTick * flFrameTime )
-	vAimVelocity:Mul( math_exp( flAimDampingThisTick * flFrameTime ) )
+	vAimVelocity:Mul( math_exp( -flAimDampingThisTick * flFrameTime ) )
 
 	MyTable.vAimVelocity = vAimVelocity
 
@@ -602,14 +577,14 @@ function ENT:HandleTurning( MyTable )
 	local flBodyDampingThisTick = MyTable.flOverrideBodyDampingThisTick || MyTable.flBodyDamping
 	MyTable.flOverrideBodyDampingThisTick = nil
 
-	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( flBodyDampingThisTick * flFrameTime )
+	flYawVelocity = ( flYawVelocity + math_AngleDifference( v:Angle()[ 2 ], Angles[ 2 ] ) * flBodyStiffnessThisTick * flFrameTime ) * math_exp( -flBodyDampingThisTick * flFrameTime )
 
 	MyTable.flYawVelocity = flYawVelocity
 
 	local pLocomotion = MyTable.loco
 	pLocomotion:SetMaxYawRate( math_abs( MyTable.flYawVelocity ) )
 
-	v = CEntity_GetPos( self ) + Angle( 0, Angles[ 2 ] + MyTable.flYawVelocity, 0 ):Forward() * 128
+	v = CEntity_GetPos( self ) + Angle( 0, Angles[ 2 ] + math.Clamp( MyTable.flYawVelocity * flFrameTime, -90, 90 ), 0 ):Forward() * 128
 
 	pLocomotion.FaceTowards( pLocomotion, v )
 
@@ -621,8 +596,6 @@ end
 
 ENT.flSuppressionRecoverTime = 0
 ENT.flCombatStateSuppressionRecoverTime = 0
-
-ENT.m_vManualVelocity = Vector()
 
 local Lerp = Lerp
 
@@ -636,6 +609,9 @@ function ENT:RunBehaviour( MyTable )
 		while true do
 			local flNow = CurTime()
 			local flLast = MyTable.m_flLastRunBehaviourCall || flNow
+
+			MyTable.m_flPreviousRunBehaviourCall = flLast
+
 			local flFrameTime = flNow - flLast
 
 			MyTable.ResetGravity( self )

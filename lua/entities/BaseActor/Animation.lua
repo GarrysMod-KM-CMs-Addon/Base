@@ -70,7 +70,7 @@ function ENT:PlaySequenceAndWait( sSequence, flSpeed, bDontReset, fFunction, bFo
 	if !bDontReset then self:SetSequence( 0 ) end
 end
 
-function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bForce, bNoPos, bNoAng )
+function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bForce, flPos, flAng )
 	flSpeed = flSpeed || 1
 
 	local flLength = self:SetSequence( sSequence )
@@ -97,6 +97,9 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 
 	vMins[ 3 ] = vMins[ 3 ] + 12
 
+	flPos = flPos || 1
+	flAng = flAng || 1
+
 	local tSequenceEvents, tCurrentSequenceEvents = MyTable.tSequenceEvents, MyTable.m_tSequenceEvents
 	while CurTime() <= flEndTime do
 		if !bForce && MyTable.sCallMeInRunBehaviour != sSequence then break end
@@ -107,35 +110,36 @@ function ENT:PlaySequenceAndMove( sSequence, flSpeed, bDontReset, fFunction, bFo
 		local flCycle = ( CurTime() - flStartTime ) * flInverseDuration
 		self:SetCycle( flSpeed > 0 && flCycle || ( 1 - flCycle ) )
 
-		local _, v, a = self:GetSequenceMovement( self:GetSequence(), flPrevCycle, flCycle )
+		if flPos != 0 || flAng != 0 then
+			local _, v, a = self:GetSequenceMovement( self:GetSequence(), flPrevCycle, flCycle )
 
-		if bNoPos then v = Vector() end
-		if bNoAng then a = Angle() end
+			local aAngles = self:GetAngles()
+			a:Mul( flAng )
+			a:Add( aAngles )
 
-		local aAngles = self:GetAngles()
+			v:Mul( flPos )
+			v:Mul( self:GetModelScale() )
+			v:Rotate( aAngles )
+			v:Add( self:GetPos() )
 
-		v:Mul( self:GetModelScale() )
-		v:Rotate( aAngles )
-		v:Add( self:GetPos() )
-		a:Add( aAngles )
+			flPrevCycle = flCycle
 
-		flPrevCycle = flCycle
+			local tr = util.TraceHull {
+				start = v,
+				endpos = v,
+				mins = vMins,
+				maxs = vMaxs,
+				filter = function( pEntity )
+					if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
+					return true
+				end,
+				mask = MASK_SOLID
+			}
 
-		local tr = util.TraceHull {
-			start = v,
-			endpos = v,
-			mins = vMins,
-			maxs = vMaxs,
-			filter = function( pEntity )
-				if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
-				return true
-			end,
-			mask = MASK_SOLID
-		}
-
-		if !tr.Hit then
-			self:SetPos( v )
-			self:SetAngles( a )
+			if !tr.Hit then
+				if flPos != 0 then self:SetPos( v ) end
+				if flAng != 0 then self:SetAngles( a ) end
+			end
 		end
 
 		local tData = tSequenceEvents[ sSequence ]
@@ -192,14 +196,21 @@ function ENT:AnimationSystemTick( MyTable )
 
 	local tPromote, tInstant, tSequences = MyTable.tPromoteSequences, MyTable.tInstantlyPromote, MyTable.tSequences
 
-	local sIdle = MyTable.m_sIdleSequence
-	if sIdle && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then
-		MyTable.PromoteSequence( self, sIdle, MyTable.m_flIdleSequenceSpeed || 1, MyTable.m_flIdleSequenceWeight || 1 )
-	end
-
-	local sIdle2 = MyTable.m_sIdle2Sequence
-	if sIdle2 && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then
-		MyTable.PromoteSequence( self, sIdle2, MyTable.m_flIdle2SequenceSpeed || 1, MyTable.m_flIdle2SequenceWeight || 1 )
+	if self:IsOnGround() then
+		local sIdle = MyTable.m_sIdleSequence
+		if sIdle && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then
+			MyTable.PromoteSequence( self, sIdle, MyTable.m_flIdleSequenceSpeed || 1, MyTable.m_flIdleSequenceWeight || 1 )
+		end
+	else
+		local sIdleAir = MyTable.m_sIdleSequenceAir
+		if sIdleAir && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then
+			MyTable.PromoteSequence( self, sIdleAir, MyTable.m_flIdleSequenceAirSpeed || 1, MyTable.m_flIdleSequenceAirWeight || 1 )
+		else
+			local sIdle = MyTable.m_sIdleSequence
+			if sIdle && table.IsEmpty( tPromote ) && table.IsEmpty( tInstant ) then
+				MyTable.PromoteSequence( self, sIdle, MyTable.m_flIdleSequenceSpeed || 1, MyTable.m_flIdleSequenceWeight || 1 )
+			end
+		end
 	end
 
 	for seq in pairs( tInstant ) do

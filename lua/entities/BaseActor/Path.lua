@@ -20,6 +20,8 @@ local util_TraceLine = util.TraceLine
 // I wanted to make it global, but that'd be even more leaky. At least entities are removed. Sometimes.
 
 function ENT:DontRepath( pPath, vPos, vGoal, MyTable, bChase, flToleranceOverride )
+	if !pPath:IsValid() then return end
+
 	local pPathData = MyTable.m_pPathData
 	if !pPathData then
 		pPathData = {}
@@ -63,16 +65,8 @@ function ENT:ComputePath( pPath, vGoal, fWeighter, flToleranceOverride )
 	return pPath, bSuccess
 end
 
-// TODO: This is just a shitty mockup representation, there should be a way better way to do this
-// And by that, I mean the entirety of it is trash - we should only flank around already pathed
-// through areas (not every single one), should keep in mind the amount of flankers and blah blah blah
-
-ACTOR_FLANK_PATHS = ACTOR_FLANK_PATHS || {}
-
 function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
-
-	if !LevelOfDetail( pSchedule, "flNextFlankPath" ) then return end
 
 	local pPathData = MyTable.m_pPathData
 	if !pPathData then
@@ -90,6 +84,8 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 
 	if pData.bStartedThread then return end
 
+	if !LevelOfDetail( pSchedule, "flNextFlankPath", .25 ) then return end
+
 	local vPos = CEntity_GetPos( self )
 	local vGoal = CEntity_GetPos( pEnemy )
 
@@ -106,7 +102,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 			return true
 		end
 
-		local flWait = CurTime() + math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) ^ 2 )
+		local flWait = CurTime() + math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 16384 ) ^ 3 )
 		while CurTime() <= flWait do
 			if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
 				pData.bStartedThread = nil
@@ -125,75 +121,9 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 
 		if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then return end
 
-		local flDirect = math.max( vPos:Distance( vGoal ), 2048 )
-	
-		local iClassify = MyTable.Classify( self )
-	
-		MyTable.ComputePath( self, pPath, vGoal, function( pArea, pFrom, pLadder, pElevator, flLength )
-			if !IsValid( pFrom ) then return 0 end
-	
-			if !MyTable.loco:IsAreaTraversable( pArea ) then return -1 end
-	
-			local flDistance = 0
-			
-			if IsValid( pLadder ) then
-				flDistance = pLadder:GetLength()
-			elseif flLength > 0 then
-				flDistance = flLength
-			else
-				flDistance = ( pArea:GetCenter() - pFrom:GetCenter() ):GetLength()
-			end
-			
-			local flDeltaZ = pFrom:ComputeAdjacentConnectionHeightChange( pArea )
-			if flDeltaZ >= MyTable.loco:GetStepHeight() then
-				if flDeltaZ >= MyTable.loco:GetMaxJumpHeight() then
-					return -1
-				end
-			elseif flDeltaZ < -MyTable.loco:GetDeathDropHeight() then
-				return -1
-			end
-	
-			local pClass = ACTOR_FLANK_PATHS[ iClassify ]
-	
-			if !pClass then
-				pClass = {}
-				ACTOR_FLANK_PATHS[ iClassify ] = pClass
-			end
-	
-			local pFlank = pClass[ pArea ]
-	
-			if pFlank then
-				pFlank.flTime = CurTime() + 15
-	
-				timer.Simple( 16, function()
-					if pClass[ pArea ] == pFlank && CurTime() >= pFlank.flTime then
-						pClass[ pArea ] = nil
-					end
-				end )
+		MyTable.ComputePath( self, pPath, vGoal )
 
-				local i = pFlank.iCount + 1
-				pFlank.iCount = i
-
-				return flDistance * ( 1 - math.random() * math.random() * math.random() * math.random() * .75 ) * ( i * 2 ) ^ .5 * math_Clamp( 1 - pArea:GetClosestPointOnArea( vGoal ):Distance( vGoal ) / flDirect, 0, 1 ) ^ 2.5 * ( 1 - math.random() * math.random() * math.random() * math.random() * math.random() * math.random() * .75 ) + pFrom:GetCostSoFar()
-			end
-	
-			pFlank = {
-				flTime = CurTime() + 15,
-				iCount = 1
-			}
-	
-			pClass[ pArea ] = pFlank
-	
-			timer.Simple( 16, function()
-				if pClass[ pArea ] == pFlank && CurTime() >= pFlank.flTime then
-					pClass[ pArea ] = nil
-				end
-			end )
-	
-			return flDistance * ( 1 - math.random() * math.random() * math.random() * math.random() ) + pFrom:GetCostSoFar()
-		end )
-
-		local flWait = CurTime() + math.min( 1, ( pPath:GetLength() / 8192 ) ^ 2 )
+		local flWait = CurTime() + math.min( 1, ( pPath:GetLength() / 16384 ) ^ 3 )
 		while CurTime() <= flWait do
 			if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
 				pData.bStartedThread = nil
@@ -210,14 +140,34 @@ end
 function ENT:ManageFlankPathLockThisCoroutine( pPath, pEnemy, pSchedule, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
+	local pPathData = MyTable.m_pPathData
+	if !pPathData then
+		pPathData = {}
+		MyTable.m_pPathData = pPathData
+	end
+
+	local pData = pPathData[ pPath ]
+	if !pData then
+		pData = {}
+		pPathData[ pPath ] = pData
+	end
+
+	pData.flThreadTime = CurTime() + 1
+
+	local vPos = CEntity_GetPos( self )
+	local vGoal = CEntity_GetPos( pEnemy )
+
+	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then
+		return
+	end
+
 	if !IsValid( self ) || !IsValid( pEnemy ) || MyTable.Schedule != pSchedule then
 		return true
 	end
 
-	local flWait = CurTime() + math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 8192 ) ^ 2 )
+	local flWait = CurTime() + math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 16384 ) ^ 3 )
 	while CurTime() <= flWait do
-		if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
-			pData.bStartedThread = nil
+		if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule then
 			return true
 		end
 		coroutine.yield()
@@ -227,83 +177,13 @@ function ENT:ManageFlankPathLockThisCoroutine( pPath, pEnemy, pSchedule, MyTable
 		return true
 	end
 
-	local vPos = CEntity_GetPos( self )
-	local vGoal = CEntity_GetPos( pEnemy )
-
 	if MyTable.DontRepath( self, pPath, vPos, vGoal, MyTable, true ) then return end
 
-	local flDirect = math.max( vPos:Distance( vGoal ), 2048 )
+	MyTable.ComputePath( self, pPath, vGoal )
 
-	local iClassify = MyTable.Classify( self )
-
-	MyTable.ComputePath( self, pPath, vGoal, function( pArea, pFrom, pLadder, pElevator, flLength )
-		if !IsValid( pFrom ) then return 0 end
-
-		if !MyTable.loco:IsAreaTraversable( pArea ) then return -1 end
-
-		local flDistance = 0
-		
-		if IsValid( pLadder ) then
-			flDistance = pLadder:GetLength()
-		elseif flLength > 0 then
-			flDistance = flLength
-		else
-			flDistance = ( pArea:GetCenter() - pFrom:GetCenter() ):GetLength()
-		end
-		
-		local flDeltaZ = pFrom:ComputeAdjacentConnectionHeightChange( pArea )
-		if flDeltaZ >= MyTable.loco:GetStepHeight() then
-			if flDeltaZ >= MyTable.loco:GetMaxJumpHeight() then
-				return -1
-			end
-		elseif flDeltaZ < -MyTable.loco:GetDeathDropHeight() then
-			return -1
-		end
-
-		local pClass = ACTOR_FLANK_PATHS[ iClassify ]
-
-		if !pClass then
-			pClass = {}
-			ACTOR_FLANK_PATHS[ iClassify ] = pClass
-		end
-
-		local pFlank = pClass[ pArea ]
-
-		if pFlank then
-			pFlank.flTime = CurTime() + 15
-
-			timer.Simple( 16, function()
-				if pClass[ pArea ] == pFlank && CurTime() >= pFlank.flTime then
-					pClass[ pArea ] = nil
-				end
-			end )
-
-			local i = pFlank.iCount + 1
-			pFlank.iCount = i
-
-			return flDistance * ( 1 - math.random() * math.random() * math.random() * math.random() ) * ( i * 2 ) ^ .5 * math_Clamp( 1 - pArea:GetClosestPointOnArea( vGoal ):Distance( vGoal ) / flDirect, 0, 1 ) ^ 2.5 * ( 1 - math.random() * math.random() * math.random() * math.random() * math.random() * math.random() ) + pFrom:GetCostSoFar()
-		end
-
-		pFlank = {
-			flTime = CurTime() + 15,
-			iCount = 1
-		}
-
-		pClass[ pArea ] = pFlank
-
-		timer.Simple( 16, function()
-			if pClass[ pArea ] == pFlank && CurTime() >= pFlank.flTime then
-				pClass[ pArea ] = nil
-			end
-		end )
-
-		return flDistance * ( 1 - math.random() * math.random() * math.random() * math.random() ) + pFrom:GetCostSoFar()
-	end )
-
-	local flWait = CurTime() + math.min( 1, ( pPath:GetLength() / 8192 ) ^ 2 )
+	local flWait = CurTime() + math.min( 1, ( pPath:GetLength() / 16384 ) ^ 3 )
 	while CurTime() <= flWait do
-		if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
-			pData.bStartedThread = nil
+		if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule then
 			return true
 		end
 		coroutine.yield()
@@ -318,15 +198,23 @@ function ENT:PostJumpInternal() end
 
 // Tries to jump to vTarget
 function ENT:Jump( vTarget, bJumpGap, MyTable )
+	local vStart = self:GetPos()
+
+	local vDirection = vTarget - vStart
+	vDirection[ 3 ] = 0
+
+	// Make sure we are
+	// "IN HOT!"
+	//  - Pequod
+	local flMod = ( self:OBBMaxs()[ 1 ] - self:OBBMins()[ 1 ] ) * 1.5
+	vTarget[ 3 ] = vTarget[ 3 ] + flMod
+	vTarget:Add( vDirection:GetNormalized() * flMod )
 
 	local pLocomotion = self.loco
-
-	vTarget[ 3 ] = vTarget[ 3 ] + pLocomotion:GetStepHeight()
 
 	local vVelocity = pLocomotion:GetVelocity()
 	local flJumpHeight = pLocomotion:GetJumpHeight()
 
-	local vStart = self:GetPos()
 	local vMiddle = LerpVector( .5, vStart, vTarget )
 	local flZ = vStart[ 3 ]
 	local flTargetZ = vTarget[ 3 ]
@@ -352,9 +240,30 @@ function ENT:Jump( vTarget, bJumpGap, MyTable )
 	local flDelta = flTargetZ - flZ
 	if flDelta > flTargetHeight then return end
 
-	pLocomotion:SetJumpHeight( math_Clamp( ( flTargetZ - flZ ) * 2, 0, flJumpHeight ) )
-	pLocomotion:JumpAcrossGap( vTarget, self:GetForward() )
-	pLocomotion:SetJumpHeight( flJumpHeight )
+	flMaxJumpHeight = flMaxJumpHeight || pLocomotion:GetJumpHeight()
+
+	local flJumpHeight = math.min( flDelta, flTargetHeight )
+	if flJumpHeight < 0 then flJumpHeight = -flJumpHeight * .5 end
+
+	local flGravity = self:GetMyGravity()
+
+	local flVelocityZ = math.sqrt( 2 * flGravity * flJumpHeight )
+
+	local flTime = ( 2 * flVelocityZ ) / flGravity
+
+	local vDirection = vTarget - vStart
+	vDirection[ 3 ] = 0
+
+	local vTravel = vDirection:GetNormalized()
+
+	local vResult = vTravel * ( vDirection:Length() / flTime )
+	vResult[ 3 ] = vResult[ 3 ] + flVelocityZ
+
+	pLocomotion:SetJumpHeight( 1 )
+	pLocomotion:Jump()
+	pLocomotion:SetJumpHeight( flMaxJumpHeight )
+
+	pLocomotion:SetVelocity( vResult )
 
 	self:PostJumpInternal()
 
@@ -362,16 +271,19 @@ function ENT:Jump( vTarget, bJumpGap, MyTable )
 	self.m_bJumping = true
 end
 
-local developer = GetConVar "developer"
-
 ENT.flDirectAvoidTime = 0
 ENT.flNavigationAvoidTime = 0
 ENT.flJumpedTime = 0
 
-function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid )
-	local pLocomotion = self.loco
+local function fEmpty() end
 
-	if developer:GetBool() then pPath:Draw() end
+// TODO: Replace this so that we only update after reaching a goal and otherwise use Approach
+local function fUpdatePath( self, pPath )
+	pPath:Update( self )
+end
+
+function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid, fJump, fDrop )
+	local pLocomotion = self.loco
 
 	pPath:SetMinLookAheadDistance( self:OBBMaxs()[ 1 ] * 3 )
 
@@ -385,7 +297,7 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 	end
 
 	if CurTime() <= self.flDirectAvoidTime then
-		pPath:Update( self )
+		fUpdatePath( self, pPath )
 		return
 	end
 
@@ -396,7 +308,14 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 
 	local pGoal = pPath:GetCurrentGoal()
 
-	if !pGoal then pPath:Update( self ) return end
+	if !pGoal then
+		fUpdatePath( self, pPath )
+		return
+	end
+
+	if pGoal.type == 1 then
+		if fDrop && fDrop( self, vNextGoalPos ) then return end
+	end
 
 	local pNextGoal = pPath:NextSegment()
 
@@ -404,19 +323,25 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 	// into walls and triggering avoidance, yet prevents
 	// us from being stuck trying to repeatedly jump
 	// somewhere that is unjumpable
-	if CurTime() > self.flJumpedTime then
-		if pNextGoal then
-			local vNextGoalPos = pNextGoal.pos
-			if pGoal.type == 2 || pGoal.type == 3 || ( vNextGoalPos[ 3 ] - self:GetPos()[ 3 ] ) >= self.loco:GetStepHeight() then
-				self:Jump( pGoal.pos )
-				self.flJumpedTime = CurTime() + math.random() * 2
-				pPath:Update( self )
-				return
-			end
+	if CurTime() > self.flJumpedTime && pNextGoal then
+		local vNextGoalPos = pNextGoal.pos
+		local flVerticality = vNextGoalPos[ 3 ] - self:GetPos()[ 3 ]
+
+		if pGoal.type == 2 || pGoal.type == 3 || flVerticality >= self.loco:GetStepHeight() && flVerticality > vNextGoalPos:Distance2D( self:GetPos() ) then
+			self.flJumpedTime = CurTime() + math.random() * 2
+
+			if fJump && fJump( self, vNextGoalPos ) then return end
+
+			self:Jump( vNextGoalPos )
+			fUpdatePath( self, pPath )
+			return
 		end
 	end
 
-	if bNoAvoid then pPath:Update( self ) return end
+	if bNoAvoid then
+		fUpdatePath( self, pPath )
+		return
+	end
 
 	local aVelocity = pGoal.forward:Angle()
 
@@ -441,143 +366,92 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 		local b
 		if pNextGoal && ( pGoal.type == 2 || pGoal.type == 3 || ( pNextGoal.pos[ 3 ] - self:GetPos()[ 3 ] ) >= self.loco:GetStepHeight() ) then b = true end
 
-		if b then
-			local iRand = math.random( 3 )
-			if iRand == 1 then
-				self.flDirectAvoidTime = CurTime() + math.random() * math.random() * 2
-			else
-				self:Jump( pNextGoal.pos )
-				pPath:Update( self )
-			end
-			return
-		else
-			if math.random( 2 ) == 1 then
-				self.flDirectAvoidTime = CurTime() + math.random() * math.random() * 2
+		if math.random( 3 ) != 1 then
+			if b then
+				local iRand = math.random( 3 )
+				if iRand == 1 then
+					self.flDirectAvoidTime = CurTime() + math.random() * math.random() * 2
+				else
+					self:Jump( pNextGoal.pos )
+					fUpdatePath( self, pPath )
+				end
 				return
+			else
+				if math.random( 2 ) == 1 then
+					self.flDirectAvoidTime = CurTime() + math.random() * math.random() * 2
+					return
+				end
 			end
 		end
 
-		local trLeft, trRight = util.TraceHull {
-			start = self:GetPos(),
-			endpos = self:GetPos() - aVelocity:Right() * self:OBBMaxs()[ 1 ],
-			mins = self:OBBMins() + Vector( 0, 0, 12 ),
-			maxs = self:OBBMaxs(),
+		local trLeft, trRight, trBack = util.TraceLine {
+			start = self:GetPos() + self:OBBCenter(),
+			endpos = self:GetPos() + self:OBBCenter() - aVelocity:Right() * self:OBBMaxs()[ 1 ],
 			filter = self
-		}, util.TraceHull {
-			start = self:GetPos(),
-			endpos = self:GetPos() + aVelocity:Right() * self:OBBMaxs()[ 1 ],
-			mins = self:OBBMins() + Vector( 0, 0, 12 ),
-			maxs = self:OBBMaxs(),
+		}, util.TraceLine {
+			start = self:GetPos() + self:OBBCenter(),
+			endpos = self:GetPos() + self:OBBCenter() + aVelocity:Right() * self:OBBMaxs()[ 1 ],
+			filter = self
+		}, util.TraceLine {
+			start = self:GetPos() + self:OBBCenter(),
+			endpos = self:GetPos() + self:OBBCenter() - aVelocity:Forward() * self:OBBMaxs()[ 1 ],
 			filter = self
 		}
 
-		local bLeft, bRight = trLeft.Hit, trRight.Hit
-		if bLeft && bRight then
-			if math.random( 2 ) == 1 then
+		local bLeft, bRight = !trLeft.Hit, !trRight.Hit
+		if trBack.Hit then
+			if bLeft && bRight then
+				if math.random( 2 ) == 1 then
+					self.vNavigationAvoidDirection = -aVelocity:Right()
+				else
+					self.vNavigationAvoidDirection = aVelocity:Right()
+				end
+				self.flNavigationAvoidTime = CurTime() + math.random()
+				return
+			elseif bLeft then
+				self.flNavigationAvoidTime = CurTime() + math.random()
 				self.vNavigationAvoidDirection = -aVelocity:Right()
+				return
 			else
+				self.flNavigationAvoidTime = CurTime() + math.random()
 				self.vNavigationAvoidDirection = aVelocity:Right()
+				return
 			end
-			self.flNavigationAvoidTime = CurTime() + math.random()
-			return
-		elseif bLeft then
-			self.flNavigationAvoidTime = CurTime() + math.random()
-			self.vNavigationAvoidDirection = -aVelocity:Right()
-			return
 		else
+			if bLeft && bRight then
+				if math.random( 2 ) == 1 then
+					if math.random( 2 ) == 1 then
+						self.vNavigationAvoidDirection = -aVelocity:Right()
+					else
+						self.vNavigationAvoidDirection = aVelocity:Right()
+					end
+					self.flNavigationAvoidTime = CurTime() + math.random()
+					return
+				end
+			elseif bLeft then
+				if math.random( 2 ) == 1 then
+					self.flNavigationAvoidTime = CurTime() + math.random()
+					self.vNavigationAvoidDirection = -aVelocity:Right()
+					return
+				end
+			elseif bRight then
+				if math.random( 2 ) == 1 then
+					self.flNavigationAvoidTime = CurTime() + math.random()
+					self.vNavigationAvoidDirection = -aVelocity:Right()
+					return
+				end
+			end
+
 			self.flNavigationAvoidTime = CurTime() + math.random()
-			self.vNavigationAvoidDirection = aVelocity:Right()
+			self.vNavigationAvoidDirection = -( aVelocity:Forward() )
 			return
 		end
 	end
 
-	pPath:Update( self )
+	fUpdatePath( self, pPath )
 end
 
 function ENT:HandleStuck() self.loco:ClearStuck() end
-
-ENT.flMyJumpiness = 3
-
-// TODO: The funcs below should clamp the velocity so we can't move farther than flMaxJumpHeight * 3,
-// plus the IsInterceptJumpLegal functions should calculate the real intercept position instead of
-// just measuring the distance to the target itself.
-
-// Why is this called Legal and not Can? Simple.
-// Intercept jumps are cinematic, not physically correct,
-// 'cause fuck it, the IRVING's ballin'.
-// Thus, we are asking if it's KINDA fair to jump there
-function ENT:IsInterceptJumpLegal( pTarget, flJumpHeight )
-	if !self:IsOnGround() then return end
-
-	flJumpHeight = flJumpHeight || self.flJumpHeight
-
-	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * self.flMyJumpiness
-	return self:GetPos():DistToSqr( pTarget:GetPos() + pTarget:OBBCenter() ) <= f * f && self:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
-end
-
-// Only jump if it will be a (relatively) smol jump
-function ENT:IsInterceptJumpLegalShort( pTarget, flJumpHeight )
-	if !self:IsOnGround() then return end
-
-	flJumpHeight = flJumpHeight || self.flJumpHeight
-
-	local f = ( flJumpHeight || self.loco:GetJumpHeight() ) * self.flMyJumpiness
-	return self:GetPos():DistToSqr( pTarget:GetPos() + pTarget:OBBCenter() ) <= f * f && self:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
-end
-
-function ENT:IsInterceptJumpLegalInternal( pTarget, flJumpHeight )
-	return self:Visible( pTarget )
-end
-
-// TODO: Maybe add the ability to make the air gravity more/less?
-// Since Gekkos can use air resistance poses to fall slightly faster or slower.
-// TODO because I have no idea how to implement it lmao
-
-function ENT:InterceptJump( pTarget, flDesiredJumpHeight, flMaxJumpHeight )
-	if !self:IsOnGround() then return end
-
-	local pLocomotion = self.loco
-
-	local vPos = self:GetPos()
-	local vTarget = pTarget:GetPos()
-
-	flMaxJumpHeight = flMaxJumpHeight || pLocomotion:GetJumpHeight()
-
-	local flJumpHeight = math_min(
-		flDesiredJumpHeight ||
-		math_max( flMaxJumpHeight * .01, ( vPos:Distance( vTarget + pTarget:OBBCenter() ) * ( math.random( 2 ) == 1 && ( 1 / 3 + ( math.random() * math.random() ) * 2 / 3 ) || math.Rand( .1, 2 ) ) ) ),
-		flMaxJumpHeight )
-
-	local flEnemyZ, flMyZ = vTarget[ 3 ], vPos[ 3 ]
-	if flEnemyZ > flMyZ then flJumpHeight = flJumpHeight + flEnemyZ - flMyZ end
-
-	local flGravity = self:GetMyGravity()
-
-	local flVelocityZ = math.sqrt( 2 * flGravity * flJumpHeight )
-
-	local flTime = ( 2 * flVelocityZ ) / flGravity
-
-	local vIntercept = vTarget + GetVelocity( pTarget ) * flTime
-
-	local vDirection = vIntercept - vPos
-	vDirection[ 3 ] = 0
-
-	local flDistance = vDirection:Length()
-	local vTravel = vDirection:GetNormalized()
-	
-	local vResult = vTravel * ( flDistance / flTime )
-	vResult[ 3 ] = vResult[ 3 ] + flVelocityZ
-
-	pLocomotion:SetJumpHeight( 1 )
-	pLocomotion:Jump()
-	pLocomotion:SetJumpHeight( flMaxJumpHeight )
-
-	self:PostJumpInternal()
-
-	pLocomotion:SetVelocity( vResult )
-
-	return vIntercept
-end
 
 // SHITTY BACKWARDS COMPATIBILITY FUNCTION! DO NOT USE!
 // Because I am not in the mood for reworking EVERYTHING.
@@ -594,3 +468,5 @@ function ENT:ComputeFlankPath( pPath, pEnemy, MyTable )
 
 	MyTable.ComputePath( self, pPath, vGoal )
 end
+
+include "InterceptJump.lua"

@@ -1,4 +1,6 @@
 RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule, MyTable )
+	MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
+
 	if MyTable.bSkater then
 		MyTable.SetSchedule( self, "WeaponsPlatformSkateMelee", MyTable )
 		return
@@ -34,28 +36,63 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	MyTable.ManageFlankPath( self, pEnemyPath, pEnemy, pSchedule, MyTable )
 
-	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flTopSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ) )
+	MyTable.MoveAlongPath( self, pEnemyPath, ( CurTime() <= ( pSchedule.flSpeedUpAnimationsTime || 0 ) ) && ( MyTable.flTopSpeed * .5 ) || MyTable.flTopSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ), nil, nil, nil, function()
+		if pEnemyPath:IsValid() && MyTable.IsInterceptJumpLegalMedium( self, pEnemy, nil, true ) then
+			//	pEnemyPath:Invalidate()
+	
+			MyTable.HandleHeadJumpStill( self, MyTable, pEnemy, pSchedule, function()
+				if math.random( 3 ) == 1 then
+					MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
+					return true
+				end
+
+				MyTable.SetSchedule( self, pSchedule, MyTable )
+				return true
+			end )
+	
+			return true
+		end
+	end, function()
+		if pEnemyPath:IsValid() && MyTable.IsInterceptJumpLegalMedium( self, pEnemy, nil, true ) then
+			pEnemyPath:Invalidate()
+	
+			MyTable.HandleHeadJumpStill( self, MyTable, pEnemy, pSchedule, function()
+				if math.random( 3 ) == 1 then
+					MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
+					return true
+				end
+
+				MyTable.SetSchedule( self, pSchedule, MyTable )
+				return true
+			end )
+	
+			return true
+		end
+	end )
 
 	local pGoal = pEnemyPath:GetCurrentGoal()
-	if pGoal then MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle() end
+	if pGoal then
+		MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+	else
+		MyTable.vaAimTargetBody = pEnemy:GetPos()
+	end
 
 	if !pSchedule.m_bInitialized then
 		pSchedule.bGunningTurn = math.random( 2 ) == 1
 
-		// Try to (Idk if this fixes it) avoid the bug where we land
-		// and immediately try to taunt/kick/etc, causing us to
-		// interrupt our landing animation
-		pSchedule.flWaitTime = CurTime() + .1
-
 		pSchedule.m_bInitialized = true
 	end
 
-	local pHead = MyTable.tActiveBodyTemplates.Head
+	local pHead = MyTable.pActiveBodyTemplates.Head
 	if pHead then
-		pHead.SetAimTarget( self, pEnemy:GetPos() + pEnemy:OBBCenter() )
+		if self:Visible( pEnemy ) then
+			pHead.SetAimTarget( self, pEnemy:GetPos() + pEnemy:OBBCenter() )
+		else
+			pHead.SetAimTarget( self, MyTable.vaAimTargetBody )
+		end
 
 		if pSchedule.bGunningTurn then
-			local pMachineGun = MyTable.tActiveWeaponTemplates.MachineGun
+			local pMachineGun = MyTable.pActiveWeaponTemplates.MachineGun
 
 			local vPos, dDir = pMachineGun.BarrelVector( self ), pMachineGun.BarrelDirection( self )
 
@@ -69,9 +106,15 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 				FireWeapon( self, "MachineGun", pMachineGun )
 			end
 		end
+	else
+		if self:Visible( pEnemy ) then
+			MyTable.vaAimTargetPose = pEnemy:GetPos() + pEnemy:OBBCenter()
+		else
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+		end
 	end
 
-	if !self:IsOnGround() || CurTime() <= ( pSchedule.flPerformingJump || 0 ) || CurTime() <= pSchedule.flWaitTime then return end
+	if !self:IsOnGround() || CurTime() <= ( pSchedule.flPerformingJump || 0 ) then return end
 
 	local EDefense, flOptional = MyTable.HandleDefense( self, MyTable )
 	if EDefense >= DEF_NO_ACTION_NEEDED then
@@ -86,6 +129,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		if p then
 			p.fOnComplete = function()
 				MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
+				MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 				return true
 			end
 			p.fOnInterrupt = p.fOnComplete
@@ -93,14 +137,20 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		end
 	end
 
-	if MyTable.LowIfAvailable && math.random() <= .2 * MyTable.m_flFrameTime && MyTable.LowIfAvailable( self, MyTable ) then
-		util.ScreenShake( self:GetPos() + self:OBBCenter(), 2, 6, 4, 4096, true )
+	if MyTable.LowIfAvailable && math.random() <= .1 * MyTable.m_flFrameTime then
+		MyTable.LowIfAvailable( self, MyTable )
 	end
 
-	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .3 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
+	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .2 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
 		if MyTable.HandleHeadJump then
 			MyTable.HandleHeadJump( self, MyTable, pEnemy, pSchedule, function()
-				MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
+				if math.random( 3 ) == 1 then
+					MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
+					return true
+				end
+
+				MyTable.SetSchedule( self, pSchedule, MyTable )
+				MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 				return true
 			end )
 		else
@@ -111,7 +161,13 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 				local pSchedule = MyTable.SetSchedule( self, MyTable.sJumpOnTheirHeadSchedule, MyTable )
 				pSchedule.aLook = vIntercept:Angle()
 				pSchedule.fOnComplete = function()
-					MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
+					if math.random( 3 ) == 1 then
+						MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
+						return true
+					end
+
+					MyTable.SetSchedule( self, pSchedule, MyTable )
+					MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 					return true
 				end
 			end
@@ -120,23 +176,32 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		return
 	end
 
-	if !MyTable.sChargeSchedule || !MyTable.Taunt then return end
+	if !self:Visible( pEnemy ) then return end
+
+	if MyTable.Taunt && math.random() <= .06 * MyTable.m_flFrameTime then
+		MyTable.Taunt( self, pEnemy, MyTable )
+		pSchedule.flMeleeTimer = 4 + math.random() * 4
+		return
+	end
+
+	if !MyTable.sChargeSchedule then return end
 
 	local flDistance = pEnemyPath:GetLength() - pEnemyPath:GetCursorPosition()
 
 	local f = MyTable.flChargeSpeed * MyTable.flChargeTimeMin * .4
 
-	if flDistance <= f && math.random() <= .2 * MyTable.m_flFrameTime then
-		if math.random( 2 ) == 1 then
-			MyTable.Taunt( self, pEnemy, MyTable )
-			return
-		end
+	if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .1 then
+		local pCharge = MyTable.SetSchedule( self, MyTable.sChargeSchedule, MyTable )
+		pCharge.fOnComplete = function()
+			if math.random( 3 ) == 1 then
+				MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
+				return true
+			end
 
-		local pSchedule = MyTable.SetSchedule( self, MyTable.sChargeSchedule, MyTable )
-		pSchedule.fOnComplete = function()
-			MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
+			MyTable.SetSchedule( self, pSchedule, MyTable )
+			MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 			return true
 		end
-		pSchedule.fOnInterrupt = pSchedule.fOnComplete
+		pCharge.fOnInterrupt = pCharge.fOnComplete
 	end
 end } )
