@@ -13,7 +13,27 @@ SWEP.GRENADE_flMaximumTime = 3
 
 SWEP.aPullPin = ACT_VM_DRAW
 
-if !SERVER then return end
+sound.Add {
+	name = "CombineExtractorDetonate",
+	sound = {
+		"ambient/explosions/explode_1.wav",
+		"ambient/explosions/explode_2.wav",
+		"ambient/explosions/explode_4.wav",
+	},
+	pitch = { 90, 110 },
+	level = 150,
+	channel = CHAN_STATIC
+}
+
+sound.Add {
+	name = "CombineExtractorTick",
+	sound = "weapons/grenade/tick1.wav",
+	pitch = { 99, 101 },
+	level = 80,
+	channel = CHAN_STATIC
+}
+
+if CLIENT then return end
 
 local util = util
 local util_BlastDamage = util.BlastDamage
@@ -42,18 +62,14 @@ function SWEP:DetonateThink()
 	ed:SetFlags( 128 )
 	util_Effect( "Explosion", ed )
 	util_Effect( "HelicopterMegaBomb", ed )
+
+	MyTable.SOUND_flFakeTerrorDecibels = 180
+	CEntity_EmitSound( self, "CombineExtractorDetonate")
+
 	CEntity_Remove( self )
 end
 
 local CurTime = CurTime
-
-sound.Add {
-	name = "CombineExtractorTick",
-	sound = "weapons/grenade/tick1.wav",
-	pitch = { 99, 101 },
-	level = 80,
-	channel = CHAN_STATIC
-}
 
 function SWEP:GAME_Think()
 	local MyTable = CEntity_GetTable( self )

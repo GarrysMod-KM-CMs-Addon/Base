@@ -23,23 +23,32 @@ local CPlayer_KeyDown = CPlayer.KeyDown
 
 local vFinal, vFinalVel = Vector(), Vector()
 local vFinalAngle, vFinalAngleVel = Vector(), Vector()
+
 local vTarget = Vector()
 local vTargetAngle = Vector()
+
 local vViewFinal, vViewFinalVel = Vector(), Vector()
 local vViewFinalAngle, vViewFinalAngleVel = Vector(), Vector()
+
 local vBezier = Vector()
 local vBezierAngle = Vector()
+
 local vInstantTarget, vInstantTargetAngle = Vector(), Vector()
 local vFinalRatherQuick, vFinalRatherQuickAngle = Vector(), Vector()
 local vFinalRatherQuickVel, vFinalRatherQuickAngleVel = Vector(), Vector()
 local vTargetRatherQuick, vTargetRatherQuickAngle = Vector(), Vector()
+
 local vViewFinalRatherQuick, vViewFinalRatherQuickVel = Vector(), Vector()
 local vViewFinalRatherQuickAngle, vViewFinalRatherQuickAngleVel = Vector(), Vector()
 local vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
-local aLastEyeAngles = Angle()
+
+local vViewFinalAdd, vViewFinalAddVel = Vector(), Vector()
+local vViewTargetAdd = Vector(), Vector()
 
 local random = math.random
 local Rand = math.Rand
+
+local MIN_SHAKE_DELAY, MAX_SHAKE_DELAY = .05, .1
 
 WEAPON_SWAY = Vector()
 WEAPON_SWAY_CAM = Vector()
@@ -113,19 +122,6 @@ end
 local util_TraceLine = util.TraceLine
 local flLastCalcViewCall = 0
 
-local function GenericCameraSprintingAnimation( f )
-	SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 2
-	local flBreathe = RealTime() * 18
-	vTargetAngle = vTargetAngle + Vector( math_cos( flBreathe ) * 1.5, math_sin( flBreathe * .5 ) * .5, math_cos( flBreathe * .5 ) * 1.25 ) * f
-end
-
-local SPRINT_ANIMATION_CAMERA = {
-	[ WPN_PISTOL ] = GenericCameraSprintingAnimation,
-	[ WPN_RIFLE ] = GenericCameraSprintingAnimation,
-	[ WPN_RIFLEUP ] = GenericCameraSprintingAnimation,
-	[ WPN_SNIPER ] = GenericCameraSprintingAnimation
-}
-
 local flRecoilCameraShakeLerped = 0
 
 local vActualCameraSway = Vector()
@@ -133,8 +129,8 @@ local vActualCameraSway = Vector()
 local aLastEyeAnglesInternal = Angle()
 
 function SWEP:CalcView( ply, pos, ang )
-	SPRING_CAMERA_STIFFNESS_CURRENT = 225
-	SPRING_CAMERA_DAMPING_CURRENT = -20
+	SPRING_CAMERA_STIFFNESS_CURRENT = 400
+	SPRING_CAMERA_DAMPING_CURRENT = -30
 
 	local MyTable = CEntity_GetTable( self )
 
@@ -144,6 +140,7 @@ function SWEP:CalcView( ply, pos, ang )
 
 	vTarget, vTargetAngle = Vector(), Vector()
 	vViewTargetRatherQuick, vViewTargetRatherQuickAngle = Vector(), Vector()
+	vViewTargetAdd:Zero()
 
 	local bSprinting = CEntity_IsOnGround( ply ) && !CEntity_GetNW2Bool( ply, "CTRL_bSliding" ) && CEntity_GetNW2Bool( ply, "CTRL_bSprinting" )
 
@@ -162,7 +159,7 @@ function SWEP:CalcView( ply, pos, ang )
 			WEAPON_SWAY_CAM[ 1 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY_CAM[ 1 ], -11.25, 11.25 ), 0 )
 			WEAPON_SWAY_CAM[ 2 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY_CAM[ 2 ], -11.25, 11.25 ), 0 )
 		else
-			flLerpSpeed = FRILerpRate( math_Clamp( ( ( math_abs( WEAPON_SWAY_CAM[ 1 ] ) + math_abs( WEAPON_SWAY_CAM[ 2 ] ) ) ) ^ .9 + ( random() * random() - 1 ), 0, 25 ) - ( 1 - random() * random() * random() ) * 5, flFrameTime )
+			flLerpSpeed = FRILerpRate( math_Clamp( ( ( math_abs( WEAPON_SWAY_CAM[ 1 ] ) + math_abs( WEAPON_SWAY_CAM[ 2 ] ) ) ) ^ 1.5 + ( random() * random() - 1 ), 0, 25 ) - ( 1 - random() * random() * random() ) * 5, flFrameTime )
 	
 			WEAPON_SWAY_CAM[ 1 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY_CAM[ 1 ], -11.25, 11.25 ), 0 )
 			WEAPON_SWAY_CAM[ 2 ] = Lerp( flLerpSpeed, math_Clamp( WEAPON_SWAY_CAM[ 2 ], -35, 35 ), 0 )
@@ -185,19 +182,33 @@ function SWEP:CalcView( ply, pos, ang )
 		if bSprinting then
 			local flVelocity = CEntity_GetVelocity( ply ):Length()
 			if flVelocity > 10 then
-				local f = min( 1, flVelocity / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale * 3
-				local fFunction = SPRINT_ANIMATION_CAMERA[ MyTable.WPN_SPRINT ]
-				if fFunction then fFunction( f ) else SPRINT_ANIMATION_CAMERA[ WPN_RIFLE ]( f ) end
+				SPRING_CAMERA_STIFFNESS_CURRENT = SPRING_CAMERA_STIFFNESS_CURRENT * 4
+
+				local f = min( 1, flVelocity / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale
+
+				local flBreathe = RealTime() * 18
+
+				vViewTargetAdd[ 2 ] = vViewTargetAdd[ 2 ] + math_sin( flBreathe * .5 ) * f * 3
+				vViewTargetAdd[ 3 ] = vViewTargetAdd[ 3 ] + ( 1 - math_abs( math_sin( flBreathe * .5 ) ) ) * f * 3
+
+				vTargetAngle[ 1 ] = vTargetAngle[ 1 ] + math_cos( flBreathe ) * 3 * f
+				vTargetAngle[ 2 ] = vTargetAngle[ 2 ] + math_sin( flBreathe * .5 ) * 3 * f
+				vTargetAngle[ 3 ] = vTargetAngle[ 3 ] + math_cos( flBreathe * .5 ) * 3 * f
 			end
 		else
 			local flVelocity = CEntity_GetVelocity( ply ):Length()
 			if flVelocity > 10 then
-				local f = min( 1, flVelocity / CPlayer_GetRunSpeed( ply ) ) * MyTable.flBobScale
+				local f = min( 1, flVelocity / CPlayer_GetWalkSpeed( ply ) ) * MyTable.flBobScale
 
 				local flBreathe = RealTime() * 12
 				local flBreatheFast = RealTime() * 14
 
-				vTargetAngle:Add( Vector( math_sin( flBreathe ) * 1.5, math_cos( flBreathe * .5 ) * 2, math_sin( flBreathe * .5 ) ) * ( f * MyTable.flAimMultiplier ) )
+				local flMult = MyTable.flAimMultiplier * f
+
+				vViewTargetAdd[ 2 ] = vViewTargetAdd[ 2 ] + math_sin( flBreathe * .5 ) * f * 2 * flMult
+				vViewTargetAdd[ 3 ] = vViewTargetAdd[ 3 ] + ( 1 - math_abs( math_sin( flBreathe * .5 ) ) ) * f * 2 * flMult
+
+				vTargetAngle:Add( Vector( math_sin( flBreathe ) * 1.5, math_cos( flBreathe * .5 ) * 2, math_sin( flBreathe * .5 ) ) * flMult )
 
 				f = f * ( 1 - MyTable.flAimMultiplier ) * 1 / 3
 				vTarget:Add( Vector( 0, -math_sin( flBreatheFast * .5 ) * 2 / 3, ( math_abs( math_cos( flBreatheFast * .5 ) ) - .5 ) ) * f )
@@ -237,6 +248,14 @@ function SWEP:CalcView( ply, pos, ang )
 
 	vViewTargetRatherQuick:Add( vBezier )
 	vViewTargetRatherQuickAngle:Add( vBezierAngle )
+
+	vViewFinalAddVel = vViewFinalAddVel + ( vViewTargetAdd - vViewFinalAdd ) * SPRING_CAMERA_STIFFNESS_CURRENT * flFrameTime
+	vViewFinalAddVel = vViewFinalAddVel * math_exp( SPRING_CAMERA_DAMPING_CURRENT * flFrameTime )
+	vViewFinalAdd = vViewFinalAdd + vViewFinalAddVel * flFrameTime
+
+	pos:Add( vViewFinalAdd[ 1 ] * ang:Forward() )
+	pos:Add( vViewFinalAdd[ 2 ] * ang:Right() )
+	pos:Add( vViewFinalAdd[ 3 ] * ang:Up() )
 
 	vViewFinalVel = vViewFinalVel + ( vTarget - vViewFinal ) * SPRING_CAMERA_STIFFNESS_CURRENT * flFrameTime
 	vViewFinalVel = vViewFinalVel * math_exp( SPRING_CAMERA_DAMPING_CURRENT * flFrameTime )
@@ -289,30 +308,30 @@ function SWEP:CalcView( ply, pos, ang )
 
 	local flRecoilCameraShake = MyTable.flRecoilCameraShake
 
-	local flDelay = min( MyTable.Primary_flDelay, .1 )
+	local flDelay = math_Clamp( MyTable.Primary_flDelay, MIN_SHAKE_DELAY, MAX_SHAKE_DELAY )
 
 	flRecoilCameraShakeLerped = Lerp( FRILerpRate( 4 / flDelay, flFrameTime ), flRecoilCameraShakeLerped, flRecoilCameraShake )
 
-	ang[ 3 ] = ang[ 3 ] + math_sin( RealTime() * ( 2 * math.pi ) / ( flDelay * .75 ) ) * flRecoilCameraShakeLerped * MyTable.flRecoil
+	ang[ 3 ] = ang[ 3 ] + math_sin( RealTime() * ( 2 * math.pi ) / flDelay ) * flRecoilCameraShakeLerped * MyTable.flRecoil ^ .5
 
-	MyTable.flRecoilCameraShake = Lerp( FRILerpRate( .25 / flDelay, flFrameTime ), flRecoilCameraShake, 0 )
+	MyTable.flRecoilCameraShake = Lerp( FRILerpRate( .5 / flDelay, flFrameTime ), flRecoilCameraShake, 0 )
 
-	aLastEyeAngles:Set( ang )
+	local flMultiplierShake = 1 + math.abs( math_sin( RealTime() * ( 2 * math.pi ) / flDelay ) ) * .06 * flRecoilCameraShakeLerped * MyTable.flRecoil ^ .5
 
 	local v = MyTable.flCustomZoomFoV
 	if v then
 		if MyTable.bSniper then
 			local f = MyTable.flAimMultiplier <= ( MyTable.flSniperAimingMultiplier || SNIPER_AIMING_MULTIPLIER ) && v || UNIVERSAL_FOV
-			MyTable.flFoV = f
+			MyTable.flFoV = f * flMultiplierShake
 			return pos, ang, f
 		else
 			local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, v )
-			MyTable.flFoV = f
+			MyTable.flFoV = f * flMultiplierShake
 			return pos, ang, f
 		end
 	end
 
-	local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, UNIVERSAL_FOV * .9 )
+	local f = math_Remap( MyTable.flAimMultiplier, 1, 0, UNIVERSAL_FOV, UNIVERSAL_FOV * .9 ) * flMultiplierShake
 	MyTable.flFoV = f
 	return pos, ang, f
 end
@@ -457,7 +476,7 @@ local tApplyRecoil = {
 
 		local flResultP, flResultY, flResultR = pRecoilAngleSpring.Unpack()
 
-		return flResultP * Lerp( flAimMultiplier, .04, .75 ), flResultY * Lerp( flAimMultiplier, .08, .75 ), flResultR
+		return flResultP * Lerp( flAimMultiplier, .04, 2 / 3 ), flResultY * Lerp( flAimMultiplier, .08, 2 / 3 ), flResultR
 	end,
 
 	//	[ WPN_SUBMACHINEGUN ] = function( MyTable, flFrameTime, flAimMultiplier, ply, pos, ang )
@@ -687,9 +706,43 @@ local rad = math.rad
 
 SWEP.flViewModelFoV = 48
 
+local function DoViewSprings( pos, ang, flFrameTime )
+	vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
+	vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
+	vFinal = vFinal + vFinalVel * flFrameTime
+
+	vFinalAngleVel = vFinalAngleVel + ( vTargetAngle - vFinalAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
+	vFinalAngleVel = vFinalAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
+	vFinalAngle = vFinalAngle + vFinalAngleVel * flFrameTime
+
+	ang:RotateAroundAxis( ang:Right(), vFinalAngle[ 1 ] )
+	ang:RotateAroundAxis( ang:Up(), vFinalAngle[ 2 ] )
+	ang:RotateAroundAxis( ang:Forward(), vFinalAngle[ 3 ] )
+
+	vFinalRatherQuickVel = vFinalRatherQuickVel + ( vTargetRatherQuick - vFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * flFrameTime
+	vFinalRatherQuickVel = vFinalRatherQuickVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
+	vFinalRatherQuick = vFinalRatherQuick + vFinalRatherQuickVel * flFrameTime
+
+	vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel + ( vTargetRatherQuickAngle - vFinalRatherQuickAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
+	vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
+	vFinalRatherQuickAngle = vFinalRatherQuickAngle + vFinalRatherQuickAngleVel * flFrameTime
+
+	ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle[ 1 ] )
+	ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle[ 2 ] )
+	ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle[ 3 ] )
+
+	pos:Add( vFinal[ 1 ] * ang:Forward() )
+	pos:Add( vFinal[ 2 ] * ang:Right() )
+	pos:Add( vFinal[ 3 ] * ang:Up() )
+
+	pos:Add( vFinalRatherQuick[ 1 ] * ang:Forward() )
+	pos:Add( vFinalRatherQuick[ 2 ] * ang:Right() )
+	pos:Add( vFinalRatherQuick[ 3 ] * ang:Up() )
+end
+
 function SWEP:CalcViewModelView( _, pos, ang )
-	SPRING_STIFFNESS_CURRENT = 225
-	SPRING_DAMPING_CURRENT = -20
+	SPRING_STIFFNESS_CURRENT = 400
+	SPRING_DAMPING_CURRENT = -30
 
 	local f = SysTime()
 	local flFrameTime = f - flLastCalcViewModelViewCall
@@ -699,7 +752,8 @@ function SWEP:CalcViewModelView( _, pos, ang )
 	local ply = LocalPlayer()
 
 	local flViewModelFoV = MyTable.flViewModelFoV
-	MyTable.ViewModelFOV = deg( atan( tan( rad( flViewModelFoV / 2 ) ) * tan( rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / tan( rad( MyTable.flFoV * .5 ) ) ) * 2.22 )
+	MyTable.ViewModelFOV = deg( atan( tan( rad( flViewModelFoV / 2 ) ) * tan( rad( ply:GetInfoNum( "fov_desired", 75 ) / 2 ) ) / tan( rad( MyTable.flFoV * .5 ) ) ) * 2.22 ) * (
+	1 - math.abs( math_sin( RealTime() * ( 2 * math.pi ) / math_Clamp( MyTable.Primary_flDelay, MIN_SHAKE_DELAY, MAX_SHAKE_DELAY ) * .5 ) ) * .2 * flRecoilCameraShakeLerped )
 
 	vBezier, vBezierAngle = Vector(), Vector()
 	vTargetRatherQuick, vTargetRatherQuickAngle = Vector(), Vector()
@@ -872,10 +926,9 @@ function SWEP:CalcViewModelView( _, pos, ang )
 
 	vInstantTarget:Add( Vector( MyTable.flViewModelX, MyTable.flViewModelY, MyTable.flViewModelZ ) )
 
-	local aDiff = aLastEyeAngles - ang
-	aDiff[ 1 ] = math_NormalizeAngle( aDiff[ 1 ] )
-	aDiff[ 2 ] = math_NormalizeAngle( aDiff[ 2 ] )
-	ang:Add( aDiff * ( 1 - ( UNIVERSAL_FOV - flViewModelFoV ) / UNIVERSAL_FOV ) )
+	pos:Add( vViewFinalAdd[ 1 ] * ang:Forward() )
+	pos:Add( vViewFinalAdd[ 2 ] * ang:Right() )
+	pos:Add( vViewFinalAdd[ 3 ] * ang:Up() )
 
 	ang:RotateAroundAxis( ang:Right(), vInstantTargetAngle[ 1 ] )
 	ang:RotateAroundAxis( ang:Up(), vInstantTargetAngle[ 2 ] )
@@ -931,37 +984,7 @@ function SWEP:CalcViewModelView( _, pos, ang )
 
 	ApplySway( MyTable, pos, ang, flMultiplier, flPitchTurn, flYawTurn, flRollTurn, flFrameTime )
 
-	vFinalVel = vFinalVel + ( vTarget - vFinal ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-	vFinalVel = vFinalVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
-	vFinal = vFinal + vFinalVel * flFrameTime
-
-	vFinalAngleVel = vFinalAngleVel + ( vTargetAngle - vFinalAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-	vFinalAngleVel = vFinalAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
-	vFinalAngle = vFinalAngle + vFinalAngleVel * flFrameTime
-
-	ang:RotateAroundAxis( ang:Right(), vFinalAngle[ 1 ] )
-	ang:RotateAroundAxis( ang:Up(), vFinalAngle[ 2 ] )
-	ang:RotateAroundAxis( ang:Forward(), vFinalAngle[ 3 ] )
-
-	vFinalRatherQuickVel = vFinalRatherQuickVel + ( vTargetRatherQuick - vFinalRatherQuick ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-	vFinalRatherQuickVel = vFinalRatherQuickVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
-	vFinalRatherQuick = vFinalRatherQuick + vFinalRatherQuickVel * flFrameTime
-
-	vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel + ( vTargetRatherQuickAngle - vFinalRatherQuickAngle ) * SPRING_STIFFNESS_CURRENT * flFrameTime
-	vFinalRatherQuickAngleVel = vFinalRatherQuickAngleVel * math_exp( SPRING_DAMPING_CURRENT * flFrameTime )
-	vFinalRatherQuickAngle = vFinalRatherQuickAngle + vFinalRatherQuickAngleVel * flFrameTime
-
-	ang:RotateAroundAxis( ang:Right(), vFinalRatherQuickAngle[ 1 ] )
-	ang:RotateAroundAxis( ang:Up(), vFinalRatherQuickAngle[ 2 ] )
-	ang:RotateAroundAxis( ang:Forward(), vFinalRatherQuickAngle[ 3 ] )
-
-	pos:Add( vFinal[ 1 ] * ang:Forward() )
-	pos:Add( vFinal[ 2 ] * ang:Right() )
-	pos:Add( vFinal[ 3 ] * ang:Up() )
-
-	pos:Add( vFinalRatherQuick[ 1 ] * ang:Forward() )
-	pos:Add( vFinalRatherQuick[ 2 ] * ang:Right() )
-	pos:Add( vFinalRatherQuick[ 3 ] * ang:Up() )
+	DoViewSprings( pos, ang, flFrameTime )
 
 	return pos, ang
 end
