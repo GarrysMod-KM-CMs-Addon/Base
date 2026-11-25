@@ -1013,6 +1013,8 @@ HUD_SHOULD_NOT_DRAW_IMMERSIVE = {
 local HUD_SHOULD_NOT_DRAW_IMMERSIVE = HUD_SHOULD_NOT_DRAW_IMMERSIVE
 
 hook.Add( "HUDShouldDraw", "Graphics", function( sName )
+	DIRECTOR_CLIENT_TICK()
+
 	if GetGlobal2Bool "g_bImmersiveMode" then
 		return !HUD_SHOULD_NOT_DRAW_IMMERSIVE[ sName ]
 	else
@@ -1040,7 +1042,7 @@ net.Receive( "GiveMeMahTerrorBlur", function()
 end )
 
 function ClampBlur( flHorizontal, flVertical, flRadial, flRotational )
-	return  flHorizontal, flVertical, math_Clamp( flRadial, 0, 50 ), flRotational
+	return flHorizontal, flVertical, math_Clamp( flRadial, 0, 50 ), flRotational
 end
 
 hook.Add( "GetMotionBlurValues", "Graphics", function()

@@ -50,13 +50,10 @@ function EFFECT:Init( pData )
 		if !IsValid( pOwner ) then MyTable.m_bFirstPersonTracer = true return end
 	end
 
-	if pOwner == LocalPlayer() then
+	if pOwner == LocalPlayer() && !pOwner:ShouldDrawLocalPlayer() && ( !IsValid( pOwner:GetViewEntity() ) || pOwner:GetViewEntity() == pOwner ) then
+		MyTable.m_bFirstPersonTracer = true
 		MyTable.m_bNoSound = true
-
-		if !pOwner:ShouldDrawLocalPlayer() then
-			MyTable.m_bFirstPersonTracer = true
-			return
-		end
+		return
 	end
 
 	local vEnd = pData:GetOrigin()
