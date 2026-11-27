@@ -149,7 +149,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		MyTable.LowIfAvailable( self, MyTable )
 	end
 
-	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .2 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
+	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .18 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
 		if MyTable.HandleHeadJump then
 			MyTable.HandleHeadJump( self, MyTable, pEnemy, pSchedule, function()
 				if math.random( 3 ) == 1 then

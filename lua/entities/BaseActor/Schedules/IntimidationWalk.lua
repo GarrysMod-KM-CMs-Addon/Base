@@ -200,7 +200,7 @@ RegisterSchedule( "IntimidationWalkInternal", { Execute = function( self, pSched
 		return
 	end
 
-	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .15 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
+	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .14 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
 		if MyTable.HandleHeadJump then
 			MyTable.HandleHeadJump( self, MyTable, pEnemy, pSchedule, function()
 				if math.random( 2 ) == 1 then

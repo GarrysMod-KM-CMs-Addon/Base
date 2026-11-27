@@ -12,24 +12,26 @@ end
 function ENT:SetSchedule( Name, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
+	local pNew
+	if istable( Name ) then
+		MyTable.Schedule = Name
+		pNew = Name
+	else
+		pNew = { m_pOwner = self, m_sName = Name }
+		MyTable.Schedule = pNew
+	end
+
 	local pSchedule = MyTable.Schedule
 	if pSchedule then
 		local sClassName = pSchedule.m_sName || ""
 		local pScheduleClass = __SCHEDULE__[ sClassName ]
 		if pScheduleClass then
 			local fOnLeave = pScheduleClass.OnLeave
-			if fOnLeave then fOnLeave( self, pSchedule, MyTable ) end
+			if fOnLeave then fOnLeave( self, pSchedule, MyTable, pNew ) end
 		end
 	end
 
-	if istable( Name ) then
-		MyTable.Schedule = Name
-		return Name
-	else
-		local pSchedule = { m_pOwner = self, m_sName = Name }
-		MyTable.Schedule = pSchedule
-		return pSchedule
-	end
+	return pSchedule
 end
 
 local __SCHEDULE__ = __SCHEDULE__
@@ -99,7 +101,7 @@ function ENT:RunMind( MyTable )
 	local Return = fExecute( self, pSchedule, MyTable )
 	if Return != nil then
 		local fOnLeave = pScheduleClass.OnLeave
-		if fOnLeave then fOnLeave( self, pSchedule, MyTable ) end
+		if fOnLeave then fOnLeave( self, pSchedule, MyTable, Return ) end
 		MyTable.SelectScheduleInternal( self, MyTable, pSchedule, sClassName, Return )
 	end
 end
