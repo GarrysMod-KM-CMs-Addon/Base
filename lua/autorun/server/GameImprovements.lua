@@ -588,10 +588,18 @@ DONT_CHANGE_DRAW_SHADOW = {
 }
 
 local cActorQueueCallsPerTick = CreateConVar(
-	"iActorQueueCallsPerTick",
+	"ActorQueueCallsPerTick",
 	1,
 	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
 	"Complex calculations (such as finding nearest cover) are enqueued in a Circular Doubly Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
+	1
+)
+
+local cActorQueuePathCallsPerTick = CreateConVar(
+	"ActorQueuePathCallsPerTick",
+	3,
+	FCVAR_SERVER_CAN_EXECUTE + FCVAR_NEVER_AS_STRING + FCVAR_NOTIFY + FCVAR_ARCHIVE,
+	"Pathing is enqueued in a Circular Doubly Linked List. This is how much things are updated from it per tick. Bigger is more laggy but Actors are faster. Smaller is less laggy but Actors are slower.",
 	1
 )
 
@@ -670,7 +678,7 @@ hook.Add( "Think", "GameImprovements", function()
 		if !ACTOR_QUEUE_PATH_CURRENT then ACTOR_QUEUE_PATH_CURRENT = ACTOR_QUEUE_PATH_LAST.pNext end
 
 		local iCalls = 0
-		local flActorQueueCallsPerTick = cActorQueueCallsPerTick:GetInt()
+		local flActorQueueCallsPerTick = cActorQueuePathCallsPerTick:GetInt()
 
 		while iCalls < flActorQueueCallsPerTick && ACTOR_QUEUE_PATH_LAST != nil do
 			local pNode = ACTOR_QUEUE_PATH_CURRENT

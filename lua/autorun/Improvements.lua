@@ -747,13 +747,13 @@ end
 local CPlayer = FindMetaTable "Player"
 
 if SERVER then
-	Add_NPC_Class "CLASS_HUMAN"
+	if !CLASS_HUMAN then Add_NPC_Class "CLASS_HUMAN" end
 
-	function CPlayer:SetNPCClass( EClass ) self:SetNW2Int( "m_iClass", EClass ) end
+	function CPlayer:SetNPCClass( EClass ) self:SetNW2Int( "m_iPlayerClass", EClass ) end
 end
 
-function CPlayer:GetNPCClass() return self:GetNW2Int( "m_iClass", CLASS_HUMAN || -1 ) end
-function CPlayer:Classify() return self:GetNW2Int( "m_iClass", CLASS_HUMAN || -1 ) end
+function CPlayer:GetNPCClass() return self:GetNW2Int( "m_iPlayerClass", CLASS_HUMAN || -1 ) end
+function CPlayer:Classify() return self:GetNW2Int( "m_iPlayerClass", CLASS_HUMAN || -1 ) end
 
 /*
 Optimized version, for classes that support it

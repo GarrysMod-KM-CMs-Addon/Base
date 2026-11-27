@@ -93,7 +93,7 @@ function EFFECT:Init( pData )
 	local vRight = aAngles:Right()
 	local vUp = aAngles:Up()
 
-	for i = 1, 32 do
+	for i = 1, 12 do
 		local pPart = pEmitter:Add( "effects/muzzleflash" .. math_random( 1, 4 ), fGetPos() )
 
 		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
@@ -124,11 +124,11 @@ function EFFECT:Init( pData )
 		end )
 	end
 
-	for i = 1, 32 do
+	for i = 1, 12 do
 		local pPart = pEmitter:Add( "effects/muzzleflash" .. math_random( 1, 4 ), fGetPos() )
 
-		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2
-		local flResultingSpreadUp = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) * .2
+		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) / 3
+		local flResultingSpreadUp = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) ) / 3
 		local vAdd = ( vForward + flResultingSpreadRight * vRight + flResultingSpreadUp * vUp ):GetNormalized()
 		pPart:SetVelocity( vAdd / math_max( .1, abs( flResultingSpreadRight ) + abs( flResultingSpreadUp ) ) * flScale / flLifeTime * 3 )
 		pPart.m_vOffset = Vector()
@@ -155,7 +155,7 @@ function EFFECT:Init( pData )
 		end )
 	end
 
-	for i = 1, 8 do
+	for i = 1, 6 do
 		local pPart = pEmitter:Add( bFirstPerson && "MuzzleFlashHeatHazeView" || "MuzzleFlashHeatHazeWorld", fGetPos() )
 	
 		local flResultingSpreadRight = ( math_Rand( -.5, .5 ) + math_Rand( -.5, .5 ) )
