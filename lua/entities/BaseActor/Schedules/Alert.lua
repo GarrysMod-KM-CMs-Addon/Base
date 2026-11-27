@@ -25,7 +25,7 @@ RegisterSchedule( "Alert", { Execute = function( self, pSchedule, MyTable )
 end } )
 
 local function LookAround( self, pSchedule, MyTable )
-	if math.random( 3 ) == 1 then
+	if math.random( 5 ) == 1 then
 		MyTable.SetSchedule( self, "AlertFindDestination", MyTable ).bShutTheHellUp = math.random( 3 ) == 1 && !pSchedule.bShutTheHellUp || !!pSchedule.bShutTheHellUp
 		return
 	end
@@ -55,12 +55,24 @@ local function LookAround( self, pSchedule, MyTable )
 
 	MyTable.vaAimTargetPose = nil
 
-	local fForceTurnAroundLeft = MyTable.ForceTurnAroundLeft
-	local fForceTurnAroundRight = MyTable.ForceTurnAroundRight
+	local t, i = {}, 0
+	local f = MyTable.ForceTurnAroundLeft
+	if f then table.insert( t, f ) i = i + 1 end
+	local f = MyTable.ForceTurnAroundRight
+	if f then table.insert( t, f ) i = i + 1 end
+	local f = MyTable.ForceTurnLeft
+	if f then table.insert( t, f ) i = i + 1 end
+	local f = MyTable.ForceTurnRight
+	if f then table.insert( t, f ) i = i + 1 end
 
-	if fForceTurnAroundLeft || fForceTurnAroundRight then
-		if fForceTurnAroundLeft then fForceTurnAroundLeft( self, MyTable )
-		else fForceTurnAroundRight( self, MyTable ) end
+	if i > 0 then
+		MyTable.sCallMeInRunBehaviour = "ForceTurn"
+		MyTable.fCallMeInRunBehaviour = function()
+			t[ math.random( i ) ]( self, MyTable )
+			MyTable.vaAimTargetBody = self:GetAngles()
+		end
+
+		coroutine.yield()
 	else
 		MyTable.vaAimTargetBody = ( -pSchedule.aInitialFacing:Forward() ):Angle()
 	
@@ -76,7 +88,7 @@ local function LookAround( self, pSchedule, MyTable )
 
 		if CurTime() > flNextLook then
 			local a = Angle( math.Rand( -20, 20 ), math.Rand( -70, 70 ) )
-			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
+			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody + a
 			flNextLook = CurTime() + ( math.abs( a[ 1 ] ) + math.abs( a[ 2 ] ) ) / math.Rand( 20, 40 )
 		end
 

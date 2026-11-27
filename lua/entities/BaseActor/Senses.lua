@@ -373,7 +373,7 @@ function ENT:OnSeeUnalertedAlly( pAlly, MyTable )
 	MyTable.SetSchedule( self, MyTable.m_sDefaultShareAlertSchedule, MyTable ).pAlly = pAlly
 end
 
-function ENT:Look( MyTable )
+function ENT:Look( MyTable, bSystem )
 	MyTable = MyTable || CEntity_GetTable( self )
 
 	if MyTable.m_bScript then return end
@@ -417,7 +417,7 @@ function ENT:Look( MyTable )
 			if TheirTable.__ACTOR__ && MyTable.Disposition( self, ent ) == D_LI then
 				if bAlert && ( TheirTable.EScheduleState || -1 ) < ACTOR_STATE_ALERT && !IsValid( TheirTable.Enemy ) then
 					tVisionStrength[ ent ] = math_Clamp( tOldVisionStrength[ ent ] - flFrameTime + MyTable.GetVisionStrengthIncreaseSpeed( self, ent, vEyePos ) * flFrameTime, 0, 1 )
-					if tVisionStrength[ ent ] >= 1 then
+					if tVisionStrength[ ent ] >= 1 && bSystem then
 						MyTable.OnSeeUnalertedAlly( self, ent, MyTable, TheirTable )
 					end
 				end
@@ -470,11 +470,13 @@ function ENT:Look( MyTable )
 		else tVisionStrength[ ent ] = 0 end
 	end
 
-	table.SortByMember( tWeapons, 2, true )
-	for _, t in ipairs( tWeapons ) do
-		local ent = t[ 1 ]
-		if !IsValid( ent ) then continue end
-		MyTable.OnSeeWeapon( self, ent, vEyePos, tAllies, MyTable )
+	if bSystem then
+		table.SortByMember( tWeapons, 2, true )
+		for _, t in ipairs( tWeapons ) do
+			local ent = t[ 1 ]
+			if !IsValid( ent ) then continue end
+			MyTable.OnSeeWeapon( self, ent, vEyePos, tAllies, MyTable )
+		end
 	end
 
 	MyTable.tAlertEntities = tAlertEntities

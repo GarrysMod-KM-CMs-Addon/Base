@@ -241,7 +241,7 @@ RegisterSchedule( "IntimidationWalkInternal", { Execute = function( self, pSched
 
 	MyTable.ManageFlankPath( self, pEnemyPath, pEnemy, pSchedule, MyTable )
 
-	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flWalkSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ), nil, nil, nil, function()
+	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flFasterWalkSpeed || MyTable.flWalkSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ), nil, nil, nil, function()
 		if pEnemyPath:IsValid() && MyTable.IsInterceptJumpLegalMedium( self, pEnemy, nil, true ) then
 			//	pEnemyPath:Invalidate()
 

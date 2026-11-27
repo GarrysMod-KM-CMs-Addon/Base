@@ -102,7 +102,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 			return true
 		end
 
-		local flWait = CurTime() + math.min( 1, ( self:GetPos():Distance( pEnemy:GetPos() ) / 16384 ) ^ 3 )
+		local flWait = CurTime() + math.min( 2, ( self:GetPos():Distance( pEnemy:GetPos() ) / 16384 ) ^ 2 )
 		while CurTime() <= flWait do
 			if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
 				pData.bStartedThread = nil
@@ -123,7 +123,7 @@ function ENT:ManageFlankPath( pPath, pEnemy, pSchedule, MyTable )
 
 		MyTable.ComputePath( self, pPath, vGoal )
 
-		local flWait = CurTime() + math.min( 1, ( pPath:GetLength() / 16384 ) ^ 3 )
+		local flWait = CurTime() + math.min( 2, ( pPath:GetLength() / 16384 ) ^ 2 )
 		while CurTime() <= flWait do
 			if !IsValid( self ) || !IsValid( pEnemy ) || self.Schedule != pSchedule || CurTime() > pData.flThreadTime then
 				pData.bStartedThread = nil
@@ -277,19 +277,17 @@ ENT.flJumpedTime = 0
 
 local function fEmpty() end
 
-// TODO: Replace this so that we only update after reaching a goal and otherwise use Approach
-local function fUpdatePath( self, pPath )
-	pPath:Update( self )
-end
-
-function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid, fJump, fDrop )
+function ENT:GroundMovement( pPath, tFilter, flToleranceOverride, bNoAvoid, fJump, fDrop )
 	local pLocomotion = self.loco
 
-	pPath:SetMinLookAheadDistance( self:OBBMaxs()[ 1 ] * 3 )
+	local flLookAhead = self:OBBMaxs()[ 1 ] * 3
+	if pPath:GetMinLookAheadDistance() != f then pPath:SetMinLookAheadDistance( flLookAhead ) end
 
-	pPath:SetGoalTolerance( flToleranceOverride || self:OBBMaxs()[ 1 ] )
+	local flTolerance = flToleranceOverride || self:OBBMaxs()[ 1 ]
+	if pPath:GetGoalTolerance() != flTolerance then pPath:SetGoalTolerance( flTolerance ) end
 
-	pLocomotion:SetStepHeight( self.vHullMaxs[ 3 ] * .25 )
+	local flStepHeight = self.vHullMaxs[ 3 ] * .25
+	if pLocomotion:GetStepHeight() != flStepHeight then pLocomotion:SetStepHeight( flStepHeight ) end
 
 	if !self:IsOnGround() then
 		// Air acceleration, maybe? I'm too lazy to find out how sv_airaccelerate works
@@ -297,25 +295,24 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 	end
 
 	if CurTime() <= self.flDirectAvoidTime then
-		fUpdatePath( self, pPath )
+		pPath:Update( self )
 		return
 	end
 
 	if CurTime() <= self.flNavigationAvoidTime then
 		pLocomotion:Approach( self:GetPos() + self.vNavigationAvoidDirection, 1 )
+		self.aNavigation = self.vNavigationAvoidDirection:Angle()
 		return
 	end
 
 	local pGoal = pPath:GetCurrentGoal()
 
 	if !pGoal then
-		fUpdatePath( self, pPath )
+		pPath:Update( self )
 		return
 	end
 
-	if pGoal.type == 1 then
-		if fDrop && fDrop( self, vNextGoalPos ) then return end
-	end
+	if pGoal.type == 1 && fDrop && fDrop( self ) then return end
 
 	local pNextGoal = pPath:NextSegment()
 
@@ -333,13 +330,13 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 			if fJump && fJump( self, vNextGoalPos ) then return end
 
 			self:Jump( vNextGoalPos )
-			fUpdatePath( self, pPath )
+			pPath:Update( self )
 			return
 		end
 	end
 
 	if bNoAvoid then
-		fUpdatePath( self, pPath )
+		pPath:Update( self )
 		return
 	end
 
@@ -373,7 +370,7 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 					self.flDirectAvoidTime = CurTime() + math.random() * math.random() * 2
 				else
 					self:Jump( pNextGoal.pos )
-					fUpdatePath( self, pPath )
+					pPath:Update( self )
 				end
 				return
 			else
@@ -448,7 +445,16 @@ function ENT:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAv
 		end
 	end
 
-	fUpdatePath( self, pPath )
+	if self:GetPos():DistToSqr( pGoal.pos ) <= flTolerance * flTolerance then
+		pPath:Update( self )
+	else
+		local vPos = self:GetPos()
+		pPath:MoveCursorToClosestPosition( vPos )
+		pPath:MoveCursor( flLookAhead )
+		local vTarget = pPath:GetPositionOnPath( pPath:GetCursorPosition() )
+		self.aNavigation = ( vTarget - vPos ):Angle()
+		pLocomotion:Approach( vTarget, 1 )
+	end
 end
 
 function ENT:HandleStuck() self.loco:ClearStuck() end

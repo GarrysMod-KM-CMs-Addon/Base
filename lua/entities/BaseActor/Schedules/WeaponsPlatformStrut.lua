@@ -68,7 +68,7 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 
 	MyTable.ManageFlankPath( self, pEnemyPath, pEnemy, pSchedule, MyTable )
 
-	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flWalkSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ), nil, nil, nil, function()
+	MyTable.MoveAlongPath( self, pEnemyPath, MyTable.flFasterWalkSpeed || MyTable.flWalkSpeed, _, SimpleRelatedFilterTripleDouble( self, pEnemy, pTrueEnemy ), nil, nil, nil, function()
 		if pEnemyPath:IsValid() && MyTable.IsInterceptJumpLegalMedium( self, pEnemy, nil, true ) then
 			//	pEnemyPath:Invalidate()
 
@@ -111,7 +111,7 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 
 	if !self:IsOnGround() || CurTime() <= ( pSchedule.flPerformingJump || 0 ) then return end
 
-	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .15 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
+	if MyTable.sJumpOnTheirHeadSchedule && math.random() <= .17 * MyTable.m_flFrameTime && MyTable.IsInterceptJumpLegal( self, pEnemy ) then
 		if MyTable.HandleHeadJump then
 			MyTable.HandleHeadJump( self, MyTable, pEnemy, pSchedule, function()
 				if math.random( 2 ) == 1 then
@@ -213,7 +213,7 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 
 				local f = MyTable.flChargeSpeed * MyTable.flChargeTimeMin * .4
 
-				if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .05 then
+				if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .065 then
 					local pCharge = MyTable.SetSchedule( self, MyTable.sChargeSchedule, MyTable )
 					pCharge.fOnComplete = function()
 						if math.random( 3 ) == 1 then
@@ -229,7 +229,7 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 				end
 			end
 
-			if math.random() <= .06 * MyTable.m_flFrameTime then
+			if math.random() <= .05 * MyTable.m_flFrameTime then
 				MyTable.Taunt( self, pEnemy, MyTable )
 				pSchedule.flMeleeTimer = 4 + math.random() * 4
 				return

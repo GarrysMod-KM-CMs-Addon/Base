@@ -76,7 +76,11 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	local pGoal = pEnemyPath:GetCurrentGoal()
 	if pGoal then
-		MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+		if MyTable.aNavigation then
+			MyTable.vaAimTargetBody = MyTable.aNavigation
+		else
+			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+		end
 	else
 		MyTable.vaAimTargetBody = pEnemy:GetPos()
 	end
@@ -182,7 +186,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	if !self:Visible( pEnemy ) then return end
 
-	if MyTable.Taunt && math.random() <= .04 * MyTable.m_flFrameTime then
+	if MyTable.Taunt && math.random() <= .05 * MyTable.m_flFrameTime then
 		MyTable.Taunt( self, pEnemy, MyTable )
 		pSchedule.flMeleeTimer = 4 + math.random() * 4
 		return
@@ -194,7 +198,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 
 	local f = MyTable.flChargeSpeed * MyTable.flChargeTimeMin * .4
 
-	if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .05 then
+	if flDistance <= f && math.random() <= MyTable.m_flFrameTime * .065 then
 		local pCharge = MyTable.SetSchedule( self, MyTable.sChargeSchedule, MyTable )
 		pCharge.fOnComplete = function()
 			if math.random( 3 ) == 1 then

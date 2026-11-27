@@ -73,7 +73,7 @@ RegisterSchedule( "PlantToShoot", {
 
 		local pGoal = pPath:GetCurrentGoal()
 		if pGoal then
-			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+			MyTable.vaAimTargetBody = MyTable.aNavigation || ( pGoal.pos - self:GetPos() ):Angle()
 			MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 		end
 

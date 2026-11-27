@@ -231,6 +231,8 @@ function ENT:AnimationSystemTick( MyTable )
 
 	local tLastSequenceData = MyTable.tLastSequenceData
 
+	local flTotalWeight = 0
+
 	local flFrameTime, tSequenceEvents, tCurrentSequenceEvents, bReached = self.m_flFrameTime, self.tSequenceEvents, self.m_tSequenceEvents
 	for sSequence, iLayer in pairs( tSequences ) do
 		local s = self:LookupSequence( sSequence )
@@ -247,6 +249,7 @@ function ENT:AnimationSystemTick( MyTable )
 			local flTarget = tSequenceData[ 2 ]
 			flTargetWeight = 1 / flTarget
 			flWeight = flTarget
+			tSequenceData[ 4 ] = flTargetWeight
 			self:SetLayerWeight( iLayer, flWeight )
 		end
 
@@ -257,54 +260,50 @@ function ENT:AnimationSystemTick( MyTable )
 			flTargetWeight = 1 / flTarget
 			flWeight = Lerp( FRILerpRate( 5, flFrameTime ), flWeight, flTarget )
 			self:SetLayerWeight( iLayer, flWeight )
+			tSequenceData[ 4 ] = flTargetWeight
 			if flWeight >= ( flTarget - .05 ) then bReached = true end
 		end
 
-		tSequenceData[ 3 ]( self, MyTable, flWeight * flTargetWeight, iLayer )
+		flTotalWeight = flTotalWeight + self:GetLayerWeight( iLayer )
+	end
+
+	for sSequence, iLayer in pairs( tSequences ) do
+		local tSequenceData = tLastSequenceData[ sSequence ]
 
 		local flCycle = self:GetLayerCycle( iLayer )
+		local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
+
+		local flWeight = self:GetLayerWeight( iLayer ) * tSequenceData[ 4 ] / flTotalWeight
+
+		tSequenceData[ 3 ]( self, MyTable, flWeight, iLayer, flLastCycle, flCycle )
+
 		local tData = tSequenceEvents[ sSequence ]
 		if tData then
-			local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
 			for flTime, fFunction in pairs( tData ) do
 				// Normal progression, passing the event time
 				if flCycle > flTime && flLastCycle <= flTime ||
 				// Already passed the event time in the new loop
 				flCycle < flLastCycle && flCycle >= flTime ||
 				// The event was at the very end of the last loop
-				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self, MyTable, flWeight * flTargetWeight ) end
+				flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self, MyTable, flWeight ) end
 			end
-			tCurrentSequenceEvents[ sSequence ] = flCycle
 		end
+
+		tCurrentSequenceEvents[ sSequence ] = flCycle
 	end
 
 	if bReached then
 		for sSequence, iLayer in pairs( tSequences ) do
-			local flWeight = self:GetLayerWeight( iLayer )
-
 			if !tInstant[ sSequence ] && !tPromote[ sSequence ] then
+				local flWeight = self:GetLayerWeight( iLayer )
 				if self:GetLayerWeight( iLayer ) <= .05 then
 					self:RemoveLayer( iLayer )
 					tSequences[ sSequence ] = nil
 					tLastSequenceData[ sSequence ] = nil
+					continue
 				end
 				flWeight = Lerp( FRILerpRate( 5, flFrameTime ), flWeight, 0 )
 				self:SetLayerWeight( iLayer, flWeight )
-			end
-
-			local flCycle = self:GetLayerCycle( iLayer )
-			local tData = tSequenceEvents[ sSequence ]
-			if tData then
-				local flLastCycle = tCurrentSequenceEvents[ sSequence ] || 0
-				for flTime, fFunction in pairs( tData ) do
-					// Normal progression, passing the event time
-					if flCycle > flTime && flLastCycle <= flTime ||
-					// Already passed the event time in the new loop
-					flCycle < flLastCycle && flCycle >= flTime ||
-					// The event was at the very end of the last loop
-					flCycle < flLastCycle && flLastCycle <= flTime then fFunction( self, MyTable, flWeight ) end
-				end
-				tCurrentSequenceEvents[ sSequence ] = flCycle
 			end
 		end
 	end
@@ -356,4 +355,67 @@ function ENT:CenterTarget( vTarget, MyTable )
 
 	MyTable.vaAimTargetBody = vTarget
 	MyTable.vaAimTargetPose = vTarget
+end
+
+function ENT:DoRootMotion( sSequence, flSpeed, bInstant, MyTable )
+	MyTable = MyTable || CEntity_GetTable( self )
+
+	local iSequence = self:LookupSequence( sSequence )
+	local _, v = self:GetSequenceMovement( iSequence )
+
+	local pLocomotion = MyTable.loco
+
+	local vMins, vMaxs = self:OBBMins(), self:OBBMaxs()
+
+	vMins[ 3 ] = vMins[ 3 ] + pLocomotion:GetStepHeight()
+
+	pLocomotion:SetDesiredSpeed( 1 )
+	pLocomotion:SetAcceleration( 1 )
+	pLocomotion:SetDeceleration( 1 )
+
+	// Yes, the ; is really necessary there :)
+	;( bInstant && MyTable.PromoteSequenceInstant || MyTable.PromoteSequence )( self, sSequence,
+	flSpeed / v:Length(),
+	nil,
+	function( self, MyTable, flWeight, _/*iLayer*/, flPrevCycle, flCycle )
+		if flPrevCycle > .75 && flCycle < .25 then
+			local _, vResult, aResult = self:GetSequenceMovement( iSequence, flPrevCycle, 1 )
+			v = vResult
+			a = aResult
+
+			local _, vResult, aResult = self:GetSequenceMovement( iSequence, 0, flCycle )
+			v:Add( vResult )
+			a:Add( aResult )
+		else
+			local _, vResult, aResult = self:GetSequenceMovement( iSequence, flPrevCycle, flCycle )
+			v = vResult
+			a = aResult
+		end
+
+		local aAngles = self:GetAngles()
+		a:Mul( flWeight )
+		a:Add( aAngles )
+
+		v:Mul( flWeight )
+		v:Mul( self:GetModelScale() )
+		v:Rotate( aAngles )
+		v:Add( self:GetPos() )
+
+		local tr = util.TraceHull {
+			start = self:GetPos(),
+			endpos = v,
+			mins = vMins,
+			maxs = vMaxs,
+			filter = function( pEntity )
+				if pEntity == self || IsBullshitNonSolidEntity( pEntity ) then return false end
+				return true
+			end,
+			mask = MASK_SOLID
+		}
+
+		if !tr.Hit then
+			self:SetPos( v )
+			self:SetAngles( a )
+		end		
+	end )
 end

@@ -603,6 +603,8 @@ local CVector = FindMetaTable "Vector"
 local CVector_Sub = CVector.Sub
 local CVector_Div = CVector.Div
 
+function ENT:__GetVelocity__() return Vector( CEntity_GetTable( self ).m_vManualVelocity ) end
+
 ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
 	MyTable.m_coBehaveThread = coroutine_create( function( MyTable, flInterval )
@@ -671,7 +673,7 @@ function ENT:RunBehaviour( MyTable )
 
 			MyTable.HandleSentences( self, MyTable )
 			MyTable.HandleTurning( self, MyTable )
-			MyTable.Look( self, MyTable )
+			MyTable.Look( self, MyTable, true )
 			MyTable.Behaviour( self, MyTable )
 
 			coroutine_yield()

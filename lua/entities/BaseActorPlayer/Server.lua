@@ -42,7 +42,7 @@ function ENT:MoveAlongPathToCover( pPath, tFilter, flTolerance )
 		pLocomotion:SetDesiredSpeed( 0 )
 		pLocomotion:SetAcceleration( 0 )
 		pLocomotion:SetDeceleration( 0 )
-		self:GroundMovement( pPath, self.flTopSpeed, tFilter )
+		self:GroundMovement( pPath, tFilter )
 		return
 	end
 
@@ -169,7 +169,7 @@ function ENT:MoveAlongPath( pPath, flSpeed, flHeight, tFilter, bAllowSliding, fl
 	pLocomotion:SetAcceleration( f )
 	pLocomotion:SetDeceleration( f )
 
-	self:GroundMovement( pPath, flSpeed, tFilter, flToleranceOverride, bNoAvoid )
+	self:GroundMovement( pPath, tFilter, flToleranceOverride, bNoAvoid )
 end
 
 function ENT:Stand( flHeight )
