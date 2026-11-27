@@ -372,8 +372,6 @@ function ENT:DoRootMotion( sSequence, flSpeed, bInstant, MyTable )
 
 	local iSequence = self:LookupSequence( sSequence )
 
-	print(self:GetSequenceGroundSpeed( iSequence ))
-
 	// Yes, the ; is really necessary there :)
 	;( bInstant && MyTable.PromoteSequenceInstant || MyTable.PromoteSequence )( self, sSequence,
 	flSpeed / self:GetSequenceGroundSpeed( iSequence ),
