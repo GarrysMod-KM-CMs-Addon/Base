@@ -450,9 +450,9 @@ hook.Add( "Tick", "Graphics", function()
 
 	flBloom = Lerp( FRILerpRate( .5, flFrameTime ), flBloom || 0, math_max( 0, 1 - flColorSum * math_Clamp( math_Remap( flColorSum, 0, 2, 0, 1 ), 0, 1 ) ) )
 
-	flBloomDarken = math_Remap( flBloom, 0, 1, .4, .1 )
-	flBloomMultiply = math_Remap( flBloom, 0, 1, 1, 4 )
-	flBloomColorMultiply = math_Remap( flBloom, 0, 1, 1, 1.5 )
+	flBloomDarken = math_Remap( flBloom, 0, 1, 1 / 3, .1 )
+	flBloomMultiply = math_Remap( flBloom, 0, 1, .75, 4 )
+	flBloomColorMultiply = math_Remap( flBloom, 0, 1, .75, 1.5 )
 
 	flFogDensityMul = math_Approach( flFogDensityMul, math_Remap( math_Clamp( VectorSum( vTargetColor ), 0, 1 ), 0, 1, .2, 1 ), flFrameTime )
 	flFogDistance = Lerp( FRILerpRate( 2, flFrameTime ), flFogDistance, math_Remap( flColorSum, 0, 1, 512, 12288 ) )
