@@ -1,5 +1,55 @@
 // TODO: Dramatic gunning turn? Not sure how that'd work with DRY lol
 
+// Casual range bladder urgency (per-event probability for volley openers)
+local function fGetStrutExcreteChance( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount <= flFloor then return 0 end
+	if flAmount >= flCrit then return 1 end
+
+	local flRatio = ( flAmount - flFloor ) / ( flCrit - flFloor )
+	return math.Clamp( .2 + .8 * ( flRatio ^ .58 ), 0, 1 )
+end
+
+// Continuous per-second hazard rate while suppressing at range
+local function fGetStrutContinuousRate( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount <= flFloor then return 0 end
+	if flAmount >= flCrit then return 999 end
+
+	local flRatio = math.Clamp( ( flAmount - flFloor ) / ( flCrit - flFloor ), 0, 1 )
+	return .022 + .258 * ( flRatio ^ .85 )
+end
+
+local function fCalcStrutVoid( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+
+	if flAmount >= MyTable.LAT_flSize * .72 && math.random() < .85 then return flAmount end
+
+	local flResidual = flAmount < 18 && math.Rand( .8, 1.5 ) || ( MyTable.LAT_flResidualMin * math.Rand( .75, 1.15 ) )
+	local flVoidable = math.max( 0, flAmount - flResidual )
+	local flVoidFraction = math.Rand( .82, .95 )
+
+	return math.min( flVoidable * flVoidFraction, flAmount )
+end
+
+local function fStrutExcrete( self, MyTable, pSchedule, pEnemy )
+	local flVoidAmount = fCalcStrutVoid( MyTable )
+
+	pSchedule.flMeleeTimer = 4 + math.random() * 4
+
+	MyTable.TauntExcrete( self, flVoidAmount, MyTable, function()
+		if IsValid( pEnemy ) then MyTable.vaAimTargetPose = pEnemy:GetPos() + pEnemy:OBBCenter() end
+	end )
+
+	if math.random( 4 ) == 1 then MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable ) end
+end
+
 RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule, MyTable )
 	MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 
@@ -229,7 +279,10 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 				end
 			end
 
-			if math.random() <= .05 * MyTable.m_flFrameTime then
+			if MyTable.LAT_flAmount && math.random() <= fGetStrutContinuousRate( MyTable ) * MyTable.m_flFrameTime then
+				fStrutExcrete( self, MyTable, pSchedule, pEnemy )
+				return
+			elseif math.random() <= .05 * MyTable.m_flFrameTime then
 				MyTable.Taunt( self, pEnemy, MyTable )
 				pSchedule.flMeleeTimer = 4 + math.random() * 4
 				return
@@ -244,10 +297,18 @@ RegisterSchedule( "WeaponsPlatformStrut", { Execute = function( self, pSchedule,
 			elseif !pSchedule.bAttackMooed && CurTime() > pSchedule.flAttackMooDelay then
 				pSchedule.bAttackMooed = true
 				pSchedule.flJustMooed = CurTime() + 4
-	
-				if !pSchedule.bStopFirstTaunt && math.random() <= .4 then
-					MyTable.Taunt( self, pEnemy, MyTable )
-					pSchedule.flMeleeTimer = 4 + math.random() * 4
+
+				if !pSchedule.bStopFirstTaunt then
+					if MyTable.LAT_flAmount && math.random() < fGetStrutExcreteChance( MyTable ) then
+						fStrutExcrete( self, MyTable, pSchedule, pEnemy )
+						return
+					elseif math.random() <= .4 then
+						MyTable.Taunt( self, pEnemy, MyTable )
+						pSchedule.flMeleeTimer = 4 + math.random() * 4
+						return
+					end
+				elseif MyTable.LAT_flAmount && math.random() < fGetStrutExcreteChance( MyTable ) then
+					fStrutExcrete( self, MyTable, pSchedule, pEnemy )
 					return
 				end
 	

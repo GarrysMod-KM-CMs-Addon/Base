@@ -128,21 +128,12 @@ function ENT:Initialize()
 	self:DrawShadow( false )
 end
 
-local vTemp1, vTemp2 = Vector(), Vector()
 function ENT:Think()
 	self:DrawShadow( false )
 
 	local flDistance = self:GetTrueDistance()
 
-	vTemp1[ 1 ] = flDistance
-	vTemp1[ 2 ] = flDistance
-	vTemp1[ 3 ] = flDistance
-
-	vTemp2[ 1 ] = flDistance
-	vTemp2[ 2 ] = flDistance
-	vTemp2[ 3 ] = flDistance
-
-	self:SetRenderBounds( vTemp1, vTemp2 )
+	self:SetRenderBounds( Vector( -flDistance, -flDistance, -flDistance ), Vector( flDistance, flDistance, flDistance ) )
 
 	local MyTable = CEntity_GetTable( self )
 	MyTable.Update( self, MyTable )

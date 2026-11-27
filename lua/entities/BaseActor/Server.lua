@@ -605,6 +605,8 @@ local CVector_Div = CVector.Div
 
 function ENT:__GetVelocity__() return Vector( CEntity_GetTable( self ).m_vManualVelocity ) end
 
+function ENT:DoSpecials( MyTable ) end
+
 ENT.m_flFrameTime = 0
 function ENT:RunBehaviour( MyTable )
 	MyTable.m_coBehaveThread = coroutine_create( function( MyTable, flInterval )
@@ -628,8 +630,13 @@ function ENT:RunBehaviour( MyTable )
 			MyTable.m_vLastPos = vMyPos
 			MyTable.m_vManualVelocity = vVelocity
 
+			local f = MyTable.fCallMeInRunBehaviour
+			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
+
 			MyTable.m_flLastRunBehaviourCall = flNow
 			MyTable.m_flFrameTime = flFrameTime
+
+			MyTable.DoSpecials( self, MyTable )
 
 			local pController = MyTable.GAME_pController
 			if IsValid( pController ) then
@@ -657,9 +664,6 @@ function ENT:RunBehaviour( MyTable )
 			end
 
 			if ai_disabled:GetInt() == 1 then coroutine_yield() continue end
-
-			local f = MyTable.fCallMeInRunBehaviour
-			if f && f( self, MyTable ) then MyTable.fCallMeInRunBehaviour = nil MyTable.sCallMeInRunBehaviour = nil end
 
 			MyTable.CalcCombatState( self, MyTable )
 

@@ -1,6 +1,51 @@
-// TODO: EyesOfDeath (Kordhell reference) behaviour when a bunch of Gekkos turn to you, wait a second, and then all attack
-
 ENT.flDontDoIntimidationWalkTime = 0
+
+function fGetExcreteChance( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount <= flFloor then return 0 end
+	if flAmount >= flCrit then return 1 end
+
+	local flRatio = ( flAmount - flFloor ) / ( flCrit - flFloor )
+	return math.Clamp( .32 + .68 * ( flRatio ^ .52 ), 0, 1 )
+end
+
+local function fCalcNeuralVoid( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+
+	if flAmount >= MyTable.LAT_flSize * .7 && math.random() < .85 then
+		return flAmount
+	end
+
+	local flResidual = flAmount < 18 && math.Rand( .6, 1.3 ) || ( MyTable.LAT_flResidualMin * math.Rand( .75, 1.15 ) )
+	local flVoidable = math.max( 0, flAmount - flResidual )
+	local flVoidFraction = math.Rand( .85, .97 )
+
+	return math.min( flVoidable * flVoidFraction, flAmount )
+end
+
+local function fHandleRelief( self, MyTable )
+	if math.random() < fGetExcreteChance( MyTable ) then
+		MyTable.TauntExcrete( self, fCalcNeuralVoid( MyTable ), MyTable, function()
+			MyTable.SetSchedule( self, math.random( 2 ) == 1 && "WeaponsPlatformMelee" || "WeaponsPlatformStrut", MyTable )
+		end )
+
+		return true
+	end
+end
+
+local function fTauntOrExcrete( self, MyTable, pEnemy )
+	if fHandleRelief( self, MyTable ) then return true end
+
+	// Standard dry intimidation display
+	if math.random( 3 ) == 1 then
+		MyTable.Taunt( self, pEnemy, MyTable )
+		MyTable.SetSchedule( self, math.random( 3 ) == 1 && "WeaponsPlatformMelee" || "WeaponsPlatformStrut", MyTable )
+		return true
+	end
+end
 
 RegisterSchedule( "IntimidationWalk", { Execute = function( self, pSchedule, MyTable )
 	if CurTime() <= MyTable.flDontDoIntimidationWalkTime then
@@ -35,6 +80,8 @@ RegisterSchedule( "IntimidationWalk", { Execute = function( self, pSchedule, MyT
 		// TODO: Stacking up on hostiles
 		MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
 	end
+
+	if fTauntOrExcrete( self, MyTable ) then return end
 
 	if self:GetForward():Dot( ( pEnemy:GetPos() + pEnemy:OBBCenter() - self:GetPos() ):GetNormalized() ) < .8 then
 		MyTable.SetSchedule( self, "IntimidationWalkDramaticTurn", MyTable )
@@ -101,18 +148,18 @@ RegisterSchedule( "IntimidationWalkDramaticTurn", { Execute = function( self, pS
 
 	pSchedule.flLeaveTime = pSchedule.flLeaveTime - MyTable.m_flFrameTime
 
-	if !pSchedule.bEyesOfDeath then
-		if pSchedule.flLeaveTime <= 0 then
-			local i = math.random( 3 )
-			if i == 1 then
-				MyTable.SetSchedule( self, "IntimidationWalkInternal", MyTable )
-			elseif i == 2 then
-				MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
-			elseif i == 3 then
-				MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
-			end
-			return
+	if pSchedule.flLeaveTime <= 0 then
+		if fTauntOrExcrete( self, MyTable ) then return end
+
+		local i = math.random( 3 )
+		if i == 1 then
+			MyTable.SetSchedule( self, "IntimidationWalkInternal", MyTable )
+		elseif i == 2 then
+			MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
+		elseif i == 3 then
+			MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable )
 		end
+		return
 	end
 
 	MyTable.flOverrideBodyDampingThisTick = MyTable.flBodyDamping * pSchedule.flBodyDamp
@@ -185,6 +232,8 @@ RegisterSchedule( "IntimidationWalkInternal", { Execute = function( self, pSched
 	end
 
 	if pSchedule.flLeaveTime <= 0 then
+		if fTauntOrExcrete( self, MyTable ) then return end
+
 		if math.random( 2 ) == 1 then
 			MyTable.SetSchedule( self, "WeaponsPlatformMelee", MyTable )
 		else

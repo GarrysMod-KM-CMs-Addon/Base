@@ -1,7 +1,52 @@
 ENT.flIdleStandTimeMin = 0
 ENT.flIdleStandTimeMax = 4
 
-RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
+// TODO: Excretion stations, and not voiding on ally territory
+
+local function fGetIdleContinuousRate( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount < flFloor then return 0 end
+	if flAmount >= flCrit then return 999 end
+
+	local flRatio = ( flAmount - flFloor ) / ( flCrit - flFloor )
+	return .004 + .196 * ( flRatio ^ 1.25 )
+end
+
+// Voids nearly everything since nothing is interrupting it
+local function fCalcIdleVoid( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+
+	if flAmount >= MyTable.LAT_flSize * .68 && math.random() < .85 then return flAmount end
+
+	local flResidual = flAmount < 18 && math.Rand( .5, 1.1 ) || ( MyTable.LAT_flResidualMin * math.Rand( .65, 1.0 ) )
+	local flVoidable = math.max( 0, flAmount - flResidual )
+	local flVoidFraction = math.Rand( .88, .98 )
+
+	return math.min( flVoidable * flVoidFraction, flAmount )
+end
+
+local function fIdleExcrete( self, MyTable )
+	local flVoidAmount = fCalcIdleVoid( MyTable )
+
+	if MyTable.Moo then MyTable.Moo( self, MyTable ) end
+
+	MyTable.NormalExcrete( self, flVoidAmount, MyTable, function()
+		MyTable.vaAimTargetPose = nil
+	end )
+end
+
+local function fIdleExcrete( self, MyTable )
+	local flVoidAmount = fCalcIdleVoid( MyTable )
+
+	MyTable.TauntExcrete( self, flVoidAmount, MyTable, function()
+		MyTable.vaAimTargetPose = nil
+	end )
+end
+
+RegisterSchedule( "Idle", { Execute = function( self, pSchedule, MyTable )
 	if !table.IsEmpty( MyTable.tEnemies ) then return false end
 
 	MyTable.WEAPON_STANCE = WEAPON_STANCE_PASSIVE
@@ -22,16 +67,21 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 		end
 	end
 
-	if CurTime() <= ( sched.flStandTime || 0 ) then
+	if MyTable.LAT_flAmount && math.random() <= fGetIdleContinuousRate( MyTable ) * MyTable.m_flFrameTime then
+		fIdleExcrete( self, MyTable )
+		return
+	end
+
+	if CurTime() <= ( pSchedule.flStandTime || 0 ) then
 		MyTable.vaAimTargetBody = nil
 		MyTable.vaAimTargetPose = nil
-		sched.pPath = nil
-		sched.vGoal = nil
+		pSchedule.pPath = nil
+		pSchedule.vGoal = nil
 		MyTable.Stand( self )
 		return
 	end
 
-	if !sched.vGoal then
+	if !pSchedule.vGoal then
 		local tAllies = MyTable:GetAlliesByClass()
 
 		if !MyTable.bCantUse then
@@ -91,13 +141,13 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 
 		local pArea, vec = self:GetLastKnownArea() || navmesh.GetNearestNavArea( self:GetPos() )
 		if !pArea then
-			sched.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax )
+			pSchedule.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax )
 
 			MyTable.vaAimTargetBody = nil
 			MyTable.vaAimTargetPose = nil
 
-			sched.Path = nil
-			sched.vGoal = nil
+			pSchedule.Path = nil
+			pSchedule.vGoal = nil
 
 			return
 		end
@@ -119,14 +169,14 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 			if vec:DistToSqr( self:GetPos() ) >= flDistSqr then break end
 		end
 
-		if vec then sched.vGoal = vec
-		else sched.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax ) return end
+		if vec then pSchedule.vGoal = vec
+		else pSchedule.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax ) return end
 	end
 
-	local pPath = sched.pPath
+	local pPath = pSchedule.pPath
 	if !pPath then
 		pPath = Path "Follow"
-		sched.pPath = pPath
+		pSchedule.pPath = pPath
 	end
 
 	local pGoal = pPath:GetCurrentGoal()
@@ -135,17 +185,17 @@ RegisterSchedule( "Idle", { Execute = function( self, sched, MyTable )
 		MyTable.vaAimTargetPose = MyTable.vaAimTargetBody
 	end
 
-	if LevelOfDetail( sched, "flNextPath" ) then MyTable.ComputePath( self, pPath, sched.vGoal ) end
+	if LevelOfDetail( pSchedule, "flNextPath" ) then MyTable.ComputePath( self, pPath, pSchedule.vGoal ) end
 
 	MyTable.MoveAlongPath( self, pPath, MyTable.flWalkSpeed )
 
 	if math.abs( pPath:GetCursorPosition() - pPath:GetLength() ) <= MyTable.flPathTolerance then
-		sched.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax )
+		pSchedule.flStandTime = CurTime() + math.Rand( MyTable.flIdleStandTimeMin, MyTable.flIdleStandTimeMax )
 
 		MyTable.vaAimTargetBody = nil
 		MyTable.vaAimTargetPose = nil
 
-		sched.pPath = nil
-		sched.vGoal = nil
+		pSchedule.pPath = nil
+		pSchedule.vGoal = nil
 	end
 end } )

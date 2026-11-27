@@ -1,3 +1,37 @@
+local function fGetMeleeContinuousRate( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flJogFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount < flJogFloor then return 0 end
+	if flAmount >= flCrit then return 999 end
+
+	local flRatio = ( flAmount - flJogFloor ) / ( flCrit - flJogFloor )
+	return .014 + .226 * ( flRatio ^ .95 )
+end
+
+local function fCalcMeleeVoid( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+
+	if flAmount >= MyTable.LAT_flSize * .72 && math.random() < .88 then return flAmount end
+
+	local flResidual = flAmount < 18 && math.Rand( .8, 1.5 ) || ( MyTable.LAT_flResidualMin * math.Rand( .75, 1.15 ) )
+	local flVoidable = math.max( 0, flAmount - flResidual )
+	local flVoidFraction = math.Rand( .85, .96 )
+
+	return math.min( flVoidable * flVoidFraction, flAmount )
+end
+
+local function fMeleeExcrete( self, MyTable, pSchedule, pEnemy )
+	local flVoidAmount = fCalcMeleeVoid( MyTable )
+
+	MyTable.TauntExcrete( self, flVoidAmount, MyTable, function()
+		if IsValid( pEnemy ) then MyTable.vaAimTargetPose = pEnemy:GetPos() + pEnemy:OBBCenter() end
+	end )
+
+	if math.random( 4 ) == 1 then MyTable.SetSchedule( self, "WeaponsPlatformStrut", MyTable ) end
+end
+
 RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule, MyTable )
 	MyTable.flDontDoIntimidationWalkTime = CurTime() + 1
 
@@ -145,7 +179,7 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 		end
 	end
 
-	if MyTable.LowIfAvailable && math.random() <= .1 * MyTable.m_flFrameTime then
+	if MyTable.LowIfAvailable && math.random() <= .07 * MyTable.m_flFrameTime then
 		MyTable.LowIfAvailable( self, MyTable )
 	end
 
@@ -181,6 +215,11 @@ RegisterSchedule( "WeaponsPlatformMelee", { Execute = function( self, pSchedule,
 			end
 		end
 
+		return
+	end
+
+	if MyTable.LAT_flAmount && math.random() <= fGetMeleeContinuousRate( MyTable ) * MyTable.m_flFrameTime then
+		fMeleeExcrete( self, MyTable, pSchedule, pEnemy )
 		return
 	end
 

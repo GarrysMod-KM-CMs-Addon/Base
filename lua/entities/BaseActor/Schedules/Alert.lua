@@ -1,6 +1,41 @@
 ENT.tAlertSearchedAreas = {}
 ENT.tAlertContext = {}
 
+local function fGetAlertContinuousRate( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+	local flFloor = MyTable.LAT_flManifoldFloor
+	local flCrit = MyTable:LAT_GetCritical()
+
+	if flAmount < flFloor then return 0 end
+	if flAmount >= flCrit then return 999 end
+
+	local flRatio = ( flAmount - flFloor ) / ( flCrit - flFloor )
+	return .014 + .236 * ( flRatio ^ .82 )
+end
+
+local function fCalcAlertVoid( MyTable )
+	local flAmount = MyTable.LAT_flAmount
+
+	if flAmount >= MyTable.LAT_flSize * .72 && math.random() < .85 then return flAmount end
+
+	local flResidual = flAmount < 18 && math.Rand( 1, 2 ) || ( MyTable.LAT_flResidualMin * math.Rand( .8, 1.2 ) )
+	local flVoidable = math.max( 0, flAmount - flResidual )
+	local flVoidFraction = math.Rand( .80, .92 )
+
+	return math.min( flVoidable * flVoidFraction, flAmount )
+end
+
+local function fAlertExcrete( self, MyTable )
+	local flVoidAmount = fCalcAlertVoid( MyTable )
+
+	MyTable.sCallMeInRunBehaviour = "Excrete"
+	MyTable.fCallMeInRunBehaviour = function()
+		MyTable.NormalExcrete( self, flVoidAmount, MyTable, function()
+			MyTable.vaAimTargetPose = nil
+		end )
+	end
+end
+
 function ENT:PrepareAlert( MyTable )
 	//	MyTable.tAlertSearchedAreas = {}
 	MyTable.tAlertContext = {}
@@ -146,9 +181,14 @@ local function GoToDestination( self, pSchedule, MyTable )
 	local bDoubleChecked, bTripleChecked
 
 	while flStuckTime <= 4 do
+		if MyTable.LAT_flAmount && math.random() <= fGetAlertContinuousRate( MyTable ) * MyTable.m_flFrameTime then
+			fAlertExcrete( self, MyTable, pSchedule.vInvestigatePos )
+			return
+		end
+
 		local pGoal = pPath:GetCurrentGoal()
 		if pGoal then
-			MyTable.vaAimTargetBody = ( pGoal.pos - self:GetPos() ):Angle()
+			MyTable.vaAimTargetBody = MyTable.aNavigation || ( pGoal.pos - self:GetPos() ):Angle()
 		else
 			MyTable.vaAimTargetBody = GetVelocity( self ):Angle()
 		end
@@ -209,6 +249,11 @@ RegisterSchedule( "AlertFindDestination", { Execute = function( self, pSchedule,
 	local pDestination = pSchedule.pDestination
 	if !pDestination then
 		MyTable.Stand( self, MyTable )
+
+		if MyTable.LAT_flAmount && math.random() <= fGetAlertContinuousRate( MyTable ) * MyTable.m_flFrameTime then
+			fAlertExcrete( self, MyTable, pSchedule.vInvestigatePos )
+			return
+		end
 
 		if pSchedule.bSearching then return end
 
