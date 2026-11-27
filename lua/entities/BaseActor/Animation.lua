@@ -360,9 +360,6 @@ end
 function ENT:DoRootMotion( sSequence, flSpeed, bInstant, MyTable )
 	MyTable = MyTable || CEntity_GetTable( self )
 
-	local iSequence = self:LookupSequence( sSequence )
-	local _, v = self:GetSequenceMovement( iSequence )
-
 	local pLocomotion = MyTable.loco
 
 	local vMins, vMaxs = self:OBBMins(), self:OBBMaxs()
@@ -373,9 +370,11 @@ function ENT:DoRootMotion( sSequence, flSpeed, bInstant, MyTable )
 	pLocomotion:SetAcceleration( 1 )
 	pLocomotion:SetDeceleration( 1 )
 
+	local iSequence = self:LookupSequence( sSequence )
+
 	// Yes, the ; is really necessary there :)
 	;( bInstant && MyTable.PromoteSequenceInstant || MyTable.PromoteSequence )( self, sSequence,
-	flSpeed / v:Length(),
+	flSpeed / self:GetSequenceGroundSpeed( iSequence ):Length(),
 	nil,
 	function( self, MyTable, flWeight, _/*iLayer*/, flPrevCycle, flCycle )
 		if flPrevCycle > .75 && flCycle < .25 then
